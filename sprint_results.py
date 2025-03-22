@@ -48,7 +48,7 @@ async def calculate_results(bot: Bot):
                 print(f"[calculate_results] Дата окончания спринта для группы {group.id}: {end_date}")
 
                 # Проверяем, соответствует ли текущая дата дате окончания спринта
-                if False:#now.date() != end_date:
+                if now.date() != end_date:
                     print(f"[calculate_results] Сегодня не день подведения итогов для группы {group.id}. Пропускаем.")
                     continue  
 
