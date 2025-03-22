@@ -8,6 +8,6 @@ meta:
 build:
   requirementsPath: requirements.txt
 run:
-  scriptName: app.py
+  scriptName: bot.py
   persistenceMount: /data
   containerPort: 80
