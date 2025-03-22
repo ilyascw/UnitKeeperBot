@@ -5,8 +5,6 @@ from config import BOT_TOKEN
 from handlers import routers
 from sprint_results import setup_sprint_scheduler
 
-logging.basicConfig(level=logging.DEBUG)
-
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
@@ -16,7 +14,7 @@ for router in routers:
 
 async def main():
     """Основная асинхронная функция запуска бота"""
-    print("Бот запущен...")
+
 
     # Запускаем подведение итогов по расписанию
     await setup_sprint_scheduler(bot)
