@@ -31,16 +31,5 @@ async def get_db():
             await session.commit()  
         except Exception as e:
             await session.rollback()  
-            print(f"Ошибка работы с БД: {e}")
         finally:
             await session.close()  
-
-# Тест соединения с БД
-async def test_db():
-    async for session in get_db():
-        if isinstance(session, AsyncSession):
-            print("✅ Подключение к БД работает!")
-        else:
-            print("❌ Ошибка подключения к БД!")
-
-asyncio.run(test_db())

@@ -166,12 +166,10 @@ def read_and_parse_file(file_bytes):
         for index, row in df.iterrows():
                 # Проверка, что значения в колонках "Периодичность" и "Стоимость" являются числами
                 if not (isinstance(row["Периодичность"], (int, float)) or not (isinstance(row["Стоимость"], (int, float)))):
-                    print(f"Ошибка: Неверный тип данных на строке {index + 1}. Ожидаются числовые значения для 'Периодичность' и 'Стоимость'.")
                     return None
 
                 # Проверка, что "Периодичность" является целым числом
                 if not float(row["Периодичность"]).is_integer():
-                    print(f"Ошибка: Неверное значение на строке {index + 1}. Периодичность должна быть целым числом.")
                     return None
 
         tasks_to_add = []
@@ -185,5 +183,4 @@ def read_and_parse_file(file_bytes):
 
         return tasks_to_add
     except Exception as e:
-        print(f"Ошибка при обработке файла: {e}")
         return None

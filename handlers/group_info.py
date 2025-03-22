@@ -58,7 +58,7 @@ async def group_info(message: Message, bot: Bot):
                     f"👤 {tg_name} | ID: {m[0]} | Нагрузка: {group.weights.get(str(m[0]), 0):.0f}% {'(👑 Владелец)' if m[0] == group.owner_id else ''}| баланс {m[2]}"
                 )
             except Exception as e:
-                print(f"Ошибка при получении данных пользователя {m[0]}: {e}")
+                pass
 
         members_text = "\n".join(members_info) if members_info else "Пока нет участников."
 

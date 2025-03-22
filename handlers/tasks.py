@@ -455,7 +455,6 @@ async def task_detail(callback: CallbackQuery):
         week_start = datetime(current_time.year, current_time.month, current_time.day) - timedelta(days=current_time.weekday())
         week_end = week_start + timedelta(days=group.duration)
 
-        print(week_start, week_end)
         # Получаем количество выполненных задач за текущую неделю
         completed_count = await session.execute(
             select(Log)

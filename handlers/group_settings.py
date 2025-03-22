@@ -168,7 +168,6 @@ async def change_weights(callback: CallbackQuery, state: FSMContext, bot: Bot):
     async with async_session() as session:
         # Получаем данные из состояния
         data = await state.get_data()
-        print(data.items())
         group_id = data["group_id"]
 
         # Получаем всех участников группы
@@ -204,7 +203,6 @@ async def ask_user_weight(message: Message, state: FSMContext, bot: Bot):
         user_chat = await bot.get_chat(user_id)
         first_name = user_chat.first_name
     except Exception as e:
-        print(f"Ошибка при получении имени пользователя: {e}")
         first_name = "Пользователь"
 
     await message.answer(f"Нагрузка у всех пользователей в сумме должна быть 100.")
@@ -235,7 +233,6 @@ async def set_user_weight(message: Message, state: FSMContext, bot: Bot):
                 user_chat = await bot.get_chat(user_id)
                 first_name = user_chat.first_name
             except Exception as e:
-                print(f"Ошибка при получении имени пользователя: {e}")
                 first_name = "Пользователь"
 
             # Получаем группу

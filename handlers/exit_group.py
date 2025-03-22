@@ -87,13 +87,11 @@ async def confirm_exit_group(message: Message, state: FSMContext):
             # Убираем пользователя из группы
             user.group_id = None
             group.weights = weights
-            print(weights)
             
             try:
                 await session.commit()
             except Exception as e:
-                print(f'!!!!!!!!!!!!!!!!!!!!{e}')
-
+                pass
             del exit_codes[user_id]
 
             await message.answer("✅ Ты вышел из группы.")

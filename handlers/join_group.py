@@ -17,7 +17,6 @@ import re
 
 router = Router()
 
-print('join group work')
 
 class JoinGroupState(StatesGroup):
     waiting_for_group_id = State()
@@ -55,8 +54,6 @@ async def join_group_id(message: Message, state: FSMContext):
             await message.answer("❌ Группа не найдена. Введите имя снова.")
             return
         
-        print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!', group.weights)
-
         # Сохраняем group_id в состояние
         await state.update_data(group_id=group.id)
 
@@ -110,10 +107,8 @@ async def join_group_password(message: Message, state: FSMContext):
         weights[f'{user_id}'] = 0
         num_members = len(weights)
         new_balance = (100 / num_members)
-        print(new_balance)
         weights = {k: new_balance for k in weights.keys()}
         group.weights = weights
-        print(group.weights)
         await session.commit()  # Подтверждаем изменения в таблицах Users, Balance и Group
 
         await message.answer(f"✅ Вы успешно вступили в группу {group.name}!", reply_markup=ReplyKeyboardRemove())
