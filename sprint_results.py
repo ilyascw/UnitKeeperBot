@@ -160,7 +160,7 @@ async def scheduler(bot: Bot):
     while True:
         try:
             now = datetime.now()
-            target_time = now.replace(hour=00, minute=00, second=0, microsecond=0)
+            target_time = now.replace(hour=23, minute=59, second=0, microsecond=0)
             sleep_time = (target_time - now).total_seconds()
 
             if sleep_time < 0:
