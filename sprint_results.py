@@ -7,7 +7,7 @@ from db.models import Task, Log, Group, User, Balance
 from db.database import async_session
 import calendar
 
-def get_sprint_end_date(start_day: str, duration: int):
+def get_s_end_date(start_day: str, duration: int):
     """Определяет дату окончания спринта, исходя из стартового дня и продолжительности"""
     weekdays_dict = {
         "понедельник": "Monday",
@@ -32,7 +32,6 @@ def get_sprint_end_date(start_day: str, duration: int):
 async def calculate_results(bot: Bot):
     try:
         now = datetime.now()
-        print(f"[calculate_results] Запуск функции. Текущее время: {now}")
 
         async with async_session() as session:
             # Получаем все группы
@@ -40,16 +39,13 @@ async def calculate_results(bot: Bot):
             groups = groups.scalars().all()
 
             for group in groups:
-                print(f"[calculate_results] Обработка группы: {group.id}")
-                start_day, duration, owner_id, weights = group.start_day, group.sprint_duration, group.owner_id, group.weights
+                start_day, duration, owner_id, weights = group.start_day, group.s_duration, group.owner_id, group.weights
 
                 # Определяем дату окончания спринта
-                end_date = get_sprint_end_date(start_day, duration)
-                print(f"[calculate_results] Дата окончания спринта для группы {group.id}: {end_date}")
+                end_date = get_s_end_date(start_day, duration)
 
                 # Проверяем, соответствует ли текущая дата дате окончания спринта
                 if now.date() != end_date:
-                    print(f"[calculate_results] Сегодня не день подведения итогов для группы {group.id}. Пропускаем.")
                     continue  
 
                 user_results = {}
@@ -74,10 +70,7 @@ async def calculate_results(bot: Bot):
                         user_chat = await bot.get_chat(user_id)
                         first_name = user_chat.first_name
                     except Exception as e:
-                        print(f"[calculate_results] Ошибка при получении имени пользователя {user_id}: {e}")
                         first_name = "Неизвестный"
-
-                    print(f"[calculate_results] Обработка пользователя: {first_name} ({user_id})")
 
                     # Плановые юниты
                     plan_units = sum(float(task.cost) * int(task.frequency) for task in tasks) * (weights.get(str(user_id), 0))/100
@@ -93,7 +86,6 @@ async def calculate_results(bot: Bot):
 
                 # 1. Начисление бонуса
                 bonus = 0.25 * total_plan if total_fact >= total_plan else 0
-                print(f"[calculate_results] Бонус для группы {group.id}: {bonus}")
                                 # Обновляем баланс группы
 
                 group_balance = await session.execute(
@@ -127,7 +119,6 @@ async def calculate_results(bot: Bot):
                         session.add(balance)
 
                     await session.commit()
-                    print(f"[calculate_results] Новый баланс для {first_name}: {balance.balance:.2f} юнитов")
 
                 # 3. Формирование и отправка отчета пользователям
                 for user_id, (first_name, plan, fact, efficiency) in user_results.items():
@@ -141,9 +132,10 @@ async def calculate_results(bot: Bot):
                     )
                     try:
                         await bot.send_message(user_id, text)
-                        print(f"[calculate_results] Сообщение отправлено {first_name}")
+
                     except Exception as e:
-                        print(f"[calculate_results] Ошибка при отправке сообщения {first_name}: {e}")
+                        pass
+
 
                 # 4. Отчет в общий чат
                 summary_text = "📢 Итоги группы:\n\n" + f"Результат группы {bonus} ю.\n" + "\n".join([
@@ -152,21 +144,19 @@ async def calculate_results(bot: Bot):
                 ])
                 try:
                     await bot.send_message(owner_id, summary_text)
-                    print(f"[calculate_results] Отчет отправлен владельцу группы {owner_id}")
+ 
                 except Exception as e:
-                    print(f"[calculate_results] Ошибка при отправке отчета владельцу группы {owner_id}: {e}")
-
-                print(summary_text)
+                    pass
 
                 # 5. Очистка логов группы (не требуется, так как логи хранятся в базе данных)
-                print(f"[calculate_results] Логи группы {group.id} не очищены (хранятся в базе данных)")
+
 
     except Exception as e:
-        print(f"[calculate_results] Критическая ошибка: {e}")
+        pass
 
 async def scheduler(bot: Bot):
     """Функция для запуска итогов по расписанию (23:59)"""
-    print('[scheduler] Запуск планировщика')
+
     while True:
         try:
             now = datetime.now()
@@ -176,15 +166,13 @@ async def scheduler(bot: Bot):
             if sleep_time < 0:
                 sleep_time += 86400  # Если время прошло, ждем до следующего дня
 
-            print(f"[scheduler] Ожидание до {target_time}. Осталось секунд: {sleep_time}")
             await asyncio.sleep(sleep_time)
 
-            print("[scheduler] Запуск calculate_results")
+
             await calculate_results(bot)
         except Exception as e:
-            print(f"[scheduler] Ошибка в планировщике: {e}")
+            pass
 
-async def setup_sprint_scheduler(bot: Bot):
+async def setup_s_scheduler(bot: Bot):
     """Запуск задачи подведения итогов"""
-    print('[setup_sprint_scheduler] Запуск задачи подведения итогов')
     asyncio.create_task(scheduler(bot))
