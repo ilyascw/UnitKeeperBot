@@ -20,10 +20,7 @@ async def start_handler(message: Message):
     Если уже состоит в группе — заглушка.
     """
     user_id = message.from_user.id
-###################################################
-    logging.info(f"/start command received from {message.from_user.id}")
-    await asyncio.sleep(1)  # Добавляем небольшую задержку
-##################################################
+
     async for db in get_db():
         # Проверяем, есть ли пользователь в БД
         result = await db.execute(select(User).where(User.id == user_id))
