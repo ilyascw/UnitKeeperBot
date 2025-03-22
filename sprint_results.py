@@ -7,7 +7,7 @@ from db.models import Task, Log, Group, User, Balance
 from db.database import async_session
 import calendar
 
-def get_s_end_date(start_day: str, duration: int):
+def get_sprint_end_date(start_day: str, duration: int):
     """Определяет дату окончания спринта, исходя из стартового дня и продолжительности"""
     weekdays_dict = {
         "понедельник": "Monday",
@@ -42,7 +42,7 @@ async def calculate_results(bot: Bot):
                 start_day, duration, owner_id, weights = group.start_day, group.s_duration, group.owner_id, group.weights
 
                 # Определяем дату окончания спринта
-                end_date = get_s_end_date(start_day, duration)
+                end_date = get_sprint_end_date(start_day, duration)
 
                 # Проверяем, соответствует ли текущая дата дате окончания спринта
                 if now.date() != end_date:

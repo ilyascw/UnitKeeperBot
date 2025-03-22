@@ -15,7 +15,7 @@ Base = declarative_base()  # Создаём базовый класс для м�
 # Создаём асинхронный движок
 engine = create_async_engine(
     DATABASE_URL, 
-    echo=True,        
+    echo=False,        
     pool_size=5,      
     max_overflow=10   
 )
