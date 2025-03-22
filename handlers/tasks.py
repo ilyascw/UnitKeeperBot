@@ -441,10 +441,10 @@ async def task_detail(callback: CallbackQuery):
         group_id = user.group_id
 
         # Получаем задачу по ID
-        task = await session.execute(select(Task).where(Task.id == task_id, Task.group_id == group_id, ))
+        task = await session.execute(select(Task).where(Task.id == task_id, Task.group_id == group_id))
         task = task.scalar_one_or_none()
         group = await session.execute(select(Group).where(Group.id == group_id))
-        group = task.scalar_one_or_none()
+        group = group.scalar_one_or_none()
 
         if not task:
             await callback.answer("❌ Задача не найдена.", show_alert=True)
