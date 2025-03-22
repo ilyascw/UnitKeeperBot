@@ -26,7 +26,7 @@ def get_sprint_end_date(start_day: str, duration: int):
     start_date = today - timedelta(days=days_back)
 
     # Дата окончания спринта
-    end_date = start_date + timedelta(days=duration-1) ####поменять
+    end_date = start_date + timedelta(days=duration) ####поменять
     return end_date.date()
 
 async def calculate_results(bot: Bot):
@@ -160,7 +160,7 @@ async def scheduler(bot: Bot):
     while True:
         try:
             now = datetime.now()
-            target_time = now.replace(hour=23, minute=59, second=0, microsecond=0)
+            target_time = now.replace(hour=00, minute=00, second=0, microsecond=0)
             sleep_time = (target_time - now).total_seconds()
 
             if sleep_time < 0:
