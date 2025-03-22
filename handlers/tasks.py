@@ -246,7 +246,7 @@ async def confirm_task(callback: CallbackQuery, bot: Bot):
 @router.callback_query(lambda c: c.data.startswith("confirm_"))
 async def confirm_execution(callback: CallbackQuery, bot: Bot):
     """Другие участники подтверждают выполнение задачи."""
-    from .group import get_sprint_start_date
+    from .temp_results import get_sprint_start_date
 
     task_id = int(callback.data.split("_")[1])
     log_id = int(callback.data.split("_")[2])

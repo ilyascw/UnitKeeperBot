@@ -168,14 +168,4 @@ async def create_group_sprint_duration(message: Message, state: FSMContext):
         await message.answer("❌ Длительность должна быть числом. Введите снова.")
         await state.set_state(CreateGroupState.waiting_for_sprint_duration)
 
-def get_sprint_end_date(start_day: str, duration: int):
-    """Определяет дату окончания спринта, исходя из стартового дня и продолжительности"""
-    weekdays_dict = {
-        "понедельник": "Monday",
-        "вторник": "Tuesday",
-        "среда": "Wednesday",
-        "четверг": "Thursday",
-        "пятница": "Friday",
-        "суббота": "Saturday",
-        "воскресенье": "Sunday"
-    }
+
