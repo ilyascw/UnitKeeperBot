@@ -4,7 +4,6 @@ from aiogram.filters import Command
 
 router = Router()
 
-print(f"📌 about загружен")  # Должно появиться в консоли
 
 @router.message(Command("about"))
 async def about_handler(message: Message):

@@ -173,6 +173,6 @@ async def scheduler(bot: Bot):
         except Exception as e:
             pass
 
-async def setup_s_scheduler(bot: Bot):
+async def setup_sprint_scheduler(bot: Bot):
     """Запуск задачи подведения итогов"""
     asyncio.create_task(scheduler(bot))
