@@ -453,7 +453,7 @@ async def task_detail(callback: CallbackQuery):
         # Фильтруем логи за текущую неделю
         current_time = datetime.now()
         week_start = datetime(current_time.year, current_time.month, current_time.day) - timedelta(days=current_time.weekday())
-        week_end = week_start + timedelta(days=group.duration)
+        week_end = week_start + timedelta(days=group.sprint_duration)
 
         # Получаем количество выполненных задач за текущую неделю
         completed_count = await session.execute(
