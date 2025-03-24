@@ -44,7 +44,7 @@ DATABASE_URL=postgresql://user:password@localhost/bot_database
 ```
 ### 5️⃣ Запуск бота
 ```bash
-python main.py
+python bot.py
 ```
 
 ## 💻 Используемый стек технологий
