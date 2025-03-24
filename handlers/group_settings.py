@@ -244,7 +244,7 @@ async def set_user_weight(message: Message, state: FSMContext, bot: Bot):
                 return
 
             # Получаем текущие нагрузки
-            weights = group.weights if group.weights else {}
+            weights = group.weights.copy() if group.weights else {}
 
             # Обновляем нагрузку для текущего пользователя
             weights[str(user_id)] = weight
@@ -252,7 +252,7 @@ async def set_user_weight(message: Message, state: FSMContext, bot: Bot):
             # Сохраняем обновленные нагрузки в группе
             group.weights = weights
             await session.commit()
-
+            
             # Проверка, что все пользователи обработаны
             if current_user_index + 1 >= len(users):
                 # Проверка, что сумма нагрузок равна 100
