@@ -63,7 +63,7 @@ async def temp_results(message: Message):
 
         # Определяем дату начала и окончания текущего спринта
         sprint_start = get_sprint_start_date(start_day)
-        sprint_end = sprint_start + timedelta(days=duration - 1)
+        sprint_end = sprint_start + timedelta(days=duration)
 
         # Получаем задачи группы
         tasks = await session.execute(select(Task).where(Task.group_id == group_id))
