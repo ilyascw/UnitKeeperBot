@@ -1,8 +1,7 @@
 import asyncio
 from datetime import datetime, timedelta
 from aiogram import Bot
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from db.models import Task, Log, Group, User, Balance
 from db.database import async_session
 import calendar
@@ -21,32 +20,50 @@ def get_sprint_end_date(start_day: str, duration: int):
     today = datetime.now()
     weekday_index = list(calendar.day_name).index(weekdays_dict[start_day])  # Индекс дня начала (0=Monday, 6=Sunday)
     
-    # Определяем ближайший понедельник (или другой стартовый день) в прошлом или сегодня
+    # Определяем стартовый день в прошлом или сегодня
     days_back = (today.weekday() - weekday_index) % 7
     start_date = today - timedelta(days=days_back)
 
     # Дата окончания спринта
-    end_date = start_date + timedelta(days=duration) ####поменять
+    end_date = start_date + timedelta(days=duration-1) ####поменять
     return end_date.date()
 
 async def calculate_results(bot: Bot):
     try:
         now = datetime.now()
 
+        
+
         async with async_session() as session:
             # Получаем все группы
             groups = await session.execute(select(Group))
             groups = groups.scalars().all()
 
+            print(list(groups))
             for group in groups:
-                start_day, duration, owner_id, weights = group.start_day, group.s_duration, group.owner_id, group.weights
+                start_day, duration, owner_id, weights = group.start_day, group.sprint_duration, group.owner_id, group.weights
 
                 # Определяем дату окончания спринта
-                end_date = get_sprint_end_date(start_day, duration)
+                end_date = get_sprint_end_date(start_day, duration-1)
 
+                print(end_date)
                 # Проверяем, соответствует ли текущая дата дате окончания спринта
                 if now.date() != end_date:
                     continue  
+
+                weekdays_dict = {
+                    "понедельник": "Monday",
+                    "вторник": "Tuesday",
+                    "среда": "Wednesday",
+                    "четверг": "Thursday",
+                    "пятница": "Friday",
+                    "суббота": "Saturday",
+                    "воскресенье": "Sunday"
+                }
+                weekday_index = list(calendar.day_name).index(weekdays_dict[start_day])
+                today = now
+                days_back = (today.weekday() - weekday_index) % 7
+                start_date = today - timedelta(days=days_back)
 
                 user_results = {}
                 total_plan = 0
@@ -57,7 +74,7 @@ async def calculate_results(bot: Bot):
                 tasks = tasks.scalars().all()
 
                 # Получаем логи группы
-                logs = await session.execute(select(Log).where(Log.group_id == group.id))
+                logs = await session.execute(select(Log).where(Log.group_id == group.id and Log.timestamp <= get_sprint_end_date(start_date, duration) and Log.timestamp >= start_date))
                 logs = logs.scalars().all()
 
                 # Получаем всех пользователей группы
@@ -152,7 +169,7 @@ async def calculate_results(bot: Bot):
 
 
     except Exception as e:
-        pass
+        print(f'ошибка: {e}')
 
 async def scheduler(bot: Bot):
     """Функция для запуска итогов по расписанию (23:59)"""
@@ -160,7 +177,7 @@ async def scheduler(bot: Bot):
     while True:
         try:
             now = datetime.now()
-            target_time = now.replace(hour=00, minute=00, second=0, microsecond=0)
+            target_time = now.replace(hour=23, minute=59, second=0, microsecond=0)
             sleep_time = (target_time - now).total_seconds()
 
             if sleep_time < 0:
@@ -168,10 +185,9 @@ async def scheduler(bot: Bot):
 
             await asyncio.sleep(sleep_time)
 
-
             await calculate_results(bot)
         except Exception as e:
-            pass
+            print(f'ошибка {e}')
 
 async def setup_sprint_scheduler(bot: Bot):
     """Запуск задачи подведения итогов"""

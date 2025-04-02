@@ -5,7 +5,6 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from datetime import datetime, timedelta
 from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
 from db.models import Task, User, Log, Group
 from db.database import async_session
 
@@ -133,7 +132,7 @@ async def cancel_task(callback: CallbackQuery):
         # Фильтруем логи за текущую неделю
         current_time = datetime.now()
         week_start = datetime(current_time.year, current_time.month, current_time.day) - timedelta(days=current_time.weekday())
-        week_end = week_start + timedelta(days=6)
+        week_end = week_start + timedelta(days=7)
 
         remaining_tasks = []
 
