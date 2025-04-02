@@ -32,21 +32,17 @@ async def calculate_results(bot: Bot):
     try:
         now = datetime.now()
 
-        
-
         async with async_session() as session:
             # Получаем все группы
             groups = await session.execute(select(Group))
             groups = groups.scalars().all()
 
-            print(list(groups))
             for group in groups:
                 start_day, duration, owner_id, weights = group.start_day, group.sprint_duration, group.owner_id, group.weights
 
                 # Определяем дату окончания спринта
                 end_date = get_sprint_end_date(start_day, duration-1)
 
-                print(end_date)
                 # Проверяем, соответствует ли текущая дата дате окончания спринта
                 if now.date() != end_date:
                     continue  
@@ -60,6 +56,7 @@ async def calculate_results(bot: Bot):
                     "суббота": "Saturday",
                     "воскресенье": "Sunday"
                 }
+                
                 weekday_index = list(calendar.day_name).index(weekdays_dict[start_day])
                 today = now
                 days_back = (today.weekday() - weekday_index) % 7
