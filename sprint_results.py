@@ -176,11 +176,11 @@ async def scheduler(bot: Bot):
     while True:
         try:
             now = datetime.now()
-            target_time = now.replace(hour=19, minute=35, second=0, microsecond=0)
+            target_time = now.replace(hour=19, minute=37, second=0, microsecond=0)
             sleep_time = (target_time - now).total_seconds()
 
             if sleep_time < 0:
-                print(now, target_time)
+                print('test', now, target_time)
                 sleep_time += 86400  # Если время прошло, ждем до следующего дня
 
             await asyncio.sleep(sleep_time)
