@@ -108,13 +108,17 @@ async def create_group_start_day(message: Message, state: FSMContext):
         return
 
     await state.update_data(start_day=start_day)
-    await message.answer("Введите длительность периода учета в днях:", reply_markup=ReplyKeyboardRemove())
+    await message.answer("Введите длительность периода учета в днях (число должно делиться нацело на 7):", reply_markup=ReplyKeyboardRemove())
     await state.set_state(CreateGroupState.waiting_for_sprint_duration)
 
 @router.message(CreateGroupState.waiting_for_sprint_duration)
 async def create_group_sprint_duration(message: Message, state: FSMContext):
     try:
         sprint_duration = int(message.text)
+
+        if sprint_duration % 7 != 0:
+            raise ValueError
+        
         await state.update_data(sprint_duration=sprint_duration)
 
         data = await state.get_data()
@@ -165,7 +169,7 @@ async def create_group_sprint_duration(message: Message, state: FSMContext):
         await state.clear()
 
     except ValueError:
-        await message.answer("❌ Длительность должна быть числом. Введите снова.")
+        await message.answer("❌ Длительность должна быть числом, делящимся нацело на 7. Введите снова.")
         await state.set_state(CreateGroupState.waiting_for_sprint_duration)
 
 

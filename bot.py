@@ -14,8 +14,7 @@ for router in routers:
 
 async def main():
     """Основная асинхронная функция запуска бота"""
-
-
+    
     # Запускаем подведение итогов по расписанию
     await setup_sprint_scheduler(bot)
 

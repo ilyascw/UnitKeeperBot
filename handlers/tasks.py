@@ -40,7 +40,7 @@ async def show_tasks(message: Message):
         # Фильтруем логи за текущую неделю
         current_time = datetime.now()
         week_start = datetime(current_time.year, current_time.month, current_time.day) - timedelta(days=current_time.weekday())
-        week_end = week_start + timedelta(days=6)
+        week_end = week_start + timedelta(days=7)
 
         remaining_tasks = []
 
@@ -129,11 +129,13 @@ async def cancel_task(callback: CallbackQuery):
             await callback.message.edit_text("📭 В группе пока нет задач.")
             return
 
+        group = await session.execute(select(Group).where(Group.id == group_id))
+        group = group.scalar_one_or_none()
+
         # Фильтруем логи за текущую неделю
         current_time = datetime.now()
         week_start = datetime(current_time.year, current_time.month, current_time.day) - timedelta(days=current_time.weekday())
-        week_end = week_start + timedelta(days=7)
-
+        week_end = week_start + timedelta(days=group.sprint_duration)
         remaining_tasks = []
 
         # Проходим по всем задачам группы

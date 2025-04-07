@@ -25,7 +25,7 @@ def get_sprint_end_date(start_day: str, duration: int):
     start_date = today - timedelta(days=days_back)
 
     # Дата окончания спринта
-    end_date = start_date + timedelta(days=duration-1) ####поменять
+    end_date = start_date + timedelta(days=duration) 
     return end_date.date()
 
 async def calculate_results(bot: Bot):
@@ -43,9 +43,10 @@ async def calculate_results(bot: Bot):
                 # Определяем дату окончания спринта
                 end_date = get_sprint_end_date(start_day, duration-1)
 
-                # Проверяем, соответствует ли текущая дата дате окончания спринта
+                print(f"[DEBUG] now.date() = {now.date()}, end_date = {end_date}, group {group.name}")  # Добавь эту строку перед условием
                 if now.date() != end_date:
-                    continue  
+                    print("Пропускаем: даты не совпадают!")
+                    continue
 
                 weekdays_dict = {
                     "понедельник": "Monday",
@@ -162,7 +163,6 @@ async def calculate_results(bot: Bot):
                 except Exception as e:
                     pass
 
-                # 5. Очистка логов группы (не требуется, так как логи хранятся в базе данных)
 
 
     except Exception as e:
@@ -174,7 +174,7 @@ async def scheduler(bot: Bot):
     while True:
         try:
             now = datetime.now()
-            target_time = now.replace(hour=23, minute=59, second=0, microsecond=0)
+            target_time = now.replace(hour=19, minute=30, second=0, microsecond=0)
             sleep_time = (target_time - now).total_seconds()
 
             if sleep_time < 0:
