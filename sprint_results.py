@@ -6,8 +6,6 @@ from db.models import Task, Log, Group, User, Balance
 from db.database import async_session
 import calendar
 
-print('служба подключена')
-
 def get_sprint_end_date(start_day: str, duration: int):
     """Определяет дату окончания спринта, исходя из стартового дня и продолжительности"""
     weekdays_dict = {
@@ -176,7 +174,7 @@ async def scheduler(bot: Bot):
     while True:
         try:
             now = datetime.now()
-            target_time = now.replace(hour=19, minute=37, second=0, microsecond=0)
+            target_time = now.replace(hour=23, minute=59, second=0, microsecond=0)
             sleep_time = (target_time - now).total_seconds()
 
             if sleep_time < 0:
