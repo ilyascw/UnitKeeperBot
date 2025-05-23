@@ -43,7 +43,7 @@ async def calculate_results(bot: Bot):
                 # Определяем дату окончания спринта
                 end_date = get_sprint_end_date(start_day, duration-1)
 
-                print(f"[DEBUG] now.date() = {now.date()}, end_date = {end_date}, group {group.name}")  # Добавь эту строку перед условием
+                print(f"[DEBUG] now.date() = {now.date()}, end_date = {end_date}, group {group.name}") 
                 if now.date() != end_date:
                     print("Пропускаем: даты не совпадают!")
                     continue
@@ -72,7 +72,16 @@ async def calculate_results(bot: Bot):
                 tasks = tasks.scalars().all()
 
                 # Получаем логи группы
-                logs = await session.execute(select(Log).where(Log.group_id == group.id and Log.timestamp <= get_sprint_end_date(start_date, duration) and Log.timestamp >= start_date))
+                # Получаем логи группы за текущий спринт
+                logs = await session.execute(
+                    select(Log)
+                    .where(
+                        Log.group_id == group.id,
+                        Log.status == "completed",
+                        Log.timestamp >= start_date,
+                        Log.timestamp <= start_date + + timedelta(days=duration)
+                    )
+                )
                 logs = logs.scalars().all()
 
                 # Получаем всех пользователей группы
@@ -90,8 +99,8 @@ async def calculate_results(bot: Bot):
                     # Плановые юниты
                     plan_units = sum(float(task.cost) * int(task.frequency) for task in tasks) * (weights.get(str(user_id), 0))/100
                     # Фактические юниты
-                    fact_units = sum(float(task.cost) for log in logs if log.user_id == user_id and log.status == "completed" 
-                                     for task in tasks if task.id == log.task_id)
+                   # Подсчитываем фактические юниты
+                    fact_units = float(sum(task.cost for log in logs for task in tasks if task.id == log.task_id and log.user_id == user_id))
 
                     total_plan += plan_units
                     total_fact += fact_units
@@ -143,7 +152,7 @@ async def calculate_results(bot: Bot):
                         f"🔹 План: {plan} юнитов\n"
                         f"✅ Факт: {fact} юнитов\n"
                         f"📈 Эффективность: {efficiency:.1f}%\n"
-                        f"💰 Новый баланс: {balance.balance:.2f} юнитов"
+                        f"💰 Новый баланс: {fact - plan:.2f} юнитов"
                     )
                     try:
                         await bot.send_message(user_id, text)
