@@ -611,6 +611,11 @@ async def minus_one_task(callback: CallbackQuery):
             if task:
                 task.frequency -= 1
                 new_frequency = task.frequency
+                if task.frequency < 0:
+                    await callback.message.answer(
+                        "Частота выполнения меньше 0."
+                    )
+                    return
                 await session.commit()
 
         await callback.message.answer(
