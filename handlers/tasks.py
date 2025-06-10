@@ -590,7 +590,9 @@ async def task_detail(callback: CallbackQuery):
 async def minus_one_task(callback: CallbackQuery):
     """Снижает частоту выполнения на 1."""
 
-    if int(callback.data.split("_")[-2]) < 1:
+    remaining_tasks = int(callback.data.split("_")[-2])
+
+    if remaining_tasks < 1:
         await callback.message.answer("Задачи все выполнены, удалить нельзя")
         return
 
@@ -616,18 +618,44 @@ async def minus_one_task(callback: CallbackQuery):
                     return
 
                 task.frequency -= 1
-                new_frequency = task.frequency
+
+                # Кнопка "Назад"
+                keyboard = InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [
+                            InlineKeyboardButton(
+                                text="⬅️ Назад", callback_data="back_to_task_list"
+                            ),
+                            InlineKeyboardButton(
+                                text="➕",
+                                callback_data=f"add_one_task_{remaining_tasks - 1}_{task.id}",
+                            ),
+                            InlineKeyboardButton(
+                                text="➖",
+                                callback_data=f"minus_one_task_{remaining_tasks - 1}_{task.id}",
+                            ),
+                        ]
+                    ]
+                )
+
+                await callback.message.edit_text(
+                    f"🔹 Задача ID: {task.id}\n"
+                    f"Название: {task.title}\n"
+                    f"Частота выполнения: {task.frequency}\n"
+                    f"Стоимость: {task.cost} ю\n"
+                    f"Осталось выполнить: {remaining_tasks - 1} раз(а) на текущий спринт\n"
+                    "Чтобы прибавить или удалить 1 задачу, нажмите ➕ / ➖",
+                    reply_markup=keyboard,
+                )
 
                 await session.commit()
-
-        await callback.message.answer(
-            "Частота выполнения задачи обновлена на: " f"{new_frequency} раз в неделю."
-        )
 
 
 @router.callback_query(lambda c: c.data.startswith("add_one_task_"))
 async def add_one_task(callback: CallbackQuery):
     """Увеличивает частоту выполнения на 1."""
+
+    remaining_tasks = int(callback.data.split("_")[-2])
 
     user_id = callback.from_user.id
     task_id = int(callback.data.split("_")[-1])
@@ -645,13 +673,39 @@ async def add_one_task(callback: CallbackQuery):
             task = result.scalar_one_or_none()
 
             if task:
-                task.frequency += 1
-                new_frequency = task.frequency
-                await session.commit()
 
-        await callback.message.answer(
-            "Частота выполнения задачи обновлена на: " f"{new_frequency} раз в неделю."
-        )
+                task.frequency += 1
+
+                # Кнопка "Назад"
+                keyboard = InlineKeyboardMarkup(
+                    inline_keyboard=[
+                        [
+                            InlineKeyboardButton(
+                                text="⬅️ Назад", callback_data="back_to_task_list"
+                            ),
+                            InlineKeyboardButton(
+                                text="➕",
+                                callback_data=f"add_one_task_{remaining_tasks + 1}_{task.id}",
+                            ),
+                            InlineKeyboardButton(
+                                text="➖",
+                                callback_data=f"minus_one_task_{remaining_tasks + 1}_{task.id}",
+                            ),
+                        ]
+                    ]
+                )
+
+                await callback.message.edit_text(
+                    f"🔹 Задача ID: {task.id}\n"
+                    f"Название: {task.title}\n"
+                    f"Частота выполнения: {task.frequency}\n"
+                    f"Стоимость: {task.cost} ю\n"
+                    f"Осталось выполнить: {remaining_tasks + 1} раз(а) на текущий спринт\n"
+                    "Чтобы прибавить или удалить 1 задачу, нажмите ➕ / ➖",
+                    reply_markup=keyboard,
+                )
+
+                await session.commit()
 
 
 @router.callback_query(lambda c: c.data == "back_to_task_list")
