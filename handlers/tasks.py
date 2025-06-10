@@ -3,7 +3,7 @@ from aiogram.types import (
     Message,
     CallbackQuery,
     InlineKeyboardMarkup,
-    InlineKeyboardButton
+    InlineKeyboardButton,
 )
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import select, func
 from db.models import Task, User, Log, Group
 from db.database import async_session
+import random
 
 router = Router()
 
@@ -611,11 +612,9 @@ async def minus_one_task(callback: CallbackQuery):
             if task:
 
                 if task.frequency - 1 < 0:
-                    await callback.message.answer(
-                        "Частота выполнения меньше 0."
-                    )
+                    await callback.message.answer("Частота выполнения меньше 0.")
                     return
-                
+
                 task.frequency -= 1
                 new_frequency = task.frequency
 
@@ -695,82 +694,125 @@ async def back_to_task_list(callback: CallbackQuery):
         await callback.message.edit_text("📋 Список задач:", reply_markup=keyboard)
 
 
+exit_codes = {}  # Храним коды подтверждения {user_id: код}
+
+
+class ConfirmState(StatesGroup):
+    """Состояния для подтверждения выхода и выбора нового владельца."""
+
+    wait_confirm = State()  # Ожидание ввода кода подтверждения выхода
+
+
 @router.message(Command("kill_tasks"))
-async def show_tasks(message: Message):
-    """Убирает все оставшиеся задачи."""
+async def kill_tasks(message: Message, state: FSMContext):
+    """Запрос на удаление всех задач, отправляет код подтверждения."""
     user_id = message.from_user.id
 
     async with async_session() as session:
-        # Проверяем, состоит ли пользователь в группе
-        user = await session.execute(select(User).where(User.id == user_id))
-        user = user.scalar_one_or_none()
+        user = await session.get(User, user_id)
 
-        if user is None or user.group_id is None:
+        if not user or not user.group_id:
             await message.answer("❌ Ты не состоишь в группе.")
             return
 
-        group_id = user.group_id
+        # Генерируем 4-значный код
+        code = random.randint(1000, 9999)
+        exit_codes[user_id] = code
 
-        # Получаем все задачи группы
-        tasks = await session.execute(
-            select(Task).where(Task.group_id == group_id, Task.status == True)
+        await state.set_state(ConfirmState.wait_confirm)
+        await message.answer(
+            f"⚠️ Ты собираешься очистить все задачи. Чтобы подтвердить, введи код: `{code}`",
+            parse_mode="Markdown",
         )
-        tasks = tasks.scalars().all()
 
-        if not tasks:
-            await message.answer("📭 В группе пока нет задач.")
-            return
 
-        # Фильтруем логи за текущую неделю
-        current_time = datetime.now()
-        week_start = datetime(
-            current_time.year, current_time.month, current_time.day
-        ) - timedelta(days=current_time.weekday())
-        week_end = week_start + timedelta(days=7)
+@router.message(ConfirmState.wait_confirm)
+async def confirm_kill(message: Message, state: FSMContext):
+    """Убирает все оставшиеся задачи."""
 
-        remaining_tasks = []
+    user_id = message.from_user.id
 
-        # Проходим по всем задачам группы
-        for task in tasks:
-            # Получаем количество выполненных задач за текущую неделю
-            completed_count = await session.execute(
-                select(Log).where(
-                    Log.task_id == task.id,
-                    Log.status == "completed",
-                    Log.timestamp >= week_start,
-                    Log.timestamp <= week_end,
-                )
+    if user_id in exit_codes and message.text == str(exit_codes[user_id]):
+
+        async with async_session() as session:
+            # Проверяем, состоит ли пользователь в группе
+            user = await session.execute(select(User).where(User.id == user_id))
+            user = user.scalar_one_or_none()
+
+            if user is None or user.group_id is None:
+                await message.answer("❌ Ты не состоишь в группе.")
+                return
+
+            group_id = user.group_id
+
+            # Получаем все задачи группы
+            tasks = await session.execute(
+                select(Task).where(Task.group_id == group_id, Task.status == True)
             )
-            completed_count = len(completed_count.scalars().all())
+            tasks = tasks.scalars().all()
 
-            # Если выполнено меньше, чем требуется,
-            # добавляем в список оставшихся
-            if completed_count < task.frequency:
-                remaining_tasks.append(
-                    (task.id, task.title, task.cost, task.frequency - completed_count)
-                )
+            if not tasks:
+                await message.answer("📭 В группе пока нет задач.")
+                return
 
-    async with async_session() as session:
+            # Фильтруем логи за текущую неделю
+            current_time = datetime.now()
+            week_start = datetime(
+                current_time.year, current_time.month, current_time.day
+            ) - timedelta(days=current_time.weekday())
+            week_end = week_start + timedelta(days=7)
 
-        if remaining_tasks:
-            # Удаляем оставшиеся задачи
-            async with session.begin():
-                query = select(User).filter(User.id == user_id)
-                result = await session.execute(query)
-                user = result.scalar_one_or_none()
+            remaining_tasks = []
 
-                for task in remaining_tasks:
-                    query = select(Task).filter(
-                        Task.id == task[0], Task.group_id == user.group_id
+            # Проходим по всем задачам группы
+            for task in tasks:
+                # Получаем количество выполненных задач за текущую неделю
+                completed_count = await session.execute(
+                    select(Log).where(
+                        Log.task_id == task.id,
+                        Log.status == "completed",
+                        Log.timestamp >= week_start,
+                        Log.timestamp <= week_end,
                     )
+                )
+                completed_count = len(completed_count.scalars().all())
+
+                # Если выполнено меньше, чем требуется,
+                # добавляем в список оставшихся
+                if completed_count < task.frequency:
+                    remaining_tasks.append(
+                        (
+                            task.id,
+                            task.title,
+                            task.cost,
+                            task.frequency - completed_count,
+                        )
+                    )
+
+        async with async_session() as session:
+
+            if remaining_tasks:
+                # Удаляем оставшиеся задачи
+                async with session.begin():
+                    query = select(User).filter(User.id == user_id)
                     result = await session.execute(query)
-                    task_ = result.scalar_one_or_none()
+                    user = result.scalar_one_or_none()
 
-                    if task_:
-                        task_.frequency -= task[-1]
+                    for task in remaining_tasks:
+                        query = select(Task).filter(
+                            Task.id == task[0], Task.group_id == user.group_id
+                        )
+                        result = await session.execute(query)
+                        task_ = result.scalar_one_or_none()
 
-                await session.commit()
-                await message.answer("Оставшиеся задачи очищены")
+                        if task_:
+                            task_.frequency -= task[-1]
 
-        else:
-            await message.answer("Не осталось задач")
+                    await session.commit()
+                    await message.answer("Оставшиеся задачи очищены")
+
+            else:
+                await message.answer("Не осталось задач")
+
+    elif user_id in exit_codes:
+        await message.answer("❌ Неверный код. Попробуй еще раз.")
