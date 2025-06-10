@@ -868,5 +868,9 @@ async def confirm_kill(message: Message, state: FSMContext):
             else:
                 await message.answer("Не осталось задач")
 
+        state.clear()
+
     elif user_id in exit_codes:
         await message.answer("❌ Неверный код. Попробуй еще раз.")
+
+
