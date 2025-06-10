@@ -6,8 +6,10 @@ from db.models import Task, Log, Group, User, Balance
 from db.database import async_session
 import calendar
 
+
 def get_sprint_end_date(start_day: str, duration: int):
     """Определяет дату окончания спринта, исходя из стартового дня и продолжительности"""
+
     weekdays_dict = {
         "понедельник": "Monday",
         "вторник": "Tuesday",
@@ -15,18 +17,23 @@ def get_sprint_end_date(start_day: str, duration: int):
         "четверг": "Thursday",
         "пятница": "Friday",
         "суббота": "Saturday",
-        "воскресенье": "Sunday"
+        "воскресенье": "Sunday",
     }
+
     today = datetime.now()
-    weekday_index = list(calendar.day_name).index(weekdays_dict[start_day])  # Индекс дня начала (0=Monday, 6=Sunday)
-    
+
+    weekday_index = list(calendar.day_name).index(
+        weekdays_dict[start_day]
+    )  # Индекс дня начала (0=Monday, 6=Sunday)
+
     # Определяем стартовый день в прошлом или сегодня
     days_back = (today.weekday() - weekday_index) % 7
     start_date = today - timedelta(days=days_back)
 
     # Дата окончания спринта
-    end_date = start_date + timedelta(days=duration) 
+    end_date = start_date + timedelta(days=duration)
     return end_date.date()
+
 
 async def calculate_results(bot: Bot):
     try:
@@ -38,12 +45,19 @@ async def calculate_results(bot: Bot):
             groups = groups.scalars().all()
 
             for group in groups:
-                start_day, duration, owner_id, weights = group.start_day, group.sprint_duration, group.owner_id, group.weights
+                start_day, duration, owner_id, weights = (
+                    group.start_day,
+                    group.sprint_duration,
+                    group.owner_id,
+                    group.weights,
+                )
 
                 # Определяем дату окончания спринта
-                end_date = get_sprint_end_date(start_day, duration-1)
+                end_date = get_sprint_end_date(start_day, duration - 1)
 
-                print(f"[DEBUG] now.date() = {now.date()}, end_date = {end_date}, group {group.name}") 
+                print(
+                    f"[DEBUG] now.date() = {now.date()}, end_date = {end_date}, group {group.name}"
+                )
                 if now.date() != end_date:
                     print("Пропускаем: даты не совпадают!")
                     continue
@@ -55,9 +69,9 @@ async def calculate_results(bot: Bot):
                     "четверг": "Thursday",
                     "пятница": "Friday",
                     "суббота": "Saturday",
-                    "воскресенье": "Sunday"
+                    "воскресенье": "Sunday",
                 }
-                
+
                 weekday_index = list(calendar.day_name).index(weekdays_dict[start_day])
                 today = now
                 days_back = (today.weekday() - weekday_index) % 7
@@ -68,24 +82,27 @@ async def calculate_results(bot: Bot):
                 total_fact = 0
 
                 # Получаем задачи группы
-                tasks = await session.execute(select(Task).where(Task.group_id == group.id))
+                tasks = await session.execute(
+                    select(Task).where(Task.group_id == group.id)
+                )
                 tasks = tasks.scalars().all()
 
                 # Получаем логи группы
                 # Получаем логи группы за текущий спринт
                 logs = await session.execute(
-                    select(Log)
-                    .where(
+                    select(Log).where(
                         Log.group_id == group.id,
                         Log.status == "completed",
                         Log.timestamp >= start_date,
-                        Log.timestamp <= start_date + + timedelta(days=duration)
+                        Log.timestamp <= start_date + +timedelta(days=duration),
                     )
                 )
                 logs = logs.scalars().all()
 
                 # Получаем всех пользователей группы
-                users = await session.execute(select(User).where(User.group_id == group.id))
+                users = await session.execute(
+                    select(User).where(User.group_id == group.id)
+                )
                 users = users.scalars().all()
 
                 for user in users:
@@ -97,24 +114,39 @@ async def calculate_results(bot: Bot):
                         first_name = "Неизвестный"
 
                     # Плановые юниты
-                    plan_units = sum(float(task.cost) * int(task.frequency) for task in tasks) * (weights.get(str(user_id), 0))/100
+                    plan_units = (
+                        sum(float(task.cost) * int(task.frequency) for task in tasks)
+                        * (weights.get(str(user_id), 0))
+                        / 100
+                    )
                     # Фактические юниты
-                   # Подсчитываем фактические юниты
-                    fact_units = float(sum(task.cost for log in logs for task in tasks if task.id == log.task_id and log.user_id == user_id))
+                    # Подсчитываем фактические юниты
+                    fact_units = float(
+                        sum(
+                            task.cost
+                            for log in logs
+                            for task in tasks
+                            if task.id == log.task_id and log.user_id == user_id
+                        )
+                    )
 
                     total_plan += plan_units
                     total_fact += fact_units
 
                     efficiency = (fact_units / plan_units) * 100 if plan_units else 0
-                    user_results[user_id] = (first_name, plan_units, fact_units, efficiency)
+                    user_results[user_id] = (
+                        first_name,
+                        plan_units,
+                        fact_units,
+                        efficiency,
+                    )
 
                 # 1. Начисление бонуса
                 bonus = 0.25 * total_plan if total_fact >= total_plan else 0
-                                # Обновляем баланс группы
+                # Обновляем баланс группы
 
                 group_balance = await session.execute(
-                    select(Group)
-                    .where(Group.id == group.id)
+                    select(Group).where(Group.id == group.id)
                 )
 
                 group_balance = group_balance.scalar_one_or_none()
@@ -127,25 +159,39 @@ async def calculate_results(bot: Bot):
                 # 2. Пересчет балансов пользователей
                 for user_id in user_results.keys():
                     first_name, plan, fact, _ = user_results[user_id]
-                    balance_change = (float(fact) - float(plan)) + bonus * weights.get(user_id, 0)
+                    balance_change = (float(fact) - float(plan)) + bonus * weights.get(
+                        user_id, 0
+                    )
 
                     # Обновляем баланс пользователя
                     balance = await session.execute(
-                        select(Balance)
-                        .where(Balance.user_id == user_id, Balance.group_id == group.id)
+                        select(Balance).where(
+                            Balance.user_id == user_id,
+                            Balance.group_id == group.id
+                        )
                     )
                     balance = balance.scalar_one_or_none()
 
                     if balance:
-                        balance.balance = round((float(balance.balance) + float(balance_change)), 2)
+                        balance.balance = round(
+                            (float(balance.balance) + float(balance_change)), 2
+                        )
                     else:
-                        balance = Balance(user_id=user_id, group_id=group.id, balance=balance_change)
+                        balance = Balance(
+                            user_id=user_id, group_id=group.id,
+                            balance=balance_change
+                        )
                         session.add(balance)
 
                     await session.commit()
 
                 # 3. Формирование и отправка отчета пользователям
-                for user_id, (first_name, plan, fact, efficiency) in user_results.items():
+                for user_id, (
+                    first_name,
+                    plan,
+                    fact,
+                    efficiency,
+                ) in user_results.items():
                     text = (
                         f"📊 Итоги спринта:\n\n"
                         f"👤 {first_name}\n"
@@ -160,22 +206,31 @@ async def calculate_results(bot: Bot):
                     except Exception as e:
                         pass
 
-
                 # 4. Отчет в общий чат
-                summary_text = "📢 Итоги группы:\n\n" + f"Результат группы {bonus} ю.\n" + "\n".join([
-                    f"👤 {first_name}: {fact}/{plan} юнитов ({eff:.1f}%)"
-                    for user_id, (first_name, plan, fact, eff) in user_results.items()
-                ])
+                summary_text = (
+                    "📢 Итоги группы:\n\n"
+                    + f"Результат группы {bonus} ю.\n"
+                    + "\n".join(
+                        [
+                            f"👤 {first_name}: {fact}/{plan} юнитов ({eff:.1f}%)"
+                            for user_id, (
+                                first_name,
+                                plan,
+                                fact,
+                                eff,
+                            ) in user_results.items()
+                        ]
+                    )
+                )
                 try:
                     await bot.send_message(owner_id, summary_text)
- 
+
                 except Exception as e:
                     pass
 
-
-
     except Exception as e:
-        print(f'ошибка: {e}')
+        print(f"ошибка: {e}")
+
 
 async def scheduler(bot: Bot):
     """Функция для запуска итогов по расписанию (23:59)"""
@@ -187,14 +242,15 @@ async def scheduler(bot: Bot):
             sleep_time = (target_time - now).total_seconds()
 
             if sleep_time < 0:
-                print('test', now, target_time)
+                print("test", now, target_time)
                 sleep_time += 86400  # Если время прошло, ждем до следующего дня
 
             await asyncio.sleep(sleep_time)
 
             await calculate_results(bot)
         except Exception as e:
-            print(f'ошибка {e}')
+            print(f"ошибка {e}")
+
 
 async def setup_sprint_scheduler(bot: Bot):
     """Запуск задачи подведения итогов"""
