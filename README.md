@@ -23,7 +23,7 @@
 
 ### 1️⃣ Клонирование репозитория  
 ```bash
-git clone https://github.com/твой_репозиторий.git
+git clone https://github.com/ilyascw/UnitKeeperBot.git
 cd bot_project
 ```
 ### 2️⃣ Установка зависимостей
