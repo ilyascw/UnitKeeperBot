@@ -40,7 +40,7 @@ pip install -r requirements.txt
 Создайте файл .env в корне проекта и добавьте туда:
 ```bash
 TOKEN=твой_токен_бота
-DATABASE_URL=postgresql://user:password@localhost/bot_database
+DATABASE_URL=postgresql+asyncpg://user:password@localhost/bot_database
 ```
 ### 5️⃣ Запуск бота
 ```bash
