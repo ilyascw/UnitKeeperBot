@@ -32,7 +32,6 @@
 * **Framework:** Aiogram 3.x (Asynchronous)
 * **Database:** PostgreSQL + AsyncPG
 * **ORM:** SQLAlchemy (Async)
-* **Migrations:** Alembic
 * **Data Processing:** Pandas, OpenPyXL
 
 ## 🚀 Установка и запуск
