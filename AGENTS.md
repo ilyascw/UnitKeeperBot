@@ -22,3 +22,6 @@
 - Shared DB models and migrations live in `common`.
 - Each migrated feature should be traceable back to the legacy artifact in [`docs/legacy-functionality.md`](/Users/ilaskvorcov/Desktop/дело/unitkeeper/docs/legacy-functionality.md).
 - Use ruff, mypy, uv, tests
+- Python services must use `pyproject.toml` as the project entrypoint for dependencies and tooling; do not add ad hoc dependency files when `pyproject.toml` is appropriate.
+- Use `uv` to create and manage the virtual environment for the service you are working on.
+- The virtual environment must live inside the working service directory, not at repo root. Example: when working on [`backend`](/Users/ilaskvorcov/Desktop/дело/unitkeeper/backend), create and activate [`backend/.venv`](/Users/ilaskvorcov/Desktop/дело/unitkeeper/backend/.venv).
