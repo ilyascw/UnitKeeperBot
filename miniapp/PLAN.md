@@ -8,11 +8,13 @@
 - Authentication via Telegram Mini App init data.
 - Main dashboard, task workflows, balances, group settings, sprint progress.
 - Native Telegram UI Kit look and feel.
+- Chosen stack: Vite + React + TypeScript + Telegram UI Kit.
 
 ## Phase 1: Foundation
-- [ ] Choose frontend stack and bootstrap the app shell around Telegram Mini Apps.
-- [ ] Set up routing, layout, design tokens, and Telegram UI Kit integration.
-- [ ] Add API client, auth bootstrap from init data, error boundary, and loading states.
+- [x] Choose frontend stack: Vite + React + TypeScript + Telegram UI Kit.
+- [x] Bootstrap the app shell around Telegram Mini Apps.
+- [x] Set up routing, layout, design tokens, and Telegram UI Kit integration.
+- [x] Add API client, auth bootstrap from init data, error boundary, and loading states.
 - [ ] Define screen-level contract with backend before writing business UI.
 
 ## Phase 2: Core Screens

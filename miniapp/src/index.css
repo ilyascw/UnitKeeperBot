@@ -1,0 +1,26 @@
+:root {
+  color-scheme: light dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Telegram theme background; falls back to the UI Kit token. */
+  background: var(--tg-theme-bg-color, var(--tgui--bg_color, #fff));
+}
+
+#root {
+  isolation: isolate;
+}
