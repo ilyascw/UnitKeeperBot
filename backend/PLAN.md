@@ -8,39 +8,41 @@
 - FastAPI app, Dishka DI, business services, auth, scheduler orchestration, and integrations.
 
 ## Phase 1: Service Foundation
-- [ ] Bootstrap FastAPI application structure.
-- [ ] Wire Dishka containers for config, DB sessions, repositories, services, and background jobs.
-- [ ] Add health endpoint and local developer run path.
-- [ ] Define public API shape before implementing screens.
+- [x] Bootstrap FastAPI application structure.
+- [x] Wire Dishka containers for config, DB sessions, repositories, and core services.
+- [ ] Add background-job providers and worker startup lifecycle.
+- [x] Add health endpoint and local developer run path.
+- [x] Define public API shape before implementing screens.
 
 ## Phase 2: Auth And Session Context
-- [ ] Verify Telegram Mini App init data on the backend.
-- [ ] Resolve or create local user records from Telegram identity.
-- [ ] Provide current-user and current-group context dependencies.
-- [ ] Decide whether the bot also authenticates through service credentials or internal transport.
+- [x] Verify Telegram Mini App init data on the backend.
+- [x] Resolve or create local user records from Telegram identity.
+- [x] Provide current-user and current-group context dependencies.
+- [x] Decide whether the bot also authenticates through service credentials or internal transport. *(Issue 01: service-secret via `X-Internal-Auth` header on `/api/v1/internal/bot/*`)*
 
 ## Phase 3: Core Use Cases
-- [ ] Create group.
-- [ ] Join group.
-- [ ] Leave group with owner handover rules.
-- [ ] Read group info and members.
-- [ ] Update group settings.
-- [ ] Create, bulk import, edit, soft-delete, and list tasks.
-- [ ] Compute remaining task executions within the current sprint.
-- [ ] Mark task completion.
-- [ ] Approve or reject task completion.
-- [ ] Read sprint progress and current results.
+- [x] Create, join, and leave group with owner handover rules.
+- [x] Read current user/current group context and base group summary.
+- [x] Update group settings. *(Issue 02: `GET /groups/current` card, `GET /groups/current/members`, `PATCH /groups/current/settings`, `PUT /groups/current/weights`; manual weights reset on join/leave via equal redistribution.)*
+- [x] Create, read, update, soft-delete, and list tasks.
+- [x] Add bulk import and richer task-management contracts. *(Issue 03: `POST /tasks/import` with per-row validation report, `POST /tasks/{id}/increase-frequency`, `POST /tasks/{id}/decrease-frequency`; legacy `kill_tasks` intentionally left as a bot-only convenience and excluded from backend critical path.)*
+- [x] Compute remaining task executions within the current sprint.
+- [x] Mark task completion.
+- [x] Approve or reject task completion.
+- [x] Read sprint progress and current results.
 - [ ] Read balance and transfer units.
 
 ## Phase 4: Scheduling And Notifications
+- [x] Expose manual current-sprint close use case with duplicate protection.
 - [ ] Rebuild sprint closing logic as backend jobs.
-- [ ] Store scheduler-safe bookkeeping to avoid duplicate sprint closure.
+- [x] Store scheduler-safe bookkeeping to avoid duplicate sprint closure.
 - [ ] Produce notification events for the bot.
 - [ ] Produce deep links for miniapp navigation from notifications.
 - [ ] Add reminder jobs for pending confirmations and sprint deadlines.
 
 ## Phase 5: Reliability
-- [ ] Add validation and business error taxonomy.
+- [x] Add validation and business error taxonomy.
+- [x] Add initial unit tests for group, task, sprint, and routing slices.
 - [ ] Add idempotency strategy for repeated Telegram actions.
 - [ ] Add tests for sprint math, weights, ownership changes, and balance transfers.
 - [ ] Add observability hooks: structured logging, request IDs, and job logs.
