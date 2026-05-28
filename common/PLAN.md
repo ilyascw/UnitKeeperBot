@@ -10,38 +10,48 @@
 - Session management and DB wiring.
 - Shared enums, value objects, and persistence-facing DTOs if needed.
 
+## Current Status
+- [x] Shared package `unitkeeper-common` with import surface under `src/db`.
+- [x] PostgreSQL settings, async engine, sessionmaker, and transaction helpers.
+- [x] Naming conventions for metadata and Alembic.
+- [x] Initial normalized UnitKeeper schema and baseline migration.
+- [x] Documentation for schema choices and legacy deviations.
+- [ ] Seed/bootstrap dataset for local development.
+- [ ] Migration smoke tests and forward migration policy for the next iterations.
+- [ ] Additional persistence primitives for outbox, idempotency, and cutover support.
+
 ## Phase 1: Package Skeleton
-- [ ] Create Python package structure for shared DB code.
-- [ ] Introduce configuration for database URL and engine settings.
-- [ ] Add async session factory and transaction helpers.
-- [ ] Set naming conventions for metadata and migrations.
+- [x] Create Python package structure for shared DB code.
+- [x] Introduce configuration for database URL and engine settings.
+- [x] Add async session factory and transaction helpers.
+- [x] Set naming conventions for metadata and migrations.
 
 ## Phase 2: Domain Schema
-- [ ] Rebuild entities for users, groups, memberships, tasks, task logs, balances, and sprint runs.
-- [ ] Normalize legacy weak spots where needed without losing behavior.
-- [ ] Decide which Telegram profile fields are cached locally and which remain external.
-- [ ] Model ownership, workload weights, and task status explicitly.
-- [ ] Decide whether sprint snapshots or result tables are needed instead of recalculating everything from raw logs.
+- [x] Rebuild entities for users, groups, memberships, tasks, task logs, balances, and sprint runs.
+- [x] Normalize legacy weak spots where needed without losing behavior.
+- [x] Decide which Telegram profile fields are cached locally and which remain external.
+- [x] Model ownership, workload weights, and task status explicitly.
+- [x] Decide whether sprint snapshots or result tables are needed instead of recalculating everything from raw logs.
 
 ## Phase 3: Migrations
-- [ ] Initialize Alembic.
-- [ ] Create baseline migration for the new schema.
+- [x] Initialize Alembic.
+- [x] Create baseline migration for the new schema.
 - [ ] Add seed or bootstrap strategy for local development.
 - [ ] Define migration policy for future product iterations.
 
 ## Phase 4: Shared Access Layer
-- [ ] Add repositories or query services for backend use cases.
-- [ ] Add Unit of Work boundary used by backend and background jobs.
-- [ ] Expose read models needed by the thin bot without leaking business logic into bot code.
-- [ ] Prepare import path conventions so backend and bot share the package cleanly.
+- [x] Prepare import path conventions so backend and bot share the package cleanly.
+- [ ] Decide which shared repository/query helpers belong in `common` versus backend infrastructure.
+- [ ] Expose storage primitives for bot notification delivery and internal workers.
+- [ ] Add migration and schema smoke tests around the shared package surface.
 
 ## Migration Tasks From Legacy
-- [ ] Map `Group.weights` JSON to the new representation.
-- [ ] Preserve soft-delete semantics for tasks.
-- [ ] Preserve pending/completed log statuses.
-- [ ] Preserve per-user balances and group-level economics.
-- [ ] Fix legacy inconsistency around `group_balance` versus `balance`.
-- [ ] Decide how to represent sprint periods and scheduler bookkeeping explicitly.
+- [x] Map `Group.weights` JSON to the new representation.
+- [x] Preserve soft-delete semantics for tasks.
+- [x] Preserve pending/completed log statuses.
+- [x] Preserve per-user balances and group-level economics.
+- [x] Fix legacy inconsistency around `group_balance` versus `balance`.
+- [x] Decide how to represent sprint periods and scheduler bookkeeping explicitly.
 
 ## Non-Goals
 - [ ] No HTTP endpoints here.
