@@ -77,3 +77,54 @@ export interface ErrorResponse {
   code: string;
   message: string;
 }
+
+export type Weekday =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday';
+
+export const WEEKDAYS: readonly Weekday[] = [
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+  'sunday',
+] as const;
+
+export interface CreateGroupRequest {
+  name: string;
+  join_secret: string;
+  sprint_start_weekday: Weekday;
+  sprint_duration_days: number;
+  timezone?: string;
+}
+
+export interface JoinGroupRequest {
+  name: string;
+  join_secret: string;
+}
+
+export interface UpdateGroupSettingsRequest {
+  join_secret?: string;
+  sprint_start_weekday?: Weekday;
+  sprint_duration_days?: number;
+}
+
+export interface MemberWeightInput {
+  user_id: number;
+  weight_percent: string;
+}
+
+export interface UpdateWeightsRequest {
+  weights: MemberWeightInput[];
+}
+
+export interface GroupMembersResponse {
+  members: MemberCardResponse[];
+}
