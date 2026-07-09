@@ -110,6 +110,34 @@ class TaskLogInfo:
 
 
 @dataclass(slots=True)
+class TaskLogView:
+    id: int
+    group_id: int
+    task_id: int
+    task_title: str
+    unit_cost: Decimal
+    task_is_active: bool
+    status: TaskLogStatus
+    performer: UserProfile
+    approver: UserProfile | None
+    decided_at: datetime | None
+    rejection_reason: str | None
+    created_at: datetime
+
+
+@dataclass(slots=True)
+class TaskLogPage:
+    items: list[TaskLogView]
+    total: int
+    limit: int
+    offset: int
+
+    @property
+    def has_more(self) -> bool:
+        return self.offset + len(self.items) < self.total
+
+
+@dataclass(slots=True)
 class CompletedTaskBreakdownItem:
     task_id: int
     title: str

@@ -44,6 +44,13 @@ class SqlAlchemyTaskRepository:
         result = await self._session.execute(query)
         return [map_task(item) for item in result.scalars().all()]
 
+    async def list_tasks_by_ids(self, *, group_id: int, task_ids: Sequence[int]) -> list[TaskInfo]:
+        if not task_ids:
+            return []
+        query = select(Task).where(Task.group_id == group_id, Task.id.in_(tuple(task_ids)))
+        result = await self._session.execute(query)
+        return [map_task(item) for item in result.scalars().all()]
+
     async def get_task(self, *, group_id: int, task_id: int) -> TaskInfo | None:
         query = select(Task).where(Task.group_id == group_id, Task.id == task_id)
         result = await self._session.execute(query)
@@ -122,6 +129,74 @@ class SqlAlchemyTaskRepository:
     async def get_task_log(self, *, log_id: int) -> TaskLogInfo | None:
         model = await self._session.get(TaskLog, log_id)
         return map_task_log(model) if model is not None else None
+
+    @staticmethod
+    def _task_log_filters(
+        *,
+        group_id: int,
+        performer_user_id: int | None,
+        exclude_performer_user_id: int | None,
+        task_id: int | None,
+        statuses: Sequence[TaskLogStatus] | None,
+    ) -> list:
+        conditions = [TaskLog.group_id == group_id]
+        if performer_user_id is not None:
+            conditions.append(TaskLog.performer_user_id == performer_user_id)
+        if exclude_performer_user_id is not None:
+            conditions.append(TaskLog.performer_user_id != exclude_performer_user_id)
+        if task_id is not None:
+            conditions.append(TaskLog.task_id == task_id)
+        if statuses:
+            conditions.append(TaskLog.status.in_(tuple(statuses)))
+        return conditions
+
+    async def list_task_logs(
+        self,
+        *,
+        group_id: int,
+        performer_user_id: int | None = None,
+        exclude_performer_user_id: int | None = None,
+        task_id: int | None = None,
+        statuses: Sequence[TaskLogStatus] | None = None,
+        limit: int,
+        offset: int,
+    ) -> Sequence[TaskLogInfo]:
+        conditions = self._task_log_filters(
+            group_id=group_id,
+            performer_user_id=performer_user_id,
+            exclude_performer_user_id=exclude_performer_user_id,
+            task_id=task_id,
+            statuses=statuses,
+        )
+        query = (
+            select(TaskLog)
+            .where(*conditions)
+            .order_by(TaskLog.created_at.desc(), TaskLog.id.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self._session.execute(query)
+        return [map_task_log(item) for item in result.scalars().all()]
+
+    async def count_task_logs(
+        self,
+        *,
+        group_id: int,
+        performer_user_id: int | None = None,
+        exclude_performer_user_id: int | None = None,
+        task_id: int | None = None,
+        statuses: Sequence[TaskLogStatus] | None = None,
+    ) -> int:
+        conditions = self._task_log_filters(
+            group_id=group_id,
+            performer_user_id=performer_user_id,
+            exclude_performer_user_id=exclude_performer_user_id,
+            task_id=task_id,
+            statuses=statuses,
+        )
+        query = select(func.count(TaskLog.id)).where(*conditions)
+        result = await self._session.execute(query)
+        return int(result.scalar_one())
 
     async def approve_task_log(
         self,

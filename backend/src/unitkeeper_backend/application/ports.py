@@ -5,9 +5,8 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Protocol
 
-from db.enums import Weekday
+from db.enums import TaskLogStatus, Weekday
 from unitkeeper_backend.application.models import (
-    CurrentContext,
     GroupInfo,
     MembershipInfo,
     SprintMemberResultInfo,
@@ -105,6 +104,8 @@ class TaskRepository(Protocol):
 
     async def list_tasks(self, *, group_id: int, active_only: bool = True) -> list[TaskInfo]: ...
 
+    async def list_tasks_by_ids(self, *, group_id: int, task_ids: Sequence[int]) -> list[TaskInfo]: ...
+
     async def get_task(self, *, group_id: int, task_id: int) -> TaskInfo | None: ...
 
     async def update_task(
@@ -141,6 +142,28 @@ class TaskRepository(Protocol):
     ) -> TaskLogInfo: ...
 
     async def get_task_log(self, *, log_id: int) -> TaskLogInfo | None: ...
+
+    async def list_task_logs(
+        self,
+        *,
+        group_id: int,
+        performer_user_id: int | None = None,
+        exclude_performer_user_id: int | None = None,
+        task_id: int | None = None,
+        statuses: Sequence[TaskLogStatus] | None = None,
+        limit: int,
+        offset: int,
+    ) -> Sequence[TaskLogInfo]: ...
+
+    async def count_task_logs(
+        self,
+        *,
+        group_id: int,
+        performer_user_id: int | None = None,
+        exclude_performer_user_id: int | None = None,
+        task_id: int | None = None,
+        statuses: Sequence[TaskLogStatus] | None = None,
+    ) -> int: ...
 
     async def approve_task_log(
         self,
