@@ -36,7 +36,7 @@ Miniapp должен закрыть:
 
 ## Dependencies
 
-- После `docs/backend/issue-03-task-management-parity.md`.
+- После `docs/archive/backend/issue-03-task-management-parity.md`.
 - После `docs/backend/issue-04-task-approval-inbox-and-log-query-api.md`.
 
 ## Legacy References

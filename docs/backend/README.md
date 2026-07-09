@@ -19,9 +19,11 @@
 - FastAPI app, роутер и централизованное domain error mapping;
 - DI через Dishka для config, clock, session, UoW и сервисов;
 - auth через Telegram Mini App init data;
+- internal bot transport через service secret;
 - current user / current group context;
 - create / join / leave group;
-- базовый tasks CRUD;
+- детальный group read/settings API;
+- tasks CRUD, bulk import и quick frequency adjustments;
 - mark done / approve / reject;
 - temp results;
 - manual current sprint close с защитой от повторного закрытия периода.
@@ -29,9 +31,6 @@
 ## Что ещё мешает писать miniapp и thin bot
 
 Критические пробелы:
-- нет согласованной схемы backend <-> bot auth / internal transport;
-- нет полного read/write API для group settings и детального group view;
-- нет parity по bulk task import и части task-management UX;
 - нет approval inbox / query API для task logs;
 - нет balances / transfers;
 - нет scheduler jobs и notification outbox;
@@ -42,9 +41,6 @@
 ## Очередь задач
 
 `P0`
-- [Issue 01](./issue-01-bot-auth-and-backend-transport.md) Bot auth и internal transport
-- [Issue 02](./issue-02-group-read-and-settings-api.md) Group read/settings API
-- [Issue 03](./issue-03-task-management-parity.md) Task management parity
 - [Issue 04](./issue-04-task-approval-inbox-and-log-query-api.md) Approval inbox и task log query API
 - [Issue 05](./issue-05-balances-and-unit-transfers.md) Balances и unit transfers
 
@@ -58,15 +54,18 @@
 
 ## Suggested execution order
 
-1. Issue 01
-2. Issue 02
-3. Issue 03
-4. Issue 04
-5. Issue 05
-6. Issue 06
-7. Issue 07
-8. Issue 08
-9. Issue 09
+1. Issue 04
+2. Issue 05
+3. Issue 06
+4. Issue 07
+5. Issue 08
+6. Issue 09
+
+## Archived
+
+- [Issue 01](../archive/backend/issue-01-bot-auth-and-backend-transport.md) Bot auth и internal transport
+- [Issue 02](../archive/backend/issue-02-group-read-and-settings-api.md) Group read/settings API
+- [Issue 03](../archive/backend/issue-03-task-management-parity.md) Task management parity
 
 ## Notes
 

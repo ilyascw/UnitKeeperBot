@@ -40,7 +40,7 @@ Legacy bot держит основной membership/group UX в командах
 
 ## Dependencies
 
-- После `docs/backend/issue-02-group-read-and-settings-api.md`.
+- После `docs/archive/backend/issue-02-group-read-and-settings-api.md`.
 
 ## Legacy References
 

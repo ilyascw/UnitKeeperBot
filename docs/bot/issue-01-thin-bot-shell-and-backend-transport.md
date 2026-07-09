@@ -35,7 +35,7 @@
 
 ## Dependencies
 
-- После `docs/backend/issue-01-bot-auth-and-backend-transport.md`.
+- После `docs/archive/backend/issue-01-bot-auth-and-backend-transport.md`.
 
 ## Legacy References
 

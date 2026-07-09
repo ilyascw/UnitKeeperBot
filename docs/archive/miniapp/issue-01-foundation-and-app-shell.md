@@ -36,7 +36,7 @@
 
 ## Dependencies
 
-- Может идти параллельно с `docs/backend/issue-02-group-read-and-settings-api.md`, но без привязки к неготовым screen contracts.
+- Может идти параллельно с `docs/archive/backend/issue-02-group-read-and-settings-api.md`, но без привязки к неготовым screen contracts.
 
 ## References
 
