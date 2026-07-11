@@ -676,6 +676,37 @@ body {
   font-weight: 700;
 }
 
+/* ---------- Toast ---------- */
+.uk-toast {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(94px + var(--uk-safe-bottom));
+  z-index: 50;
+  max-width: calc(100% - 36px);
+  width: max-content;
+  padding: 12px 18px;
+  border-radius: 14px;
+  font: 600 13px var(--uk-font);
+  background: rgba(20, 26, 44, 0.92);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid var(--uk-hairline-strong);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: uk-rise 0.2s ease;
+}
+
+.uk-toast--success {
+  color: var(--uk-positive);
+}
+
+.uk-toast--error {
+  color: var(--uk-danger-soft);
+}
+
 /* ---------- Helpers ---------- */
 .uk-stack {
   display: flex;

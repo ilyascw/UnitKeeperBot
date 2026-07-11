@@ -76,6 +76,51 @@ async def test_multi_member_group_rejects_self_approval_and_frequency_overflow()
         await task_service.mark_done(group_id=1, performer_user_id=1, task_id=task.id)
 
 
+@pytest.mark.asyncio
+async def test_pending_hold_consumes_a_slot_and_blocks_over_marking() -> None:
+    uow = InMemoryUnitOfWork()
+    for user_id in (1, 2):
+        uow.users.users[user_id] = UserProfile(user_id, f"user{user_id}", f"User {user_id}", None, "en", False)
+    group_service = GroupService(uow=uow, context_service=CurrentContextService(uow=uow), clock=FakeClock(utc_datetime(2026, 3, 16)))
+    await group_service.create_group(
+        user_id=1,
+        name="team",
+        join_secret="secret",
+        sprint_start_weekday=Weekday.MONDAY,
+        sprint_duration_days=7,
+        timezone="UTC",
+    )
+    await group_service.join_group(user_id=2, group_name="team", join_secret="secret")
+    task_service = TaskService(uow=uow, clock=FakeClock(utc_datetime(2026, 3, 16)))
+    task = await task_service.create_task(
+        group_id=1,
+        title="Take out trash",
+        frequency_per_sprint=1,
+        unit_cost=Decimal("2.00"),
+    )
+
+    # A single unconfirmed (pending) completion already fills the only slot, so
+    # nobody can mark it again until that hold is resolved.
+    pending = await task_service.mark_done(group_id=1, performer_user_id=1, task_id=task.id)
+    assert pending.status is TaskLogStatus.PENDING
+
+    with pytest.raises(BusinessRuleViolation):
+        await task_service.mark_done(group_id=1, performer_user_id=2, task_id=task.id)
+
+    # The task list reflects the outstanding hold and zero remaining slots.
+    listed = {t.id: t for t in await task_service.list_tasks(group_id=1)}
+    assert listed[task.id].pending_in_sprint == 1
+    assert listed[task.id].completed_in_sprint == 0
+    assert listed[task.id].available_in_sprint == 0
+
+    # Rejecting the hold frees the slot, so marking is possible again.
+    await task_service.reject(
+        group_id=1, approver_user_id=2, log_id=pending.id, rejection_reason="not done"
+    )
+    freed = await task_service.mark_done(group_id=1, performer_user_id=2, task_id=task.id)
+    assert freed.status is TaskLogStatus.PENDING
+
+
 async def _bootstrap_solo_group() -> tuple[InMemoryUnitOfWork, TaskService]:
     uow = InMemoryUnitOfWork()
     uow.users.users[1] = UserProfile(1, "solo", "Solo", None, "en", False)

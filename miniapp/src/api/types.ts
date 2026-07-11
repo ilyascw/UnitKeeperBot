@@ -137,8 +137,14 @@ export interface TaskResponse {
   frequency_per_sprint: number;
   unit_cost: string;
   deleted_at: string | null;
+  /** Confirmed completions in the current sprint. */
   completed_in_sprint: number;
+  /** Slots left against the frequency cap (frequency − completed). */
   remaining_in_sprint: number;
+  /** Completions logged but awaiting approval (holds). */
+  pending_in_sprint: number;
+  /** Slots still open to mark now: frequency − completed − pending. */
+  available_in_sprint: number;
 }
 
 export interface CreateTaskRequest {

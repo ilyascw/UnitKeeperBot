@@ -62,6 +62,8 @@ class TaskResponse(BaseModel):
     deleted_at: datetime | None
     completed_in_sprint: int
     remaining_in_sprint: int
+    pending_in_sprint: int
+    available_in_sprint: int
 
 
 class TaskLogResponse(BaseModel):

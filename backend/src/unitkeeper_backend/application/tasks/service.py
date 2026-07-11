@@ -143,13 +143,23 @@ class TaskService:
         if not task.is_active:
             raise BusinessRuleViolation("Soft-deleted tasks cannot be completed")
 
+        # Lock the task row so concurrent completions cannot both slip past the
+        # sprint cap. Every open completion — confirmed or still pending —
+        # consumes a slot, so you can mark a task only as many times as remain
+        # available this sprint.
+        await self._uow.tasks.lock_task(group_id=group_id, task_id=task_id)
         window = await self._current_window(group_id)
         completed_count = await self._uow.tasks.count_completed_in_window(
             task_id=task_id,
             window_start=window.starts_at,
             window_end_exclusive=window.ends_before,
         )
-        if completed_count >= task.frequency_per_sprint:
+        pending_count = await self._uow.tasks.count_pending_in_window(
+            task_id=task_id,
+            window_start=window.starts_at,
+            window_end_exclusive=window.ends_before,
+        )
+        if completed_count + pending_count >= task.frequency_per_sprint:
             raise BusinessRuleViolation("Task frequency limit for the current sprint is exhausted")
 
         memberships = await self._uow.groups.list_active_memberships(group_id)
@@ -230,6 +240,11 @@ class TaskService:
                 window_start=window.starts_at,
                 window_end_exclusive=window.ends_before,
             )
+            pending = await self._uow.tasks.count_pending_in_window(
+                task_id=task.id,
+                window_start=window.starts_at,
+                window_end_exclusive=window.ends_before,
+            )
             updated.append(
                 TaskInfo(
                     id=task.id,
@@ -239,6 +254,7 @@ class TaskService:
                     unit_cost=task.unit_cost,
                     deleted_at=task.deleted_at,
                     completed_in_sprint=completed,
+                    pending_in_sprint=pending,
                 )
             )
         return updated

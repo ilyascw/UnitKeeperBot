@@ -254,6 +254,20 @@ export function Avatar({ label, seed }: { label: string; seed: number }) {
 
 /* ---------------- Bottom sheet ---------------- */
 
+export function Toast({
+  message,
+  tone = 'info',
+}: {
+  message: ReactNode;
+  tone?: 'info' | 'success' | 'error';
+}) {
+  return (
+    <div className={`uk-toast uk-toast--${tone}`} role="status" aria-live="polite">
+      {message}
+    </div>
+  );
+}
+
 export function BottomSheet({
   onClose,
   children,

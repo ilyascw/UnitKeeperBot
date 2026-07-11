@@ -86,6 +86,7 @@ class TaskInfo:
     unit_cost: Decimal
     deleted_at: datetime | None
     completed_in_sprint: int = 0
+    pending_in_sprint: int = 0
 
     @property
     def is_active(self) -> bool:
@@ -94,6 +95,11 @@ class TaskInfo:
     @property
     def remaining_in_sprint(self) -> int:
         return max(self.frequency_per_sprint - self.completed_in_sprint, 0)
+
+    @property
+    def available_in_sprint(self) -> int:
+        """Slots still open to be marked: cap minus confirmed and pending holds."""
+        return max(self.frequency_per_sprint - self.completed_in_sprint - self.pending_in_sprint, 0)
 
 
 @dataclass(slots=True)

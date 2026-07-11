@@ -16,6 +16,7 @@ from unitkeeper_backend.application.models import (
     TelegramIdentity,
     UserProfile,
 )
+from unitkeeper_backend.domain.errors import NotFoundError
 
 
 class FakeClock:
@@ -265,6 +266,29 @@ class InMemoryTaskRepository:
                 and window_start <= (log.decided_at or log.created_at) < window_end_exclusive
             ]
         )
+
+    async def count_pending_in_window(
+        self,
+        *,
+        task_id: int,
+        window_start: datetime,
+        window_end_exclusive: datetime,
+    ) -> int:
+        return len(
+            [
+                log
+                for log in self.logs.values()
+                if log.task_id == task_id
+                and log.status is TaskLogStatus.PENDING
+                and window_start <= log.created_at < window_end_exclusive
+            ]
+        )
+
+    async def lock_task(self, *, group_id: int, task_id: int) -> TaskInfo:
+        task = self.tasks.get(task_id)
+        if task is None or task.group_id != group_id:
+            raise NotFoundError("Task was not found")
+        return task
 
     async def create_task_log(
         self,

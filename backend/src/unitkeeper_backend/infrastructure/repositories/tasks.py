@@ -98,6 +98,38 @@ class SqlAlchemyTaskRepository:
         result = await self._session.execute(query)
         return int(result.scalar_one())
 
+    async def count_pending_in_window(
+        self,
+        *,
+        task_id: int,
+        window_start: datetime,
+        window_end_exclusive: datetime,
+    ) -> int:
+        # Pending logs are not yet decided, so they are placed in the window by
+        # their creation time.
+        query = select(func.count(TaskLog.id)).where(
+            TaskLog.task_id == task_id,
+            TaskLog.status == TaskLogStatus.PENDING,
+            TaskLog.created_at >= window_start,
+            TaskLog.created_at < window_end_exclusive,
+        )
+        result = await self._session.execute(query)
+        return int(result.scalar_one())
+
+    async def lock_task(self, *, group_id: int, task_id: int) -> TaskInfo:
+        # Row-level lock to serialise concurrent completions against the sprint
+        # frequency cap. A no-op on backends without SELECT ... FOR UPDATE.
+        query = (
+            select(Task)
+            .where(Task.group_id == group_id, Task.id == task_id)
+            .with_for_update()
+        )
+        result = await self._session.execute(query)
+        model = result.scalar_one_or_none()
+        if model is None:
+            raise NotFoundError("Task was not found")
+        return map_task(model)
+
     async def create_task_log(
         self,
         *,

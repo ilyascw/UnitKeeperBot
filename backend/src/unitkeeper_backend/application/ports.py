@@ -128,6 +128,16 @@ class TaskRepository(Protocol):
         window_end_exclusive: datetime,
     ) -> int: ...
 
+    async def count_pending_in_window(
+        self,
+        *,
+        task_id: int,
+        window_start: datetime,
+        window_end_exclusive: datetime,
+    ) -> int: ...
+
+    async def lock_task(self, *, group_id: int, task_id: int) -> TaskInfo: ...
+
     async def create_task_log(
         self,
         *,

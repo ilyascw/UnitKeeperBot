@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
 
 import { useCreateTask, useMarkTaskDone } from '@/api/mutations';
@@ -8,8 +8,8 @@ import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
 import { routes } from '@/routes/paths';
 import { formatUnits } from '@/ui/format';
-import { BottomSheet, Button, Card, Field, Note, Screen, Stepper, TextInput } from '@/ui/kit';
-import { CheckIcon, PlusIcon } from '@/ui/icons';
+import { BottomSheet, Button, Card, Field, Note, Screen, Stepper, TextInput, Toast } from '@/ui/kit';
+import { CheckIcon, ClockIcon, PlusIcon } from '@/ui/icons';
 import type { TaskResponse } from '@/api/types';
 
 /** Owner-only sheet for adding a recurring task. */
@@ -76,22 +76,38 @@ function AddTaskSheet({ onClose }: { onClose: () => void }) {
 function TaskRow({
   task,
   onDone,
-  pending,
-  disabled,
+  loading,
+  busy,
 }: {
   task: TaskResponse;
   onDone: () => void;
-  pending: boolean;
-  disabled: boolean;
+  /** This task's own completion request is in flight. */
+  loading: boolean;
+  /** Some completion request is in flight (blocks all rows). */
+  busy: boolean;
 }) {
+  // Backend-derived states (source of truth, survives reload):
+  //  complete  — every slot confirmed (remaining 0)
+  //  heldFull  — remaining slots all occupied by pending holds (available 0)
+  //  markable  — at least one free slot (available > 0)
   const complete = task.remaining_in_sprint <= 0;
+  const markable = task.available_in_sprint > 0;
+  const heldFull = !complete && !markable;
+  const locked = !markable || busy;
+
   return (
     <div className="uk-row">
       <button
         type="button"
         onClick={onDone}
-        disabled={complete || disabled}
-        aria-label={complete ? 'Задача выполнена' : `Отметить «${task.title}»`}
+        disabled={locked}
+        aria-label={
+          complete
+            ? 'Задача выполнена'
+            : heldFull
+              ? 'Ждёт подтверждения'
+              : `Отметить «${task.title}»`
+        }
         style={{
           width: 30,
           height: 30,
@@ -99,16 +115,22 @@ function TaskRow({
           borderRadius: 10,
           display: 'grid',
           placeItems: 'center',
-          cursor: complete || disabled ? 'default' : 'pointer',
+          cursor: locked ? 'default' : 'pointer',
           background: complete ? 'var(--uk-accent-grad)' : 'transparent',
-          border: complete ? 'none' : '2px solid rgba(94,199,255,.5)',
-          color: 'var(--uk-on-accent)',
+          border: complete
+            ? 'none'
+            : heldFull
+              ? '2px solid rgba(255,200,97,.6)'
+              : '2px solid rgba(94,199,255,.5)',
+          color: complete ? 'var(--uk-on-accent)' : 'var(--uk-warn)',
         }}
       >
-        {pending ? (
+        {loading ? (
           <span className="uk-btn-spinner" style={{ color: 'var(--uk-blue)' }} aria-hidden />
         ) : complete ? (
           <CheckIcon size={16} strokeWidth={3} />
+        ) : heldFull ? (
+          <ClockIcon size={16} />
         ) : null}
       </button>
       <div className="uk-row__grow">
@@ -120,9 +142,29 @@ function TaskRow({
         >
           {task.title}
         </div>
-        <div style={{ font: "400 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>
-          {task.completed_in_sprint} из {task.frequency_per_sprint} за спринт
-        </div>
+        {heldFull ? (
+          <div
+            style={{
+              font: "600 12px 'Manrope'",
+              color: 'var(--uk-warn)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+            }}
+          >
+            <ClockIcon size={13} /> Ждёт подтверждения
+          </div>
+        ) : (
+          <div style={{ font: "400 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>
+            {task.completed_in_sprint} из {task.frequency_per_sprint} за спринт
+            {task.pending_in_sprint > 0 ? (
+              <span style={{ color: 'var(--uk-warn)' }}>
+                {' · '}
+                {task.pending_in_sprint} на подтверждении
+              </span>
+            ) : null}
+          </div>
+        )}
       </div>
       <span
         style={{
@@ -146,6 +188,26 @@ export function TasksScreen() {
   const { data: tasks, isPending, isError, error, refetch } = useTasks();
   const markDone = useMarkTaskDone();
   const [adding, setAdding] = useState(false);
+  const [toast, setToast] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 2800);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  const handleDone = (task: TaskResponse): void => {
+    // The pending / completed state itself comes from the refetched task list
+    // (invalidated by the mutation); the toast just confirms the action landed.
+    markDone.mutate(task.id, {
+      onSuccess: (log) =>
+        setToast({
+          tone: 'success',
+          text: log.status === 'pending' ? 'Отправлено на подтверждение' : 'Задача засчитана',
+        }),
+      onError: () => setToast({ tone: 'error', text: 'Не удалось отметить задачу' }),
+    });
+  };
 
   if (group.data === null) return <Navigate to={routes.onboarding} replace />;
   if (isPending) return <Loader title="Загружаем задачи…" />;
@@ -178,8 +240,6 @@ export function TasksScreen() {
         ) : null}
       </div>
 
-      {markDone.isError ? <Note tone="error">{markDone.error.message}</Note> : null}
-
       {tasks.length === 0 ? (
         <Card style={{ padding: 22, borderRadius: 20, textAlign: 'center' }}>
           <div style={{ font: "700 16px 'Manrope'" }}>Пока нет задач</div>
@@ -204,15 +264,16 @@ export function TasksScreen() {
               <TaskRow
                 key={task.id}
                 task={task}
-                onDone={() => markDone.mutate(task.id)}
-                pending={markDone.isPending && markDone.variables === task.id}
-                disabled={markDone.isPending}
+                onDone={() => handleDone(task)}
+                loading={markDone.isPending && markDone.variables === task.id}
+                busy={markDone.isPending}
               />
             ))}
           </Card>
         </>
       )}
 
+      {toast ? <Toast tone={toast.tone} message={toast.text} /> : null}
       {adding ? <AddTaskSheet onClose={() => setAdding(false)} /> : null}
     </Screen>
   );
