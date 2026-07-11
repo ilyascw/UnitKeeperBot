@@ -14,11 +14,18 @@ export function HomeScreen() {
   const { data: group, isPending, isError, error, refetch } = useCurrentGroup();
 
   if (isPending) {
-    return <Loader label="Loading your group…" />;
+    return <Loader title="Загружаем…" label="Открываем вашу группу." />;
   }
 
   if (isError) {
-    return <ErrorState description={error.message} onRetry={() => void refetch()} />;
+    return (
+      <ErrorState
+        title="Не удалось загрузить"
+        description={error.message}
+        accent="rgba(255,86,110"
+        onRetry={() => void refetch()}
+      />
+    );
   }
 
   return <Navigate to={group === null ? routes.onboarding : routes.group} replace />;

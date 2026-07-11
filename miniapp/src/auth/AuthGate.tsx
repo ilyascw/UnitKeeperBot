@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
+import { PlaneIcon } from '@/ui/icons';
 
 import { useAuth } from './useAuth';
 
@@ -14,16 +15,17 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const { status, error, reauthenticate } = useAuth();
 
   if (status === 'loading') {
-    return <Loader label="Signing you in…" />;
+    return <Loader title="Входим…" label="Проверяем ваш профиль Telegram. Это займёт секунду." />;
   }
 
   if (status === 'unauthenticated') {
     return (
       <ErrorState
-        title="Open from Telegram"
-        description="UnitKeeper runs as a Telegram Mini App. Please open it from the Telegram bot to continue."
+        title="Откройте из Telegram"
+        description="UnitKeeper работает внутри Telegram. Найдите бота в чате и нажмите «Открыть»."
+        icon={<PlaneIcon size={52} style={{ color: 'var(--uk-blue)' }} />}
         onRetry={reauthenticate}
-        retryLabel="Retry"
+        retryLabel="Повторить"
       />
     );
   }
@@ -31,8 +33,9 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (status === 'error') {
     return (
       <ErrorState
-        title="Couldn’t sign you in"
-        description={error?.message ?? 'Please try again.'}
+        title="Не удалось войти"
+        description={error?.message ?? 'Попробуйте ещё раз.'}
+        accent="rgba(255,86,110"
         onRetry={reauthenticate}
       />
     );

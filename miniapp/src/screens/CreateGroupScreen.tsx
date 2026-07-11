@@ -1,20 +1,13 @@
-import { Button, Input, List, Section, Select } from '@telegram-apps/telegram-ui';
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useCreateGroup } from '@/api/mutations';
 import { WEEKDAYS, type Weekday } from '@/api/types';
 import { routes } from '@/routes/paths';
+import { WEEKDAY_SHORT } from '@/ui/format';
+import { Button, Field, Note, Screen, ScreenHeader, Segmented, Stepper, TextInput } from '@/ui/kit';
 
-const WEEKDAY_LABEL: Record<Weekday, string> = {
-  monday: 'Понедельник',
-  tuesday: 'Вторник',
-  wednesday: 'Среда',
-  thursday: 'Четверг',
-  friday: 'Пятница',
-  saturday: 'Суббота',
-  sunday: 'Воскресенье',
-};
+const WEEKDAY_OPTIONS = WEEKDAYS.map((day) => ({ value: day, label: WEEKDAY_SHORT[day] }));
 
 /**
  * Owner-driven flow to create a brand-new group. Mirrors legacy `/create_group`
@@ -28,98 +21,88 @@ export function CreateGroupScreen() {
   const [name, setName] = useState('');
   const [secret, setSecret] = useState('');
   const [weekday, setWeekday] = useState<Weekday>('monday');
-  const [duration, setDuration] = useState('7');
+  const [duration, setDuration] = useState(7);
   const timezone =
     typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC';
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
-    const days = Number.parseInt(duration, 10);
-    if (!Number.isFinite(days) || days <= 0) return;
+    if (disabled) return;
     mutation.mutate(
       {
         name: name.trim(),
         join_secret: secret,
         sprint_start_weekday: weekday,
-        sprint_duration_days: days,
+        sprint_duration_days: duration,
         timezone,
       },
       { onSuccess: () => navigate(routes.group, { replace: true }) },
     );
   };
 
-  const disabled =
-    mutation.isPending || name.trim().length === 0 || secret.length < 3 || duration.length === 0;
+  const disabled = mutation.isPending || name.trim().length === 0 || secret.length < 3;
 
   return (
-    <form onSubmit={handleSubmit}>
-      <List>
-        <Section
-          header="Создание группы"
-          footer="Код нужен другим участникам для вступления в группу."
-        >
-          <Input
-            header="Название группы"
-            placeholder="Например: Семья"
+    <Screen>
+      <ScreenHeader title="Новая группа" onBack={() => navigate(routes.onboarding)} />
+      <form onSubmit={handleSubmit} className="uk-stack" style={{ flex: 1 }}>
+        <Field label="Название группы">
+          <TextInput
+            placeholder="Например: Квартира на Лесной"
             value={name}
-            onChange={(event) => setName(event.currentTarget.value)}
+            onChange={(e) => setName(e.currentTarget.value)}
             disabled={mutation.isPending}
           />
-          <Input
-            header="Код вступления"
+        </Field>
+
+        <Field
+          label="Код вступления"
+          hint="Передайте его тем, кого хотите пригласить. Можно поменять позже в настройках."
+        >
+          <TextInput
             placeholder="Минимум 3 символа"
             value={secret}
-            onChange={(event) => setSecret(event.currentTarget.value)}
+            style={{ letterSpacing: '0.12em' }}
+            onChange={(e) => setSecret(e.currentTarget.value)}
             disabled={mutation.isPending}
           />
-        </Section>
-        <Section header="Период учёта" footer="Период начинается заново в выбранный день недели.">
-          <Select
-            header="День начала"
+        </Field>
+
+        <div className="uk-divider" />
+
+        <div className="uk-eyebrow">Период учёта</div>
+        <Field label="День начала">
+          <Segmented
+            options={WEEKDAY_OPTIONS}
             value={weekday}
-            onChange={(event) => setWeekday(event.currentTarget.value as Weekday)}
-            disabled={mutation.isPending}
-          >
-            {WEEKDAYS.map((day) => (
-              <option key={day} value={day}>
-                {WEEKDAY_LABEL[day]}
-              </option>
-            ))}
-          </Select>
-          <Input
-            header="Длительность в днях"
-            type="number"
-            inputMode="numeric"
-            value={duration}
-            onChange={(event) => setDuration(event.currentTarget.value)}
+            onChange={setWeekday}
             disabled={mutation.isPending}
           />
-        </Section>
-        {mutation.isError ? (
-          <Section header="Не удалось создать группу">
-            <div style={{ padding: '8px 16px', color: 'var(--tgui--destructive_text_color)' }}>
-              {mutation.error.message}
-            </div>
-          </Section>
-        ) : null}
-        <Section>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 16px' }}>
-            <Button type="submit" stretched size="l" loading={mutation.isPending} disabled={disabled}>
-              Создать группу
-            </Button>
-            <Button
-              type="button"
-              stretched
-              size="l"
-              mode="plain"
-              onClick={() => navigate(routes.onboarding)}
-              disabled={mutation.isPending}
-            >
-              Отмена
-            </Button>
-          </div>
-        </Section>
-      </List>
-    </form>
+        </Field>
+
+        <Stepper
+          label="Длительность"
+          sublabel="1–31 дней"
+          value={duration}
+          suffix="дн"
+          min={1}
+          max={31}
+          onChange={setDuration}
+          disabled={mutation.isPending}
+        />
+
+        <Note tone="info">
+          Период — это отрезок, за который считаются план и балансы. Часовой пояс возьмём из вашего
+          устройства.
+        </Note>
+
+        {mutation.isError ? <Note tone="error">{mutation.error.message}</Note> : null}
+
+        <div className="uk-spacer" />
+        <Button type="submit" variant="primary" loading={mutation.isPending} disabled={disabled}>
+          Создать группу
+        </Button>
+      </form>
+    </Screen>
   );
 }

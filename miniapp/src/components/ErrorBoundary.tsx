@@ -33,10 +33,11 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.error) {
       return (
         <ErrorState
-          title="Something went wrong"
+          title="Что-то пошло не так"
           description={this.state.error.message}
+          accent="rgba(255,86,110"
           onRetry={this.handleReset}
-          retryLabel="Reload screen"
+          retryLabel="Перезагрузить"
         />
       );
     }

@@ -1,12 +1,12 @@
-import { Button, Input, List, Section } from '@telegram-apps/telegram-ui';
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useJoinGroup } from '@/api/mutations';
 import { routes } from '@/routes/paths';
+import { Button, Field, Note, Screen, ScreenHeader, TextInput } from '@/ui/kit';
 
 /**
- * Joins an existing group by name and secret. Mirrors legacy `/join_group`.
+ * Joins an existing group by name and code. Mirrors legacy `/join_group`.
  */
 export function JoinGroupScreen() {
   const navigate = useNavigate();
@@ -17,6 +17,7 @@ export function JoinGroupScreen() {
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
+    if (disabled) return;
     mutation.mutate(
       { name: name.trim(), join_secret: secret },
       { onSuccess: () => navigate(routes.group, { replace: true }) },
@@ -24,52 +25,53 @@ export function JoinGroupScreen() {
   };
 
   const disabled = mutation.isPending || name.trim().length === 0 || secret.length < 3;
+  const invalid = mutation.isError;
 
   return (
-    <form onSubmit={handleSubmit}>
-      <List>
-        <Section
-          header="Join a group"
-          footer="Ask the owner for the group name and the join secret."
-        >
-          <Input
-            header="Group name"
+    <Screen>
+      <ScreenHeader title="Вступить в группу" onBack={() => navigate(routes.onboarding)} />
+      <form onSubmit={handleSubmit} className="uk-stack" style={{ flex: 1 }}>
+        <Note tone="info">
+          Название группы и код вступления узнайте у того, кто вас пригласил.
+        </Note>
+
+        <Field label="Название группы">
+          <TextInput
+            placeholder="Квартира на Лесной"
             value={name}
-            onChange={(event) => setName(event.currentTarget.value)}
+            invalid={invalid}
+            onChange={(e) => setName(e.currentTarget.value)}
             disabled={mutation.isPending}
           />
-          <Input
-            header="Join secret"
+        </Field>
+
+        <Field
+          label="Код вступления"
+          error={invalid ? 'Неверное название или код. Проверьте у владельца.' : undefined}
+        >
+          <TextInput
+            placeholder="например: lesnaya-2026"
             value={secret}
-            onChange={(event) => setSecret(event.currentTarget.value)}
+            invalid={invalid}
+            style={{ letterSpacing: '0.12em' }}
+            onChange={(e) => setSecret(e.currentTarget.value)}
             disabled={mutation.isPending}
           />
-        </Section>
-        {mutation.isError ? (
-          <Section header="Couldn’t join group">
-            <div style={{ padding: '8px 16px', color: 'var(--tgui--destructive_text_color)' }}>
-              {mutation.error.message}
-            </div>
-          </Section>
-        ) : null}
-        <Section>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 16px' }}>
-            <Button type="submit" stretched size="l" loading={mutation.isPending} disabled={disabled}>
-              Join group
-            </Button>
-            <Button
-              type="button"
-              stretched
-              size="l"
-              mode="plain"
-              onClick={() => navigate(routes.onboarding)}
-              disabled={mutation.isPending}
-            >
-              Cancel
-            </Button>
-          </div>
-        </Section>
-      </List>
-    </form>
+        </Field>
+
+        <div className="uk-spacer" />
+        <Button type="submit" variant="primary" loading={mutation.isPending} disabled={disabled}>
+          Вступить
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => navigate(routes.onboarding)}
+          disabled={mutation.isPending}
+        >
+          Назад
+        </Button>
+      </form>
+    </Screen>
   );
 }

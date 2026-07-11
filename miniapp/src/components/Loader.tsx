@@ -1,21 +1,31 @@
-import { Spinner, Text } from '@telegram-apps/telegram-ui';
+import { BrandSpinner, Screen } from '@/ui/kit';
 
-/** Centred full-height loading indicator for screen-level async states. */
-export function Loader({ label = 'Loading…' }: { label?: string }) {
+/** Centred full-height loading state with the brand spinner. */
+export function Loader({
+  title = 'Загружаем…',
+  label,
+}: {
+  title?: string;
+  label?: string;
+}) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 16,
-        minHeight: '60vh',
-        padding: 24,
-      }}
-    >
-      <Spinner size="l" />
-      <Text style={{ color: 'var(--tg-theme-hint-color)' }}>{label}</Text>
-    </div>
+    <Screen centered>
+      <BrandSpinner />
+      <div style={{ marginTop: 8 }}>
+        <div style={{ font: "700 20px 'Manrope'", marginBottom: 6 }}>{title}</div>
+        {label ? (
+          <div
+            style={{
+              font: "400 15px/1.5 'Manrope'",
+              color: 'var(--uk-ink-70)',
+              maxWidth: 250,
+              marginInline: 'auto',
+            }}
+          >
+            {label}
+          </div>
+        ) : null}
+      </div>
+    </Screen>
   );
 }

@@ -1,4 +1,3 @@
-import { Button, Input, List, Section } from '@telegram-apps/telegram-ui';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 
@@ -8,16 +7,33 @@ import { useAuth } from '@/auth/useAuth';
 import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
 import { routes } from '@/routes/paths';
+import { avatarGradient } from '@/ui/avatar';
+import { Button, Note, Screen, ScreenHeader } from '@/ui/kit';
 
-function parsePercent(value: string): number {
-  const n = Number.parseFloat(value);
-  return Number.isFinite(n) ? n : 0;
+function memberName(m: {
+  first_name: string | null;
+  username: string | null;
+  user_id: number;
+}): string {
+  return m.first_name ?? m.username ?? `Участник ${m.user_id}`;
+}
+
+/** Evenly split 100 across `n` members, pushing the rounding remainder onto
+ * the first member so the total stays exactly 100. */
+function evenSplit(userIds: number[]): Record<number, number> {
+  const n = userIds.length;
+  if (n === 0) return {};
+  const base = Math.floor(100 / n);
+  const out: Record<number, number> = {};
+  userIds.forEach((id) => (out[id] = base));
+  out[userIds[0]] += 100 - base * n;
+  return out;
 }
 
 /**
- * Owner-only editor for member weights. The backend enforces the sum=100 and
- * non-negative invariants, but we surface a live total here so the owner can
- * fix obvious mistakes before submitting.
+ * Owner-only editor for member weights. Weights are shares of the planned load
+ * that must sum to 100%. The backend enforces the invariant; we surface a live
+ * total plus a visual sum bar and quick "even split" / "reset" actions.
  */
 export function GroupWeightsScreen() {
   const navigate = useNavigate();
@@ -25,30 +41,44 @@ export function GroupWeightsScreen() {
   const { data: group, isPending, isError, error, refetch } = useCurrentGroup();
   const mutation = useUpdateGroupWeights();
 
-  const [values, setValues] = useState<Record<number, string>>({});
+  const [values, setValues] = useState<Record<number, number>>({});
+
+  const initial = useMemo(
+    () =>
+      group
+        ? Object.fromEntries(
+            group.members.map((m) => [m.user_id, Math.round(Number.parseFloat(m.weight_percent) || 0)]),
+          )
+        : {},
+    [group?.id], // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   useEffect(() => {
-    if (!group) return;
-    setValues(
-      Object.fromEntries(group.members.map((m) => [m.user_id, m.weight_percent])),
-    );
-  }, [group?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    setValues(initial);
+  }, [initial]);
 
   const total = useMemo(
-    () => Object.values(values).reduce((acc, value) => acc + parsePercent(value), 0),
+    () => Object.values(values).reduce((acc, v) => acc + v, 0),
     [values],
   );
 
-  if (isPending) return <Loader label="Loading members…" />;
+  if (isPending) return <Loader title="Загружаем участников…" />;
   if (isError) {
-    return <ErrorState description={error.message} onRetry={() => void refetch()} />;
+    return (
+      <ErrorState
+        title="Не удалось загрузить"
+        description={error.message}
+        accent="rgba(255,86,110"
+        onRetry={() => void refetch()}
+      />
+    );
   }
   if (group === null) return <Navigate to={routes.onboarding} replace />;
 
   const isOwner = context?.user?.id === group.owner_user_id;
   if (!isOwner) return <Navigate to={routes.group} replace />;
 
-  const sumIsValid = Math.abs(total - 100) < 0.01;
+  const sumIsValid = total === 100;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
@@ -57,65 +87,152 @@ export function GroupWeightsScreen() {
       {
         weights: group.members.map((member) => ({
           user_id: member.user_id,
-          weight_percent: values[member.user_id] ?? '0',
+          weight_percent: String(values[member.user_id] ?? 0),
         })),
       },
       { onSuccess: () => navigate(routes.group) },
     );
   };
 
+  const setOne = (userId: number, value: number): void =>
+    setValues((prev) => ({ ...prev, [userId]: value }));
+
   return (
-    <form onSubmit={handleSubmit}>
-      <List>
-        <Section
-          header="Member weights"
-          footer={`Total: ${total.toFixed(2)}% — must equal 100% to save.`}
+    <Screen>
+      <ScreenHeader title="Нагрузка участников" onBack={() => navigate(routes.group)} />
+      <form onSubmit={handleSubmit} className="uk-stack" style={{ flex: 1 }}>
+        <div style={{ font: "400 13px/1.5 'Manrope'", color: 'var(--uk-ink-70)' }}>
+          Вес — это доля плановой нагрузки участника. Сумма всех долей должна быть 100%.
+        </div>
+
+        {/* Sum bar */}
+        <div
+          style={{
+            padding: 16,
+            borderRadius: 20,
+            background: sumIsValid ? 'rgba(61,215,196,.08)' : 'rgba(255,86,110,.08)',
+            border: `1px solid ${sumIsValid ? 'rgba(61,215,196,.24)' : 'rgba(255,86,110,.3)'}`,
+          }}
         >
-          {group.members.map((member) => (
-            <Input
-              key={member.user_id}
-              header={member.first_name ?? member.username ?? `User ${member.user_id}`}
-              type="number"
-              inputMode="decimal"
-              value={values[member.user_id] ?? ''}
-              onChange={(event) =>
-                setValues((prev) => ({ ...prev, [member.user_id]: event.currentTarget.value }))
-              }
-              disabled={mutation.isPending}
-            />
-          ))}
-        </Section>
-        {mutation.isError ? (
-          <Section header="Couldn’t save weights">
-            <div style={{ padding: '8px 16px', color: 'var(--tgui--destructive_text_color)' }}>
-              {mutation.error.message}
-            </div>
-          </Section>
-        ) : null}
-        <Section>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 16px' }}>
-            <Button
-              type="submit"
-              stretched
-              size="l"
-              loading={mutation.isPending}
-              disabled={!sumIsValid}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'baseline',
+              marginBottom: 10,
+            }}
+          >
+            <span style={{ font: "600 13px 'Manrope'", color: 'var(--uk-ink-70)' }}>Сумма</span>
+            <span
+              style={{
+                font: "800 20px 'Manrope'",
+                color: sumIsValid ? 'var(--uk-teal)' : 'var(--uk-danger)',
+              }}
             >
-              Save weights
-            </Button>
-            <Button
-              type="button"
-              stretched
-              size="l"
-              mode="plain"
-              onClick={() => navigate(routes.group)}
-              disabled={mutation.isPending}
-            >
-              Cancel
-            </Button>
+              {total}%
+            </span>
           </div>
-        </Section>
-      </List>
-    </form>
+          <div className="uk-stackbar">
+            {group.members.map((m) => (
+              <div
+                key={m.user_id}
+                style={{
+                  width: `${values[m.user_id] ?? 0}%`,
+                  background: avatarGradient(m.user_id),
+                  transition: 'width 0.12s ease',
+                }}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Sliders */}
+        <div className="uk-stack" style={{ gap: 16 }}>
+          {group.members.map((member) => {
+            const value = values[member.user_id] ?? 0;
+            return (
+              <div key={member.user_id} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ font: "600 15px 'Manrope'" }}>
+                    {memberName(member)}
+                    {member.user_id === context?.user?.id ? (
+                      <span style={{ font: "500 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>
+                        {' '}
+                        (вы)
+                      </span>
+                    ) : null}
+                  </span>
+                  <span style={{ font: "800 16px 'Manrope'", color: 'var(--uk-blue)' }}>{value}%</span>
+                </div>
+                <div className="uk-slider">
+                  <input
+                    className="uk-slider__input"
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={value}
+                    disabled={mutation.isPending}
+                    onChange={(e) => setOne(member.user_id, Number(e.currentTarget.value))}
+                    aria-label={`Нагрузка: ${memberName(member)}`}
+                  />
+                  <div className="uk-slider__track">
+                    <div
+                      className="uk-slider__fill"
+                      style={{ width: `${value}%`, background: avatarGradient(member.user_id) }}
+                    />
+                  </div>
+                  <div className="uk-slider__thumb" style={{ left: `${value}%` }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 2 }}>
+          <button
+            type="button"
+            className="uk-btn uk-btn--ghost"
+            style={{
+              flex: 1,
+              padding: 12,
+              borderColor: 'rgba(94,199,255,.3)',
+              color: 'var(--uk-blue)',
+              background: 'rgba(94,199,255,.08)',
+              fontSize: 13,
+              borderRadius: 14,
+            }}
+            disabled={mutation.isPending}
+            onClick={() => setValues(evenSplit(group.members.map((m) => m.user_id)))}
+          >
+            Поровну
+          </button>
+          <button
+            type="button"
+            className="uk-btn uk-btn--ghost"
+            style={{ flex: 1, padding: 12, fontSize: 13, borderRadius: 14 }}
+            disabled={mutation.isPending}
+            onClick={() => setValues(initial)}
+          >
+            Сбросить
+          </button>
+        </div>
+
+        {!sumIsValid ? (
+          <Note tone="error">Сумма долей должна быть ровно 100%, сейчас {total}%.</Note>
+        ) : null}
+        {mutation.isError ? <Note tone="error">{mutation.error.message}</Note> : null}
+
+        <div className="uk-spacer" />
+        <Button
+          type="submit"
+          variant="primary"
+          loading={mutation.isPending}
+          disabled={!sumIsValid}
+        >
+          Сохранить нагрузку
+        </Button>
+      </form>
+    </Screen>
   );
 }
