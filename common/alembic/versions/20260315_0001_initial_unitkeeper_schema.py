@@ -1,20 +1,20 @@
 """initial unitkeeper schema
 
 Revision ID: 20260315_0001
-Revises:
+Revises: 20260315_0000
 Create Date: 2026-03-15 23:59:00
 
 """
 
 from typing import Sequence, Union
 
-from alembic import op
+from alembic import context, op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 
 revision: str = "20260315_0001"
-down_revision: Union[str, Sequence[str], None] = None
+down_revision: Union[str, Sequence[str], None] = "20260315_0000"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -53,8 +53,303 @@ balance_transaction_type_enum = postgresql.ENUM(
 )
 
 
+LEGACY_TABLES = ("groups", "users", "tasks", "logs", "balances")
+
+
+def _has_legacy_schema(bind: sa.engine.Connection) -> bool:
+    inspector = sa.inspect(bind)
+    table_names = set(inspector.get_table_names())
+    if not set(LEGACY_TABLES).issubset(table_names):
+        return False
+
+    user_columns = {column["name"] for column in inspector.get_columns("users")}
+    group_columns = {column["name"] for column in inspector.get_columns("groups")}
+    task_columns = {column["name"] for column in inspector.get_columns("tasks")}
+    return (
+        "group_id" in user_columns
+        and "password" in group_columns
+        and "start_day" in group_columns
+        and "frequency" in task_columns
+        and "cost" in task_columns
+    )
+
+
+def _rename_legacy_tables(bind: sa.engine.Connection) -> bool:
+    if context.is_offline_mode():
+        for table_name in LEGACY_TABLES:
+            op.rename_table(table_name, f"legacy_{table_name}")
+        return True
+
+    if not _has_legacy_schema(bind):
+        return False
+
+    for table_name in LEGACY_TABLES:
+        op.rename_table(table_name, f"legacy_{table_name}")
+    return True
+
+
+def _migrate_legacy_data() -> None:
+    op.execute(
+        """
+        INSERT INTO users (id, username, first_name, last_name, language_code, is_bot, created_at, updated_at)
+        SELECT DISTINCT source.user_id, NULL, NULL, NULL, NULL, false, now(), now()
+        FROM (
+            SELECT id::bigint AS user_id FROM legacy_users WHERE id IS NOT NULL
+            UNION
+            SELECT owner_id::bigint AS user_id FROM legacy_groups WHERE owner_id IS NOT NULL
+            UNION
+            SELECT user_id::bigint AS user_id FROM legacy_logs WHERE user_id IS NOT NULL
+            UNION
+            SELECT user_id::bigint AS user_id FROM legacy_balances WHERE user_id IS NOT NULL
+            UNION
+            SELECT (-1000000000000::bigint - id::bigint) AS user_id
+            FROM legacy_groups g
+            WHERE g.owner_id IS NULL
+              AND NOT EXISTS (
+                  SELECT 1 FROM legacy_users u WHERE u.group_id = g.id
+              )
+        ) AS source
+        WHERE source.user_id IS NOT NULL
+        ON CONFLICT (id) DO NOTHING
+        """
+    )
+
+    op.execute(
+        """
+        INSERT INTO groups (
+            id,
+            name,
+            join_secret,
+            owner_user_id,
+            sprint_start_weekday,
+            sprint_duration_days,
+            timezone,
+            balance,
+            created_at,
+            updated_at
+        )
+        SELECT
+            g.id,
+            g.name,
+            COALESCE(g.password, ''),
+            COALESCE(
+                g.owner_id::bigint,
+                (SELECT MIN(u.id)::bigint FROM legacy_users u WHERE u.group_id = g.id),
+                -1000000000000::bigint - g.id::bigint
+            ),
+            CASE lower(g.start_day)
+                WHEN 'понедельник' THEN 'monday'
+                WHEN 'monday' THEN 'monday'
+                WHEN 'вторник' THEN 'tuesday'
+                WHEN 'tuesday' THEN 'tuesday'
+                WHEN 'среда' THEN 'wednesday'
+                WHEN 'wednesday' THEN 'wednesday'
+                WHEN 'четверг' THEN 'thursday'
+                WHEN 'thursday' THEN 'thursday'
+                WHEN 'пятница' THEN 'friday'
+                WHEN 'friday' THEN 'friday'
+                WHEN 'суббота' THEN 'saturday'
+                WHEN 'saturday' THEN 'saturday'
+                WHEN 'воскресенье' THEN 'sunday'
+                WHEN 'sunday' THEN 'sunday'
+                ELSE 'monday'
+            END::weekday_enum,
+            CASE
+                WHEN g.sprint_duration > 0 AND mod(g.sprint_duration, 7) = 0
+                    THEN g.sprint_duration
+                ELSE 7
+            END,
+            'UTC',
+            COALESCE(g.group_balance, 0),
+            now(),
+            now()
+        FROM legacy_groups g
+        """
+    )
+
+    op.execute(
+        """
+        INSERT INTO group_memberships (id, group_id, user_id, left_at, created_at, updated_at)
+        SELECT
+            row_number() OVER (ORDER BY u.group_id, u.id),
+            u.group_id,
+            u.id::bigint,
+            NULL,
+            now(),
+            now()
+        FROM legacy_users u
+        JOIN groups g ON g.id = u.group_id
+        WHERE u.group_id IS NOT NULL
+        ON CONFLICT DO NOTHING
+        """
+    )
+
+    op.execute(
+        """
+        INSERT INTO group_member_weights (id, membership_id, weight_percent, created_at, updated_at)
+        SELECT
+            row_number() OVER (ORDER BY gm.id),
+            gm.id,
+            CASE
+                WHEN (lg.weights ->> gm.user_id::text) ~ '^-?[0-9]+(\\.[0-9]+)?$'
+                    THEN LEAST(100, GREATEST(0, (lg.weights ->> gm.user_id::text)::numeric))::numeric(5, 2)
+                ELSE 0
+            END,
+            now(),
+            now()
+        FROM group_memberships gm
+        JOIN legacy_groups lg ON lg.id = gm.group_id
+        """
+    )
+
+    op.execute(
+        """
+        INSERT INTO tasks (
+            id,
+            group_id,
+            title,
+            frequency_per_sprint,
+            unit_cost,
+            deleted_at,
+            created_at,
+            updated_at
+        )
+        SELECT
+            t.id,
+            t.group_id,
+            t.title,
+            GREATEST(1, COALESCE(round(t.frequency)::integer, 1)),
+            COALESCE(t.cost, 0)::numeric(12, 2),
+            CASE WHEN COALESCE(t.status, true) THEN NULL ELSE now() END,
+            now(),
+            now()
+        FROM legacy_tasks t
+        JOIN groups g ON g.id = t.group_id
+        """
+    )
+
+    op.execute(
+        """
+        INSERT INTO task_logs (
+            id,
+            group_id,
+            task_id,
+            performer_user_id,
+            status,
+            approver_user_id,
+            decided_at,
+            rejection_reason,
+            created_at,
+            updated_at
+        )
+        SELECT
+            l.id,
+            l.group_id,
+            l.task_id,
+            l.user_id::bigint,
+            CASE
+                WHEN lower(l.status) = 'completed' THEN 'completed'
+                ELSE 'pending'
+            END::task_log_status_enum,
+            NULL,
+            CASE WHEN lower(l.status) = 'completed' THEN l.timestamp ELSE NULL END,
+            NULL,
+            COALESCE(l.timestamp, now()),
+            COALESCE(l.timestamp, now())
+        FROM legacy_logs l
+        JOIN groups g ON g.id = l.group_id
+        JOIN tasks t ON t.id = l.task_id
+        JOIN users u ON u.id = l.user_id::bigint
+        """
+    )
+
+    op.execute(
+        """
+        INSERT INTO balances (id, group_id, user_id, current_balance, created_at, updated_at)
+        SELECT
+            MIN(b.id),
+            b.group_id,
+            b.user_id::bigint,
+            COALESCE(MAX(b.balance), 0)::numeric(12, 2),
+            now(),
+            now()
+        FROM legacy_balances b
+        JOIN groups g ON g.id = b.group_id
+        JOIN users u ON u.id = b.user_id::bigint
+        GROUP BY b.group_id, b.user_id
+        """
+    )
+
+    op.execute(
+        """
+        INSERT INTO balance_transactions (
+            id,
+            group_id,
+            user_id,
+            transaction_type,
+            amount_delta,
+            counterparty_user_id,
+            sprint_run_id,
+            task_log_id,
+            description,
+            created_at,
+            updated_at
+        )
+        SELECT
+            row_number() OVER (ORDER BY b.group_id, b.user_id),
+            b.group_id,
+            b.user_id,
+            'manual_adjustment'::balance_transaction_type_enum,
+            b.current_balance,
+            NULL,
+            NULL,
+            NULL,
+            'Migrated opening balance from legacy bot database',
+            now(),
+            now()
+        FROM balances b
+        WHERE b.current_balance <> 0
+        """
+    )
+
+    for table_name in (
+        "groups",
+        "group_memberships",
+        "group_member_weights",
+        "tasks",
+        "task_logs",
+        "balances",
+        "balance_transactions",
+        "sprint_runs",
+        "sprint_member_results",
+    ):
+        op.execute(
+            f"""
+            SELECT setval(
+                pg_get_serial_sequence('{table_name}', 'id'),
+                COALESCE((SELECT MAX(id) FROM {table_name}), 1),
+                (SELECT MAX(id) IS NOT NULL FROM {table_name})
+            )
+            """
+        )
+
+    op.execute(
+        """
+        DROP TABLE
+            legacy_logs,
+            legacy_balances,
+            legacy_tasks,
+            legacy_groups,
+            legacy_users
+        CASCADE
+        """
+    )
+
+
 def upgrade() -> None:
     bind = op.get_bind()
+    legacy_schema_was_present = _rename_legacy_tables(bind)
+
     weekday_enum.create(bind, checkfirst=True)
     task_log_status_enum.create(bind, checkfirst=True)
     sprint_run_status_enum.create(bind, checkfirst=True)
@@ -293,6 +588,9 @@ def upgrade() -> None:
         ["group_id", "user_id", "created_at"],
         unique=False,
     )
+
+    if legacy_schema_was_present:
+        _migrate_legacy_data()
 
 
 def downgrade() -> None:

@@ -83,15 +83,22 @@ class SqlAlchemyGroupRepository:
         )
         self._session.add(model)
         await self._session.flush()
-        await self._session.refresh(model)
-        return map_group(model)
+        created = await self._fetch_group(group_id=model.id)
+        if created is None:
+            raise NotFoundError("Group was not found")
+        return map_group(created)
 
     async def create_membership(self, *, group_id: int, user_id: int) -> MembershipInfo:
         model = GroupMembership(group_id=group_id, user_id=user_id)
         self._session.add(model)
         await self._session.flush()
-        await self._session.refresh(model)
-        return map_membership(model)
+        return MembershipInfo(
+            id=model.id,
+            group_id=model.group_id,
+            user_id=model.user_id,
+            left_at=model.left_at,
+            weight_percent=None,
+        )
 
     async def ensure_balance(self, *, group_id: int, user_id: int) -> Decimal:
         query = select(Balance).where(Balance.group_id == group_id, Balance.user_id == user_id)

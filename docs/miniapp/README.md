@@ -41,3 +41,8 @@
 
 - Miniapp не дублирует бизнес-правила backend локально.
 - Если экран зависит от неготового backend contract, сначала закрывается backend issue, потом UI.
+
+## Product/design handoff
+
+- [Текущее состояние функционала и экранов](./current-functionality-and-screens.md)
+- [ТЗ для дизайнера](./designer-brief.md)

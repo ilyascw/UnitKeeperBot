@@ -7,13 +7,13 @@ import { WEEKDAYS, type Weekday } from '@/api/types';
 import { routes } from '@/routes/paths';
 
 const WEEKDAY_LABEL: Record<Weekday, string> = {
-  monday: 'Monday',
-  tuesday: 'Tuesday',
-  wednesday: 'Wednesday',
-  thursday: 'Thursday',
-  friday: 'Friday',
-  saturday: 'Saturday',
-  sunday: 'Sunday',
+  monday: 'Понедельник',
+  tuesday: 'Вторник',
+  wednesday: 'Среда',
+  thursday: 'Четверг',
+  friday: 'Пятница',
+  saturday: 'Суббота',
+  sunday: 'Воскресенье',
 };
 
 /**
@@ -55,27 +55,27 @@ export function CreateGroupScreen() {
     <form onSubmit={handleSubmit}>
       <List>
         <Section
-          header="Create a group"
-          footer="The secret lets others join — share it only with the people you want in."
+          header="Создание группы"
+          footer="Код нужен другим участникам для вступления в группу."
         >
           <Input
-            header="Name"
-            placeholder="e.g. Smith family"
+            header="Название группы"
+            placeholder="Например: Семья"
             value={name}
             onChange={(event) => setName(event.currentTarget.value)}
             disabled={mutation.isPending}
           />
           <Input
-            header="Join secret"
-            placeholder="At least 3 characters"
+            header="Код вступления"
+            placeholder="Минимум 3 символа"
             value={secret}
             onChange={(event) => setSecret(event.currentTarget.value)}
             disabled={mutation.isPending}
           />
         </Section>
-        <Section header="Sprint" footer="The sprint resets weekly on the start day.">
+        <Section header="Период учёта" footer="Период начинается заново в выбранный день недели.">
           <Select
-            header="Start weekday"
+            header="День начала"
             value={weekday}
             onChange={(event) => setWeekday(event.currentTarget.value as Weekday)}
             disabled={mutation.isPending}
@@ -87,7 +87,7 @@ export function CreateGroupScreen() {
             ))}
           </Select>
           <Input
-            header="Duration (days)"
+            header="Длительность в днях"
             type="number"
             inputMode="numeric"
             value={duration}
@@ -96,7 +96,7 @@ export function CreateGroupScreen() {
           />
         </Section>
         {mutation.isError ? (
-          <Section header="Couldn’t create group">
+          <Section header="Не удалось создать группу">
             <div style={{ padding: '8px 16px', color: 'var(--tgui--destructive_text_color)' }}>
               {mutation.error.message}
             </div>
@@ -105,7 +105,7 @@ export function CreateGroupScreen() {
         <Section>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 16px' }}>
             <Button type="submit" stretched size="l" loading={mutation.isPending} disabled={disabled}>
-              Create group
+              Создать группу
             </Button>
             <Button
               type="button"
@@ -115,7 +115,7 @@ export function CreateGroupScreen() {
               onClick={() => navigate(routes.onboarding)}
               disabled={mutation.isPending}
             >
-              Cancel
+              Отмена
             </Button>
           </div>
         </Section>

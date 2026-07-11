@@ -28,3 +28,4 @@ dist/
 postgres_data/
 
 UnitKeeperBot/
+data/

@@ -69,3 +69,9 @@ More detail is captured in `ARCHITECTURE.md`.
 2. Generate a migration: `make revision m="describe change"`.
 3. Review the generated file in `alembic/versions/`.
 4. Apply it locally with `make migrate`.
+
+## Legacy Data Bootstrap
+
+Legacy bot dumps should be restored at Alembic revision `20260315_0000`, then upgraded to
+`head` to transform data into the backend v1 schema. See
+[`docs/common/legacy-data-bootstrap.md`](../docs/common/legacy-data-bootstrap.md).
