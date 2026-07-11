@@ -153,6 +153,12 @@ export interface CreateTaskRequest {
   unit_cost: string;
 }
 
+export interface UpdateTaskRequest {
+  title?: string;
+  frequency_per_sprint?: number;
+  unit_cost?: string;
+}
+
 /** Result of marking a task done — a log entry pending owner approval. */
 export interface TaskLogResponse {
   id: number;

@@ -4,7 +4,7 @@ from decimal import Decimal
 
 import pytest
 
-from db.enums import SprintRunStatus, TaskLogStatus, Weekday
+from db.enums import SprintRunStatus, Weekday
 from unitkeeper_backend.application.context.service import CurrentContextService
 from unitkeeper_backend.application.groups.service import GroupService
 from unitkeeper_backend.application.models import UserProfile

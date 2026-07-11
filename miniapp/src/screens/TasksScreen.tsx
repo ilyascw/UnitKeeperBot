@@ -1,7 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
 
-import { useCreateTask, useMarkTaskDone } from '@/api/mutations';
+import {
+  useCreateTask,
+  useDecreaseTaskFrequency,
+  useDeleteTask,
+  useIncreaseTaskFrequency,
+  useMarkTaskDone,
+  useUpdateTask,
+} from '@/api/mutations';
 import { useCurrentGroup, useTasks } from '@/api/queries';
 import { useAuth } from '@/auth/useAuth';
 import { ErrorState } from '@/components/ErrorState';
@@ -9,42 +16,96 @@ import { Loader } from '@/components/Loader';
 import { routes } from '@/routes/paths';
 import { formatUnits } from '@/ui/format';
 import { BottomSheet, Button, Card, Field, Note, Screen, Stepper, TextInput, Toast } from '@/ui/kit';
-import { CheckIcon, ClockIcon, PlusIcon } from '@/ui/icons';
+import { CheckIcon, ClockIcon, PencilIcon, PlusIcon, TrashIcon } from '@/ui/icons';
 import type { TaskResponse } from '@/api/types';
 
-/** Owner-only sheet for adding a recurring task. */
-function AddTaskSheet({ onClose }: { onClose: () => void }) {
-  const create = useCreateTask();
-  const [title, setTitle] = useState('');
-  const [frequency, setFrequency] = useState(1);
-  const [cost, setCost] = useState('');
+function parseCost(value: string): number {
+  return Number.parseFloat(value.replace(',', '.'));
+}
 
-  const costValue = Number.parseFloat(cost.replace(',', '.'));
+function taskIsMarkable(task: TaskResponse): boolean {
+  return task.available_in_sprint > 0;
+}
+
+function taskIsComplete(task: TaskResponse): boolean {
+  return task.remaining_in_sprint <= 0;
+}
+
+function taskIsHeldFull(task: TaskResponse): boolean {
+  return !taskIsComplete(task) && !taskIsMarkable(task);
+}
+
+/** Owner-only sheet for adding or editing a recurring task. */
+function TaskFormSheet({
+  task,
+  onClose,
+  onSaved,
+}: {
+  task?: TaskResponse;
+  onClose: () => void;
+  onSaved: (message: string) => void;
+}) {
+  const create = useCreateTask();
+  const update = useUpdateTask();
+  const isEditing = task !== undefined;
+  const pending = create.isPending || update.isPending;
+  const [title, setTitle] = useState(task?.title ?? '');
+  const [frequency, setFrequency] = useState(task?.frequency_per_sprint ?? 1);
+  const [cost, setCost] = useState(task?.unit_cost ?? '');
+
+  const costValue = parseCost(cost);
   const costValid = Number.isFinite(costValue) && costValue >= 0;
   const canSubmit = title.trim().length > 0 && costValid;
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     if (!canSubmit) return;
+    if (isEditing) {
+      update.mutate(
+        {
+          taskId: task.id,
+          body: {
+            title: title.trim(),
+            frequency_per_sprint: frequency,
+            unit_cost: String(costValue),
+          },
+        },
+        {
+          onSuccess: () => {
+            onSaved('Задача обновлена');
+            onClose();
+          },
+        },
+      );
+      return;
+    }
     create.mutate(
       { title: title.trim(), frequency_per_sprint: frequency, unit_cost: String(costValue) },
-      { onSuccess: onClose },
+      {
+        onSuccess: () => {
+          onSaved('Задача добавлена');
+          onClose();
+        },
+      },
     );
   };
 
   return (
-    <BottomSheet onClose={() => (create.isPending ? undefined : onClose())}>
+    <BottomSheet onClose={() => (pending ? undefined : onClose())}>
       <div style={{ textAlign: 'center', font: "800 20px 'Manrope'", marginBottom: 18 }}>
-        Новая задача
+        {isEditing ? 'Редактировать задачу' : 'Новая задача'}
       </div>
       <form onSubmit={handleSubmit} className="uk-stack">
         <Field label="Название">
           <TextInput
+            name="title"
             value={title}
             onChange={(e) => setTitle(e.currentTarget.value)}
             placeholder="Например, помыть посуду"
             maxLength={255}
+            disabled={pending}
             autoFocus
+            enterKeyHint="next"
           />
         </Field>
         <Stepper
@@ -54,21 +115,187 @@ function AddTaskSheet({ onClose }: { onClose: () => void }) {
           max={99}
           suffix="раз"
           onChange={setFrequency}
-          disabled={create.isPending}
+          disabled={pending}
         />
         <Field label="Стоимость, юниты" hint="Сколько юнитов начисляется за одно выполнение.">
           <TextInput
+            name="unit_cost"
             value={cost}
             onChange={(e) => setCost(e.currentTarget.value)}
             inputMode="decimal"
             placeholder="5"
+            disabled={pending}
+            enterKeyHint="done"
           />
         </Field>
         {create.isError ? <Note tone="error">{create.error.message}</Note> : null}
-        <Button type="submit" variant="primary" loading={create.isPending} disabled={!canSubmit}>
-          Добавить задачу
+        {update.isError ? <Note tone="error">{update.error.message}</Note> : null}
+        <Button type="submit" variant="primary" loading={pending} disabled={!canSubmit}>
+          {isEditing ? 'Сохранить изменения' : 'Добавить задачу'}
         </Button>
       </form>
+    </BottomSheet>
+  );
+}
+
+function DeleteTaskSheet({
+  task,
+  onClose,
+  onDeleted,
+}: {
+  task: TaskResponse;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  const deleteTask = useDeleteTask();
+
+  const handleDelete = (): void => {
+    deleteTask.mutate(task.id, { onSuccess: onDeleted });
+  };
+
+  return (
+    <BottomSheet onClose={() => (deleteTask.isPending ? undefined : onClose())}>
+      <div style={{ textAlign: 'center', font: "800 20px 'Manrope'", marginBottom: 10 }}>
+        Удалить задачу?
+      </div>
+      <Note tone="warn">
+        «{task.title}» исчезнет из активного списка. Уже созданные отметки выполнения сохранятся в
+        истории.
+      </Note>
+      {deleteTask.isError ? <Note tone="error">{deleteTask.error.message}</Note> : null}
+      <div className="uk-stack" style={{ marginTop: 16 }}>
+        <Button variant="danger" loading={deleteTask.isPending} onClick={handleDelete}>
+          <TrashIcon size={18} /> Удалить
+        </Button>
+        <Button variant="ghost" disabled={deleteTask.isPending} onClick={onClose}>
+          Оставить задачу
+        </Button>
+      </div>
+    </BottomSheet>
+  );
+}
+
+function TaskDetailSheet({
+  task,
+  isOwner,
+  markLoading,
+  markBusy,
+  onClose,
+  onDone,
+  onEdit,
+  onDelete,
+}: {
+  task: TaskResponse;
+  isOwner: boolean;
+  markLoading: boolean;
+  markBusy: boolean;
+  onClose: () => void;
+  onDone: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const increase = useIncreaseTaskFrequency();
+  const decrease = useDecreaseTaskFrequency();
+  const complete = taskIsComplete(task);
+  const heldFull = taskIsHeldFull(task);
+  const markable = taskIsMarkable(task);
+  const adjusting = increase.isPending || decrease.isPending;
+
+  return (
+    <BottomSheet onClose={onClose}>
+      <div className="uk-stack">
+        <div>
+          <div style={{ font: "800 22px/1.2 'Manrope'" }}>{task.title}</div>
+          <div style={{ font: "500 13px 'Manrope'", color: 'var(--uk-ink-55)', marginTop: 6 }}>
+            {formatUnits(task.unit_cost)} ю за выполнение
+          </div>
+        </div>
+
+        <Card style={{ padding: 14, borderRadius: 18 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <div className="uk-eyebrow">Прогресс</div>
+              <div style={{ font: "800 22px 'Manrope'", marginTop: 4 }}>
+                {task.completed_in_sprint}/{task.frequency_per_sprint}
+              </div>
+            </div>
+            <div>
+              <div className="uk-eyebrow">Доступно</div>
+              <div style={{ font: "800 22px 'Manrope'", marginTop: 4 }}>
+                {task.available_in_sprint}
+              </div>
+            </div>
+          </div>
+          {task.pending_in_sprint > 0 ? (
+            <div
+              style={{
+                marginTop: 12,
+                font: "600 12.5px 'Manrope'",
+                color: 'var(--uk-warn)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <ClockIcon size={14} /> {task.pending_in_sprint} на подтверждении
+            </div>
+          ) : null}
+        </Card>
+
+        {heldFull ? (
+          <Note tone="warn">Все свободные слоты сейчас заняты отметками на подтверждении.</Note>
+        ) : complete ? (
+          <Note tone="info">Лимит на этот спринт уже выполнен.</Note>
+        ) : null}
+
+        <Button
+          variant="primary"
+          loading={markLoading}
+          disabled={!markable || markBusy}
+          onClick={onDone}
+        >
+          <CheckIcon size={18} /> Отметить выполнение
+        </Button>
+
+        {isOwner ? (
+          <>
+            <div className="uk-divider" />
+            <div>
+              <div className="uk-eyebrow" style={{ marginBottom: 8 }}>
+                Частота за спринт
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <Button
+                  variant="soft"
+                  disabled={adjusting || task.frequency_per_sprint <= 1}
+                  loading={decrease.isPending}
+                  onClick={() => decrease.mutate(task.id)}
+                >
+                  −1
+                </Button>
+                <Button
+                  variant="soft"
+                  disabled={adjusting}
+                  loading={increase.isPending}
+                  onClick={() => increase.mutate(task.id)}
+                >
+                  +1
+                </Button>
+              </div>
+              {decrease.isError ? <Note tone="error">{decrease.error.message}</Note> : null}
+              {increase.isError ? <Note tone="error">{increase.error.message}</Note> : null}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <Button variant="ghost" onClick={onEdit}>
+                <PencilIcon size={17} /> Изменить
+              </Button>
+              <Button variant="danger" onClick={onDelete}>
+                <TrashIcon size={17} /> Удалить
+              </Button>
+            </div>
+          </>
+        ) : null}
+      </div>
     </BottomSheet>
   );
 }
@@ -76,11 +303,13 @@ function AddTaskSheet({ onClose }: { onClose: () => void }) {
 function TaskRow({
   task,
   onDone,
+  onOpen,
   loading,
   busy,
 }: {
   task: TaskResponse;
   onDone: () => void;
+  onOpen: () => void;
   /** This task's own completion request is in flight. */
   loading: boolean;
   /** Some completion request is in flight (blocks all rows). */
@@ -90,9 +319,9 @@ function TaskRow({
   //  complete  — every slot confirmed (remaining 0)
   //  heldFull  — remaining slots all occupied by pending holds (available 0)
   //  markable  — at least one free slot (available > 0)
-  const complete = task.remaining_in_sprint <= 0;
-  const markable = task.available_in_sprint > 0;
-  const heldFull = !complete && !markable;
+  const complete = taskIsComplete(task);
+  const markable = taskIsMarkable(task);
+  const heldFull = taskIsHeldFull(task);
   const locked = !markable || busy;
 
   return (
@@ -133,7 +362,21 @@ function TaskRow({
           <ClockIcon size={16} />
         ) : null}
       </button>
-      <div className="uk-row__grow">
+      <button
+        type="button"
+        className="uk-row__grow"
+        onClick={onOpen}
+        style={{
+          minWidth: 0,
+          padding: 0,
+          border: 'none',
+          background: 'none',
+          color: 'inherit',
+          textAlign: 'left',
+          cursor: 'pointer',
+        }}
+        aria-label={`Открыть задачу «${task.title}»`}
+      >
         <div
           style={{
             font: "600 15px 'Manrope'",
@@ -165,7 +408,7 @@ function TaskRow({
             ) : null}
           </div>
         )}
-      </div>
+      </button>
       <span
         style={{
           font: "700 15px 'Manrope'",
@@ -188,6 +431,9 @@ export function TasksScreen() {
   const { data: tasks, isPending, isError, error, refetch } = useTasks();
   const markDone = useMarkTaskDone();
   const [adding, setAdding] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+  const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
   const [toast, setToast] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
@@ -195,6 +441,19 @@ export function TasksScreen() {
     const timer = setTimeout(() => setToast(null), 2800);
     return () => clearTimeout(timer);
   }, [toast]);
+
+  useEffect(() => {
+    if (!tasks) return;
+    if (selectedTaskId !== null && !tasks.some((task) => task.id === selectedTaskId)) {
+      setSelectedTaskId(null);
+    }
+    if (editingTaskId !== null && !tasks.some((task) => task.id === editingTaskId)) {
+      setEditingTaskId(null);
+    }
+    if (deletingTaskId !== null && !tasks.some((task) => task.id === deletingTaskId)) {
+      setDeletingTaskId(null);
+    }
+  }, [deletingTaskId, editingTaskId, selectedTaskId, tasks]);
 
   const handleDone = (task: TaskResponse): void => {
     // The pending / completed state itself comes from the refetched task list
@@ -223,6 +482,9 @@ export function TasksScreen() {
   }
 
   const isOwner = context?.user?.id === group.data?.owner_user_id;
+  const selectedTask = selectedTaskId === null ? null : tasks.find((task) => task.id === selectedTaskId) ?? null;
+  const editingTask = editingTaskId === null ? null : tasks.find((task) => task.id === editingTaskId) ?? null;
+  const deletingTask = deletingTaskId === null ? null : tasks.find((task) => task.id === deletingTaskId) ?? null;
 
   return (
     <Screen>
@@ -265,6 +527,7 @@ export function TasksScreen() {
                 key={task.id}
                 task={task}
                 onDone={() => handleDone(task)}
+                onOpen={() => setSelectedTaskId(task.id)}
                 loading={markDone.isPending && markDone.variables === task.id}
                 busy={markDone.isPending}
               />
@@ -274,7 +537,47 @@ export function TasksScreen() {
       )}
 
       {toast ? <Toast tone={toast.tone} message={toast.text} /> : null}
-      {adding ? <AddTaskSheet onClose={() => setAdding(false)} /> : null}
+      {adding ? (
+        <TaskFormSheet
+          onClose={() => setAdding(false)}
+          onSaved={(text) => setToast({ tone: 'success', text })}
+        />
+      ) : null}
+      {selectedTask ? (
+        <TaskDetailSheet
+          task={selectedTask}
+          isOwner={isOwner}
+          markLoading={markDone.isPending && markDone.variables === selectedTask.id}
+          markBusy={markDone.isPending}
+          onClose={() => setSelectedTaskId(null)}
+          onDone={() => handleDone(selectedTask)}
+          onEdit={() => {
+            setEditingTaskId(selectedTask.id);
+            setSelectedTaskId(null);
+          }}
+          onDelete={() => {
+            setDeletingTaskId(selectedTask.id);
+            setSelectedTaskId(null);
+          }}
+        />
+      ) : null}
+      {editingTask ? (
+        <TaskFormSheet
+          task={editingTask}
+          onClose={() => setEditingTaskId(null)}
+          onSaved={(text) => setToast({ tone: 'success', text })}
+        />
+      ) : null}
+      {deletingTask ? (
+        <DeleteTaskSheet
+          task={deletingTask}
+          onClose={() => setDeletingTaskId(null)}
+          onDeleted={() => {
+            setToast({ tone: 'success', text: 'Задача удалена' });
+            setDeletingTaskId(null);
+          }}
+        />
+      ) : null}
     </Screen>
   );
 }
