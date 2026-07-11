@@ -5,9 +5,13 @@ import { useAuthToken } from '@/auth/useAuth';
 import {
   createGroup,
   createTask,
+  decreaseTaskFrequency,
+  deleteTask,
+  increaseTaskFrequency,
   joinGroup,
   leaveGroup,
   markTaskDone,
+  updateTask,
   updateCurrentGroupSettings,
   updateCurrentGroupWeights,
 } from './endpoints';
@@ -21,6 +25,7 @@ import type {
   JoinGroupRequest,
   TaskLogResponse,
   TaskResponse,
+  UpdateTaskRequest,
   UpdateGroupSettingsRequest,
   UpdateWeightsRequest,
 } from './types';
@@ -117,6 +122,46 @@ export function useCreateTask(): UseMutationResult<TaskResponse, Error, CreateTa
   const invalidate = useInvalidateTasks();
   return useMutation({
     mutationFn: (body: CreateTaskRequest) => createTask(token, body),
+    onSuccess: () => invalidate(),
+  });
+}
+
+export function useUpdateTask(): UseMutationResult<
+  TaskResponse,
+  Error,
+  { taskId: number; body: UpdateTaskRequest }
+> {
+  const token = useAuthToken();
+  const invalidate = useInvalidateTasks();
+  return useMutation({
+    mutationFn: ({ taskId, body }) => updateTask(token, taskId, body),
+    onSuccess: () => invalidate(),
+  });
+}
+
+export function useDeleteTask(): UseMutationResult<void, Error, number> {
+  const token = useAuthToken();
+  const invalidate = useInvalidateTasks();
+  return useMutation({
+    mutationFn: (taskId: number) => deleteTask(token, taskId),
+    onSuccess: () => invalidate(),
+  });
+}
+
+export function useIncreaseTaskFrequency(): UseMutationResult<TaskResponse, Error, number> {
+  const token = useAuthToken();
+  const invalidate = useInvalidateTasks();
+  return useMutation({
+    mutationFn: (taskId: number) => increaseTaskFrequency(token, taskId),
+    onSuccess: () => invalidate(),
+  });
+}
+
+export function useDecreaseTaskFrequency(): UseMutationResult<TaskResponse, Error, number> {
+  const token = useAuthToken();
+  const invalidate = useInvalidateTasks();
+  return useMutation({
+    mutationFn: (taskId: number) => decreaseTaskFrequency(token, taskId),
     onSuccess: () => invalidate(),
   });
 }

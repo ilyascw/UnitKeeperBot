@@ -11,6 +11,7 @@ import type {
   SprintResultsResponse,
   TaskLogResponse,
   TaskResponse,
+  UpdateTaskRequest,
   UpdateGroupSettingsRequest,
   UpdateWeightsRequest,
 } from './types';
@@ -87,6 +88,26 @@ export function listTasks(token: string): Promise<TaskResponse[]> {
 
 export function createTask(token: string, body: CreateTaskRequest): Promise<TaskResponse> {
   return request<TaskResponse>('/tasks', { method: 'POST', body, token });
+}
+
+export function updateTask(
+  token: string,
+  taskId: number,
+  body: UpdateTaskRequest,
+): Promise<TaskResponse> {
+  return request<TaskResponse>(`/tasks/${taskId}`, { method: 'PATCH', body, token });
+}
+
+export function deleteTask(token: string, taskId: number): Promise<void> {
+  return request<void>(`/tasks/${taskId}`, { method: 'DELETE', token });
+}
+
+export function increaseTaskFrequency(token: string, taskId: number): Promise<TaskResponse> {
+  return request<TaskResponse>(`/tasks/${taskId}/increase-frequency`, { method: 'POST', token });
+}
+
+export function decreaseTaskFrequency(token: string, taskId: number): Promise<TaskResponse> {
+  return request<TaskResponse>(`/tasks/${taskId}/decrease-frequency`, { method: 'POST', token });
 }
 
 /** Log a completion for a task; the entry awaits owner approval. */
