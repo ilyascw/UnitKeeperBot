@@ -38,6 +38,21 @@
   --uk-r-pill: 999px;
 
   --uk-font: 'Manrope', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /*
+   * Safe-area insets. In Telegram fullscreen the WebView is drawn edge to edge
+   * and its overlay controls sit inside the "content safe area"; the SDK's
+   * viewport.bindCssVars() populates these `--tg-viewport-*` vars (in px).
+   * They resolve to 0 in a plain browser, so these are no-ops outside Telegram.
+   */
+  --uk-safe-top: calc(
+    var(--tg-viewport-safe-area-inset-top, 0px) +
+      var(--tg-viewport-content-safe-area-inset-top, 0px)
+  );
+  --uk-safe-bottom: max(
+    env(safe-area-inset-bottom, 0px),
+    var(--tg-viewport-safe-area-inset-bottom, 0px)
+  );
 }
 
 * {
@@ -87,6 +102,8 @@ body {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
+  /* Clear Telegram's fullscreen overlay controls (close / collapse) at the top. */
+  padding-top: var(--uk-safe-top);
 }
 
 .uk-screen {
@@ -599,6 +616,64 @@ body {
   border-radius: var(--uk-r-pill);
   background: rgba(255, 255, 255, 0.25);
   margin: 0 auto 20px;
+}
+
+/* ---------- Tab bar ---------- */
+.uk-tab-scope {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Reserve room so section content never hides behind the floating bar. */
+.uk-tab-scope .uk-screen {
+  padding-bottom: calc(104px + var(--uk-safe-bottom));
+}
+
+.uk-tabbar {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(12px + var(--uk-safe-bottom));
+  width: calc(100% - 28px);
+  max-width: 452px;
+  display: flex;
+  justify-content: space-around;
+  gap: 4px;
+  padding: 10px 8px;
+  border-radius: 24px;
+  background: rgba(18, 24, 40, 0.72);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  z-index: 30;
+}
+
+.uk-tabbar__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  border: none;
+  background: none;
+  color: var(--uk-ink-55);
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.uk-tabbar__item span {
+  font: 600 10px var(--uk-font);
+}
+
+.uk-tabbar__item--active {
+  color: var(--uk-blue);
+}
+
+.uk-tabbar__item--active span {
+  font-weight: 700;
 }
 
 /* ---------- Helpers ---------- */

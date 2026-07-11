@@ -4,18 +4,23 @@ import { useAuthToken } from '@/auth/useAuth';
 
 import {
   createGroup,
+  createTask,
   joinGroup,
   leaveGroup,
+  markTaskDone,
   updateCurrentGroupSettings,
   updateCurrentGroupWeights,
 } from './endpoints';
 import { queryKeys } from './queries';
 import type {
   CreateGroupRequest,
+  CreateTaskRequest,
   CurrentContextResponse,
   GroupMembersResponse,
   GroupResponse,
   JoinGroupRequest,
+  TaskLogResponse,
+  TaskResponse,
   UpdateGroupSettingsRequest,
   UpdateWeightsRequest,
 } from './types';
@@ -28,6 +33,21 @@ function useInvalidateGroup(): () => Promise<void> {
   const qc = useQueryClient();
   return async () => {
     await qc.invalidateQueries({ queryKey: queryKeys.currentGroup });
+  };
+}
+
+/**
+ * Invalidate everything a task completion or a new task can shift: the task
+ * list, the sprint results, and the balances shown on the group card.
+ */
+function useInvalidateTasks(): () => Promise<void> {
+  const qc = useQueryClient();
+  return async () => {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: queryKeys.tasks }),
+      qc.invalidateQueries({ queryKey: queryKeys.sprintResults }),
+      qc.invalidateQueries({ queryKey: queryKeys.currentGroup }),
+    ]);
   };
 }
 
@@ -88,6 +108,24 @@ export function useUpdateGroupWeights(): UseMutationResult<
   const invalidate = useInvalidateGroup();
   return useMutation({
     mutationFn: (body: UpdateWeightsRequest) => updateCurrentGroupWeights(token, body),
+    onSuccess: () => invalidate(),
+  });
+}
+
+export function useCreateTask(): UseMutationResult<TaskResponse, Error, CreateTaskRequest> {
+  const token = useAuthToken();
+  const invalidate = useInvalidateTasks();
+  return useMutation({
+    mutationFn: (body: CreateTaskRequest) => createTask(token, body),
+    onSuccess: () => invalidate(),
+  });
+}
+
+export function useMarkTaskDone(): UseMutationResult<TaskLogResponse, Error, number> {
+  const token = useAuthToken();
+  const invalidate = useInvalidateTasks();
+  return useMutation({
+    mutationFn: (taskId: number) => markTaskDone(token, taskId),
     onSuccess: () => invalidate(),
   });
 }

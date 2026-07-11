@@ -1,12 +1,16 @@
 import { request } from './client';
 import type {
   CreateGroupRequest,
+  CreateTaskRequest,
   CurrentContextResponse,
   GroupCardResponse,
   GroupMembersResponse,
   GroupResponse,
   JoinGroupRequest,
   SessionResponse,
+  SprintResultsResponse,
+  TaskLogResponse,
+  TaskResponse,
   UpdateGroupSettingsRequest,
   UpdateWeightsRequest,
 } from './types';
@@ -74,4 +78,23 @@ export function updateCurrentGroupWeights(
     body,
     token,
   });
+}
+
+/** List the current group's active tasks with per-sprint completion counts. */
+export function listTasks(token: string): Promise<TaskResponse[]> {
+  return request<TaskResponse[]>('/tasks', { token });
+}
+
+export function createTask(token: string, body: CreateTaskRequest): Promise<TaskResponse> {
+  return request<TaskResponse>('/tasks', { method: 'POST', body, token });
+}
+
+/** Log a completion for a task; the entry awaits owner approval. */
+export function markTaskDone(token: string, taskId: number): Promise<TaskLogResponse> {
+  return request<TaskLogResponse>(`/tasks/${taskId}/done`, { method: 'POST', token });
+}
+
+/** Provisional results for the running sprint. */
+export function getSprintResults(token: string): Promise<SprintResultsResponse> {
+  return request<SprintResultsResponse>('/sprints/current/results', { token });
 }

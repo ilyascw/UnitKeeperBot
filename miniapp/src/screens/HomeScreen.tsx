@@ -28,5 +28,5 @@ export function HomeScreen() {
     );
   }
 
-  return <Navigate to={group === null ? routes.onboarding : routes.group} replace />;
+  return <Navigate to={group === null ? routes.onboarding : routes.dashboard} replace />;
 }

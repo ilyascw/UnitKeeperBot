@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { HashRouter } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
 
 import { ApiError } from '@/api/client';
 import { AuthGate } from '@/auth/AuthGate';
@@ -34,9 +34,15 @@ export function App() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <AuthGate>
-            <HashRouter>
+            {/*
+             * BrowserRouter (path-based), not HashRouter: Telegram appends its
+             * launch params to the URL hash (`#tgWebAppData=...`). A hash router
+             * would read that as a route and fall through to the 404 screen.
+             * Path routing ignores the hash, leaving it for the Telegram SDK.
+             */}
+            <BrowserRouter>
               <AppRoutes />
-            </HashRouter>
+            </BrowserRouter>
           </AuthGate>
         </AuthProvider>
       </QueryClientProvider>

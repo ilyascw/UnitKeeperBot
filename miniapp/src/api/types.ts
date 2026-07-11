@@ -128,3 +128,51 @@ export interface UpdateWeightsRequest {
 export interface GroupMembersResponse {
   members: MemberCardResponse[];
 }
+
+/** A recurring task in the current group. Decimal `unit_cost` is a string. */
+export interface TaskResponse {
+  id: number;
+  group_id: number;
+  title: string;
+  frequency_per_sprint: number;
+  unit_cost: string;
+  deleted_at: string | null;
+  completed_in_sprint: number;
+  remaining_in_sprint: number;
+}
+
+export interface CreateTaskRequest {
+  title: string;
+  frequency_per_sprint: number;
+  unit_cost: string;
+}
+
+/** Result of marking a task done — a log entry pending owner approval. */
+export interface TaskLogResponse {
+  id: number;
+  group_id: number;
+  task_id: number;
+  performer_user_id: number;
+  status: string;
+  approver_user_id: number | null;
+  decided_at: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+}
+
+export interface CompletedTaskBreakdownResponse {
+  task_id: number;
+  title: string;
+  completed_count: number;
+  completed_units: string;
+}
+
+/** Provisional results for the running sprint (before it is closed). */
+export interface SprintResultsResponse {
+  period_start: string;
+  period_end: string;
+  planned_units: string;
+  completed_units: string;
+  progress_percent: string;
+  breakdown: CompletedTaskBreakdownResponse[];
+}

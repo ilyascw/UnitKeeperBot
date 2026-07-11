@@ -9,8 +9,11 @@ import { Loader } from '@/components/Loader';
 import { routes } from '@/routes/paths';
 import {
   WEEKDAY_EVERY,
+  balanceColor,
   daysUntil,
+  formatBalance,
   formatPeriod,
+  memberName,
   pluralDays,
   pluralMembers,
 } from '@/ui/format';
@@ -26,31 +29,6 @@ import {
   SlidersIcon,
 } from '@/ui/icons';
 import type { MemberCardResponse, Weekday } from '@/api/types';
-
-function memberName(m: {
-  first_name: string | null;
-  username: string | null;
-  user_id: number;
-}): string {
-  return m.first_name ?? m.username ?? `Участник ${m.user_id}`;
-}
-
-function balanceColor(value: string): string {
-  const n = Number.parseFloat(value);
-  if (Number.isFinite(n) && n < 0) return 'var(--uk-danger-soft)';
-  if (Number.isFinite(n) && n > 0) return 'var(--uk-positive)';
-  return 'var(--uk-ink)';
-}
-
-/** `-5.95` → `−5.95`, `18.4` → `+18.40`; keeps a clean signed unit balance. */
-function formatBalance(value: string): string {
-  const n = Number.parseFloat(value);
-  if (!Number.isFinite(n)) return value;
-  const fixed = Math.abs(n).toFixed(2);
-  if (n < 0) return `−${fixed}`;
-  if (n > 0) return `+${fixed}`;
-  return fixed;
-}
 
 /**
  * Main group surface. Leads with the two balances people check daily, then the

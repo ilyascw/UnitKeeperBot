@@ -3,11 +3,13 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { useAuthToken } from '@/auth/useAuth';
 
 import { ApiError } from './client';
-import { getCurrentGroup } from './endpoints';
-import type { GroupCardResponse } from './types';
+import { getCurrentGroup, getSprintResults, listTasks } from './endpoints';
+import type { GroupCardResponse, SprintResultsResponse, TaskResponse } from './types';
 
 export const queryKeys = {
   currentGroup: ['groups', 'current'] as const,
+  tasks: ['tasks'] as const,
+  sprintResults: ['sprints', 'current', 'results'] as const,
 };
 
 /**
@@ -28,5 +30,23 @@ export function useCurrentGroup(): UseQueryResult<GroupCardResponse | null, Erro
         throw error;
       }
     },
+  });
+}
+
+/** The current group's active tasks with per-sprint completion counts. */
+export function useTasks(): UseQueryResult<TaskResponse[], Error> {
+  const token = useAuthToken();
+  return useQuery({
+    queryKey: queryKeys.tasks,
+    queryFn: () => listTasks(token),
+  });
+}
+
+/** Provisional results for the running sprint. */
+export function useSprintResults(): UseQueryResult<SprintResultsResponse, Error> {
+  const token = useAuthToken();
+  return useQuery({
+    queryKey: queryKeys.sprintResults,
+    queryFn: () => getSprintResults(token),
   });
 }
