@@ -30,6 +30,43 @@ function evenSplit(userIds: number[]): Record<number, number> {
   return out;
 }
 
+/** Set `changedId`'s weight to `rawValue` and rescale the other members
+ * proportionally to their current shares so the total stays exactly 100. */
+function redistribute(
+  prev: Record<number, number>,
+  changedId: number,
+  rawValue: number,
+  memberIds: number[],
+): Record<number, number> {
+  const value = Math.max(0, Math.min(100, Math.round(rawValue)));
+  const others = memberIds.filter((id) => id !== changedId);
+  const next: Record<number, number> = { ...prev, [changedId]: value };
+  if (others.length === 0) return next;
+
+  const remaining = 100 - value;
+  const otherSum = others.reduce((acc, id) => acc + (prev[id] ?? 0), 0);
+
+  if (otherSum === 0) {
+    const base = Math.floor(remaining / others.length);
+    others.forEach((id) => (next[id] = base));
+    next[others[0]] += remaining - base * others.length;
+    return next;
+  }
+
+  let allocated = 0;
+  others.forEach((id) => {
+    const share = Math.round(((prev[id] ?? 0) / otherSum) * remaining);
+    next[id] = share;
+    allocated += share;
+  });
+  const drift = remaining - allocated;
+  if (drift !== 0) {
+    const largest = others.reduce((a, b) => (next[a] >= next[b] ? a : b));
+    next[largest] += drift;
+  }
+  return next;
+}
+
 /**
  * Owner-only editor for member weights. Weights are shares of the planned load
  * that must sum to 100%. The backend enforces the invariant; we surface a live
@@ -94,8 +131,9 @@ export function GroupWeightsScreen() {
     );
   };
 
+  const memberIds = group.members.map((m) => m.user_id);
   const setOne = (userId: number, value: number): void =>
-    setValues((prev) => ({ ...prev, [userId]: value }));
+    setValues((prev) => redistribute(prev, userId, value, memberIds));
 
   return (
     <Screen>
