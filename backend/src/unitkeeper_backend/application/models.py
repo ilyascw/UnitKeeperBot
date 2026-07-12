@@ -3,8 +3,17 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal
+from uuid import UUID
 
-from db.enums import BalanceTransactionType, SprintRunStatus, TaskLogStatus, Weekday
+from db.enums import (
+    BalanceTransactionType,
+    NotificationDeliveryAttemptStatus,
+    NotificationEventType,
+    NotificationOutboxStatus,
+    SprintRunStatus,
+    TaskLogStatus,
+    Weekday,
+)
 
 
 @dataclass(slots=True)
@@ -249,3 +258,29 @@ class TelegramIdentity:
     last_name: str | None
     language_code: str | None
     is_bot: bool
+
+
+@dataclass(slots=True)
+class NotificationOutboxEventInfo:
+    id: UUID
+    event_type: NotificationEventType
+    recipient_user_id: int
+    group_id: int | None
+    payload: dict[str, object]
+    deep_link_path: str | None
+    correlation_id: str | None
+    status: NotificationOutboxStatus
+    attempt_count: int
+    next_attempt_at: datetime | None
+    delivered_at: datetime | None
+    last_error: str | None
+    created_at: datetime
+
+
+@dataclass(slots=True)
+class NotificationDeliveryAttemptInfo:
+    event_id: UUID
+    attempt_number: int
+    status: NotificationDeliveryAttemptStatus
+    error_message: str | None
+    acknowledged_at: datetime | None

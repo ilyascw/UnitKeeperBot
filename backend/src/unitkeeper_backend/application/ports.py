@@ -5,7 +5,11 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Protocol
 
-from db.enums import TaskLogStatus, Weekday
+from db.enums import (
+    NotificationEventType,
+    TaskLogStatus,
+    Weekday,
+)
 from unitkeeper_backend.application.models import (
     BalanceTransactionInfo,
     GroupInfo,
@@ -16,6 +20,7 @@ from unitkeeper_backend.application.models import (
     TaskLogInfo,
     TelegramIdentity,
     UserProfile,
+    NotificationOutboxEventInfo,
 )
 
 
@@ -258,11 +263,55 @@ class SprintRepository(Protocol):
     ) -> tuple[list[BalanceTransactionInfo], int]: ...
 
 
+class NotificationRepository(Protocol):
+    async def enqueue(
+        self,
+        *,
+        event_type: NotificationEventType,
+        recipient_user_id: int,
+        group_id: int | None,
+        payload: dict[str, object],
+        deep_link_path: str | None,
+    ) -> NotificationOutboxEventInfo: ...
+
+    async def enqueue_once(
+        self,
+        *,
+        dedupe_key: str,
+        correlation_id: str | None,
+        event_type: NotificationEventType,
+        recipient_user_id: int,
+        group_id: int | None,
+        payload: dict[str, object],
+        deep_link_path: str | None,
+    ) -> tuple[NotificationOutboxEventInfo, bool]: ...
+
+    async def list_ready(self, *, now: datetime, limit: int) -> list[NotificationOutboxEventInfo]: ...
+
+    async def acknowledge(
+        self,
+        *,
+        event_id: object,
+        acknowledged_at: datetime,
+    ) -> NotificationOutboxEventInfo: ...
+
+    async def fail(
+        self,
+        *,
+        event_id: object,
+        failed_at: datetime,
+        error_message: str,
+        retry_at: datetime | None,
+        terminal: bool,
+    ) -> NotificationOutboxEventInfo: ...
+
+
 class UnitOfWork(Protocol):
     users: UserRepository
     groups: GroupRepository
     tasks: TaskRepository
     sprints: SprintRepository
+    notifications: NotificationRepository
 
     async def commit(self) -> None: ...
 

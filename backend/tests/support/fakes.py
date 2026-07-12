@@ -5,7 +5,14 @@ from dataclasses import replace
 from datetime import date, datetime, timezone
 from decimal import Decimal
 
-from db.enums import BalanceTransactionType, SprintRunStatus, TaskLogStatus, Weekday
+from db.enums import (
+    BalanceTransactionType,
+    NotificationEventType,
+    NotificationOutboxStatus,
+    SprintRunStatus,
+    TaskLogStatus,
+    Weekday,
+)
 from unitkeeper_backend.application.models import (
     BalanceTransactionInfo,
     GroupInfo,
@@ -16,7 +23,9 @@ from unitkeeper_backend.application.models import (
     TaskLogInfo,
     TelegramIdentity,
     UserProfile,
+    NotificationOutboxEventInfo,
 )
+from uuid import UUID, uuid4
 from unitkeeper_backend.domain.errors import BusinessRuleViolation, NotFoundError
 
 
@@ -548,12 +557,111 @@ class InMemorySprintRepository:
         return matching[offset : offset + limit], len(matching)
 
 
+class InMemoryNotificationRepository:
+    def __init__(self) -> None:
+        self.events: dict[UUID, NotificationOutboxEventInfo] = {}
+
+    async def enqueue(
+        self,
+        *,
+        event_type: NotificationEventType,
+        recipient_user_id: int,
+        group_id: int | None,
+        payload: dict[str, object],
+        deep_link_path: str | None,
+    ) -> NotificationOutboxEventInfo:
+        event = NotificationOutboxEventInfo(
+            id=uuid4(),
+            event_type=event_type,
+            recipient_user_id=recipient_user_id,
+            group_id=group_id,
+            payload=payload,
+            deep_link_path=deep_link_path,
+            correlation_id=None,
+            status=NotificationOutboxStatus.PENDING,
+            attempt_count=0,
+            next_attempt_at=None,
+            delivered_at=None,
+            last_error=None,
+            created_at=utc_datetime(2026, 3, 16),
+        )
+        self.events[event.id] = event
+        return event
+
+    async def enqueue_once(
+        self,
+        *,
+        dedupe_key: str,
+        correlation_id: str | None,
+        event_type: NotificationEventType,
+        recipient_user_id: int,
+        group_id: int | None,
+        payload: dict[str, object],
+        deep_link_path: str | None,
+    ) -> tuple[NotificationOutboxEventInfo, bool]:
+        for event in self.events.values():
+            if event.payload.get("dedupe_key") == dedupe_key:
+                return event, False
+        event = await self.enqueue(
+            event_type=event_type,
+            recipient_user_id=recipient_user_id,
+            group_id=group_id,
+            payload={**payload, "dedupe_key": dedupe_key},
+            deep_link_path=deep_link_path,
+        )
+        event = replace(event, correlation_id=correlation_id)
+        self.events[event.id] = event
+        return event, True
+
+    async def list_ready(self, *, now: datetime, limit: int) -> list[NotificationOutboxEventInfo]:
+        return [
+            event
+            for event in self.events.values()
+            if event.status is NotificationOutboxStatus.PENDING
+            and (event.next_attempt_at is None or event.next_attempt_at <= now)
+        ][:limit]
+
+    async def acknowledge(self, *, event_id: UUID, acknowledged_at: datetime) -> NotificationOutboxEventInfo:
+        event = self.events[event_id]
+        updated = replace(
+            event,
+            status=NotificationOutboxStatus.DELIVERED,
+            attempt_count=event.attempt_count + 1,
+            delivered_at=acknowledged_at,
+            next_attempt_at=None,
+            last_error=None,
+        )
+        self.events[event_id] = updated
+        return updated
+
+    async def fail(
+        self,
+        *,
+        event_id: UUID,
+        failed_at: datetime,
+        error_message: str,
+        retry_at: datetime | None,
+        terminal: bool,
+    ) -> NotificationOutboxEventInfo:
+        event = self.events[event_id]
+        updated = replace(
+            event,
+            status=NotificationOutboxStatus.DEAD_LETTER if terminal else NotificationOutboxStatus.PENDING,
+            attempt_count=event.attempt_count + 1,
+            next_attempt_at=None if terminal else retry_at,
+            last_error=error_message,
+        )
+        self.events[event_id] = updated
+        return updated
+
+
 class InMemoryUnitOfWork:
     def __init__(self) -> None:
         self.users = InMemoryUserRepository()
         self.groups = InMemoryGroupRepository()
         self.tasks = InMemoryTaskRepository()
         self.sprints = InMemorySprintRepository()
+        self.notifications = InMemoryNotificationRepository()
         self.commit_count = 0
 
     async def commit(self) -> None:

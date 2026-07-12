@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from unitkeeper_backend.infrastructure.repositories.groups import SqlAlchemyGroupRepository
+from unitkeeper_backend.infrastructure.repositories.notifications import SqlAlchemyNotificationRepository
 from unitkeeper_backend.infrastructure.repositories.sprints import SqlAlchemySprintRepository
 from unitkeeper_backend.infrastructure.repositories.tasks import SqlAlchemyTaskRepository
 from unitkeeper_backend.infrastructure.repositories.users import SqlAlchemyUserRepository
@@ -15,6 +16,7 @@ class SqlAlchemyUnitOfWork:
         self.groups = SqlAlchemyGroupRepository(session)
         self.tasks = SqlAlchemyTaskRepository(session)
         self.sprints = SqlAlchemySprintRepository(session)
+        self.notifications = SqlAlchemyNotificationRepository(session)
 
     async def commit(self) -> None:
         await self._session.commit()

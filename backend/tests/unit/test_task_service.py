@@ -4,7 +4,7 @@ from decimal import Decimal
 
 import pytest
 
-from db.enums import TaskLogStatus, Weekday
+from db.enums import NotificationEventType, TaskLogStatus, Weekday
 from unitkeeper_backend.application.context.service import CurrentContextService
 from unitkeeper_backend.application.groups.service import GroupService
 from unitkeeper_backend.application.models import UserProfile
@@ -65,12 +65,24 @@ async def test_multi_member_group_rejects_self_approval_and_frequency_overflow()
 
     pending = await task_service.mark_done(group_id=1, performer_user_id=1, task_id=task.id)
     assert pending.status is TaskLogStatus.PENDING
+    approval_event = next(
+        event
+        for event in uow.notifications.events.values()
+        if event.event_type is NotificationEventType.TASK_APPROVAL_REQUESTED
+    )
+    assert approval_event.event_type is NotificationEventType.TASK_APPROVAL_REQUESTED
+    assert approval_event.recipient_user_id == 2
+    assert approval_event.deep_link_path == f"/tasks/history?task_log_id={pending.id}"
 
     with pytest.raises(AuthorizationError):
         await task_service.approve(group_id=1, approver_user_id=1, log_id=pending.id)
 
     approved = await task_service.approve(group_id=1, approver_user_id=2, log_id=pending.id)
     assert approved.status is TaskLogStatus.COMPLETED
+    result_event = list(uow.notifications.events.values())[-1]
+    assert result_event.event_type is NotificationEventType.TASK_APPROVED
+    assert result_event.recipient_user_id == 1
+    assert result_event.deep_link_path == f"/tasks/history?task_log_id={pending.id}"
 
     with pytest.raises(BusinessRuleViolation):
         await task_service.mark_done(group_id=1, performer_user_id=1, task_id=task.id)

@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 
-from db.enums import TaskLogStatus
+from db.enums import NotificationEventType, TaskLogStatus
 from unitkeeper_backend.application.models import TaskInfo, TaskLogInfo, TaskLogPage, TaskLogView
 from unitkeeper_backend.application.ports import Clock, UnitOfWork
 from unitkeeper_backend.domain.errors import AuthorizationError, BusinessRuleViolation, NotFoundError, ValidationError
@@ -176,6 +176,17 @@ class TaskService:
             approver_user_id=approver_user_id,
             decided_at=decided_at,
         )
+        if status is TaskLogStatus.PENDING:
+            for membership in memberships:
+                if membership.user_id == performer_user_id:
+                    continue
+                await self._uow.notifications.enqueue(
+                    event_type=NotificationEventType.TASK_APPROVAL_REQUESTED,
+                    recipient_user_id=membership.user_id,
+                    group_id=group_id,
+                    payload={"task_log_id": log.id, "task_title": task.title, "performer_user_id": performer_user_id},
+                    deep_link_path=f"/tasks/history?task_log_id={log.id}",
+                )
         await self._uow.commit()
         return log
 
@@ -202,6 +213,13 @@ class TaskService:
             approver_user_id=approver_user_id,
             decided_at=self._clock.now(),
         )
+        await self._uow.notifications.enqueue(
+            event_type=NotificationEventType.TASK_APPROVED,
+            recipient_user_id=updated.performer_user_id,
+            group_id=group_id,
+            payload={"task_log_id": updated.id, "task_title": task.title, "approver_user_id": approver_user_id},
+            deep_link_path=f"/tasks/history?task_log_id={updated.id}",
+        )
         await self._uow.commit()
         return updated
 
@@ -226,6 +244,19 @@ class TaskService:
             approver_user_id=approver_user_id,
             decided_at=self._clock.now(),
             rejection_reason=rejection_reason.strip(),
+        )
+        task = await self.get_task(group_id=group_id, task_id=updated.task_id)
+        await self._uow.notifications.enqueue(
+            event_type=NotificationEventType.TASK_REJECTED,
+            recipient_user_id=updated.performer_user_id,
+            group_id=group_id,
+            payload={
+                "task_log_id": updated.id,
+                "task_title": task.title,
+                "approver_user_id": approver_user_id,
+                "rejection_reason": updated.rejection_reason or "",
+            },
+            deep_link_path=f"/tasks/history?task_log_id={updated.id}",
         )
         await self._uow.commit()
         return updated

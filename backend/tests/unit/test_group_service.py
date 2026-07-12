@@ -61,6 +61,11 @@ async def test_join_and_leave_rebalance_weights_and_handover_owner() -> None:
     await service.join_group(user_id=2, group_name="team", join_secret="secret")
     await service.join_group(user_id=3, group_name="team", join_secret="secret")
 
+    join_events = list(uow.notifications.events.values())
+    assert {event.recipient_user_id for event in join_events} == {1, 2}
+    assert all(event.payload["kind"] == "membership_event" for event in join_events)
+    assert all(event.deep_link_path == "/group" for event in join_events)
+
     memberships = await uow.groups.list_active_memberships(1)
     assert {membership.user_id: membership.weight_percent for membership in memberships} == {
         1: Decimal("33.33"),
@@ -78,6 +83,10 @@ async def test_join_and_leave_rebalance_weights_and_handover_owner() -> None:
         2: Decimal("50.00"),
         3: Decimal("50.00"),
     }
+    owner_event = list(uow.notifications.events.values())[-2]
+    assert owner_event.recipient_user_id == 2
+    assert owner_event.payload["kind"] == "group_event"
+    assert owner_event.payload["message"] == "Вы назначены новым владельцем группы."
 
 
 async def _seed_two_member_group(uow: InMemoryUnitOfWork) -> GroupService:

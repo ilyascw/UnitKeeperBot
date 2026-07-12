@@ -36,9 +36,9 @@
 - [x] Expose manual current-sprint close use case with duplicate protection.
 - [ ] Rebuild sprint closing logic as backend jobs.
 - [x] Store scheduler-safe bookkeeping to avoid duplicate sprint closure.
-- [ ] Produce notification events for the bot.
-- [ ] Produce deep links for miniapp navigation from notifications.
-- [ ] Add reminder jobs for pending confirmations and sprint deadlines.
+- [x] Produce notification events for the bot.
+- [x] Produce deep links for miniapp navigation from notifications.
+- [x] Add reminder jobs for pending confirmations and sprint deadlines.
 
 ## Phase 5: Reliability
 - [x] Add validation and business error taxonomy.
