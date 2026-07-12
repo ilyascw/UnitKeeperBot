@@ -3,13 +3,23 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { useAuthToken } from '@/auth/useAuth';
 
 import { ApiError } from './client';
-import { getCurrentGroup, getSprintResults, listTasks } from './endpoints';
-import type { GroupCardResponse, SprintResultsResponse, TaskResponse } from './types';
+import {
+  getCurrentGroup,
+  getSprintResults,
+  listGroupTaskLogs,
+  listMyTaskLogs,
+  listPendingApprovals,
+  listTasks,
+} from './endpoints';
+import type { GroupCardResponse, SprintResultsResponse, TaskLogPageResponse, TaskResponse } from './types';
 
 export const queryKeys = {
   currentGroup: ['groups', 'current'] as const,
   tasks: ['tasks'] as const,
   sprintResults: ['sprints', 'current', 'results'] as const,
+  pendingApprovals: ['task-logs', 'pending-approval'] as const,
+  myTaskLogs: ['task-logs', 'mine'] as const,
+  groupTaskLogs: ['groups', 'current', 'task-logs'] as const,
 };
 
 /**
@@ -48,5 +58,28 @@ export function useSprintResults(): UseQueryResult<SprintResultsResponse, Error>
   return useQuery({
     queryKey: queryKeys.sprintResults,
     queryFn: () => getSprintResults(token),
+  });
+}
+
+export function usePendingApprovals(enabled: boolean): UseQueryResult<TaskLogPageResponse, Error> {
+  const token = useAuthToken();
+  return useQuery({
+    queryKey: queryKeys.pendingApprovals,
+    queryFn: () => listPendingApprovals(token),
+    enabled,
+  });
+}
+
+export function useMyTaskLogs(): UseQueryResult<TaskLogPageResponse, Error> {
+  const token = useAuthToken();
+  return useQuery({ queryKey: queryKeys.myTaskLogs, queryFn: () => listMyTaskLogs(token) });
+}
+
+export function useGroupTaskLogs(enabled: boolean): UseQueryResult<TaskLogPageResponse, Error> {
+  const token = useAuthToken();
+  return useQuery({
+    queryKey: queryKeys.groupTaskLogs,
+    queryFn: () => listGroupTaskLogs(token),
+    enabled,
   });
 }

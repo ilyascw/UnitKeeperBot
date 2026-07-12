@@ -6,6 +6,7 @@ export const routes = {
   onboardingJoin: '/onboarding/join',
   dashboard: '/dashboard',
   tasks: '/tasks',
+  taskLogs: '/tasks/history',
   progress: '/progress',
   balance: '/balance',
   group: '/group',

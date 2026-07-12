@@ -76,6 +76,7 @@ export interface GroupCardResponse {
 export interface ErrorResponse {
   code: string;
   message: string;
+  details?: unknown;
 }
 
 export type Weekday =
@@ -159,6 +160,18 @@ export interface UpdateTaskRequest {
   unit_cost?: string;
 }
 
+export interface BulkImportTaskItem {
+  title: string;
+  frequency_per_sprint: number;
+  unit_cost: string;
+}
+
+export interface TaskImportRowError {
+  index: number;
+  field: string;
+  message: string;
+}
+
 /** Result of marking a task done — a log entry pending owner approval. */
 export interface TaskLogResponse {
   id: number;
@@ -170,6 +183,35 @@ export interface TaskLogResponse {
   decided_at: string | null;
   rejection_reason: string | null;
   created_at: string;
+}
+
+export type TaskLogStatus = 'pending' | 'completed' | 'rejected';
+
+export interface TaskLogTaskResponse {
+  id: number;
+  title: string;
+  unit_cost: string;
+  is_active: boolean;
+}
+
+export interface TaskLogViewResponse {
+  id: number;
+  group_id: number;
+  task: TaskLogTaskResponse;
+  status: TaskLogStatus;
+  performer: UserResponse;
+  approver: UserResponse | null;
+  decided_at: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+}
+
+export interface TaskLogPageResponse {
+  items: TaskLogViewResponse[];
+  total: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
 }
 
 export interface CompletedTaskBreakdownResponse {

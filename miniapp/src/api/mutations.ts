@@ -5,12 +5,15 @@ import { useAuthToken } from '@/auth/useAuth';
 import {
   createGroup,
   createTask,
+  importTasks,
   decreaseTaskFrequency,
   deleteTask,
   increaseTaskFrequency,
   joinGroup,
   leaveGroup,
   markTaskDone,
+  approveTaskLog,
+  rejectTaskLog,
   updateTask,
   updateCurrentGroupSettings,
   updateCurrentGroupWeights,
@@ -19,6 +22,7 @@ import { queryKeys } from './queries';
 import type {
   CreateGroupRequest,
   CreateTaskRequest,
+  BulkImportTaskItem,
   CurrentContextResponse,
   GroupMembersResponse,
   GroupResponse,
@@ -52,8 +56,17 @@ function useInvalidateTasks(): () => Promise<void> {
       qc.invalidateQueries({ queryKey: queryKeys.tasks }),
       qc.invalidateQueries({ queryKey: queryKeys.sprintResults }),
       qc.invalidateQueries({ queryKey: queryKeys.currentGroup }),
+      qc.invalidateQueries({ queryKey: queryKeys.pendingApprovals }),
+      qc.invalidateQueries({ queryKey: queryKeys.myTaskLogs }),
+      qc.invalidateQueries({ queryKey: queryKeys.groupTaskLogs }),
     ]);
   };
+}
+
+export function useImportTasks(): UseMutationResult<TaskResponse[], Error, BulkImportTaskItem[]> {
+  const token = useAuthToken();
+  const invalidate = useInvalidateTasks();
+  return useMutation({ mutationFn: (items) => importTasks(token, items), onSuccess: () => invalidate() });
 }
 
 export function useCreateGroup(): UseMutationResult<
@@ -171,6 +184,25 @@ export function useMarkTaskDone(): UseMutationResult<TaskLogResponse, Error, num
   const invalidate = useInvalidateTasks();
   return useMutation({
     mutationFn: (taskId: number) => markTaskDone(token, taskId),
+    onSuccess: () => invalidate(),
+  });
+}
+
+export function useApproveTaskLog(): UseMutationResult<TaskLogResponse, Error, number> {
+  const token = useAuthToken();
+  const invalidate = useInvalidateTasks();
+  return useMutation({ mutationFn: (logId) => approveTaskLog(token, logId), onSuccess: () => invalidate() });
+}
+
+export function useRejectTaskLog(): UseMutationResult<
+  TaskLogResponse,
+  Error,
+  { logId: number; reason: string }
+> {
+  const token = useAuthToken();
+  const invalidate = useInvalidateTasks();
+  return useMutation({
+    mutationFn: ({ logId, reason }) => rejectTaskLog(token, logId, reason),
     onSuccess: () => invalidate(),
   });
 }

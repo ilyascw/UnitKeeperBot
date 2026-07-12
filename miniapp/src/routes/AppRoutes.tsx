@@ -14,6 +14,7 @@ import { NotFoundScreen } from '@/screens/NotFoundScreen';
 import { OnboardingScreen } from '@/screens/OnboardingScreen';
 import { ProgressScreen } from '@/screens/ProgressScreen';
 import { TasksScreen } from '@/screens/TasksScreen';
+import { TaskLogsScreen } from '@/screens/TaskLogsScreen';
 
 import { routes } from './paths';
 
@@ -54,6 +55,7 @@ export function AppRoutes() {
 
         <Route path={routes.groupSettings} element={<GroupSettingsScreen />} />
         <Route path={routes.groupWeights} element={<GroupWeightsScreen />} />
+        <Route path={routes.taskLogs} element={<TaskLogsScreen />} />
         <Route path="*" element={<NotFoundScreen />} />
       </Routes>
     </AppLayout>
