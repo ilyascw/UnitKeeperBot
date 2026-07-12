@@ -59,3 +59,12 @@ Since this schema had no data to preserve yet (migration decided with the user 2
 - Python services must use `pyproject.toml` as the project entrypoint for dependencies and tooling; do not add ad hoc dependency files when `pyproject.toml` is appropriate.
 - Use `uv` to create and manage the virtual environment for the service you are working on.
 - The virtual environment must live inside the working service directory, not at repo root. Example: when working on [`backend`](/Users/ilaskvorcov/Desktop/дело/unitkeeper/backend), create and activate [`backend/.venv`](/Users/ilaskvorcov/Desktop/дело/unitkeeper/backend/.venv).
+
+## Branching
+
+- `main` is production. It only moves via a merge from `dev` once the migration (or a batch of it) is judged production-ready — never commit or merge feature work directly into `main`.
+- `dev` is the integration branch for the whole migration. All issue work branches off `dev` and merges back into `dev` via PR.
+- Issue branches are named `<area>/issue-NN-slug`, e.g. `backend/issue-04-balances`, `miniapp/issue-05-transfer-screen`, `bot/issue-02-notifications`. `<area>` is the top-level directory the work is mostly in (`backend`, `bot`, `common`, `miniapp`); cross-cutting work picks whichever area is primary.
+  - Do not use a `dev/...` prefix for these branches — git refs can't have both a branch named `dev` and branches named `dev/*` at the same time.
+- Monorepo, not submodules: a single PR may touch multiple areas (`backend` + `common` + `miniapp`) when the change genuinely spans them. Don't split one logical change into separate per-area branches/PRs just to keep areas isolated — that only adds merge/rebase overhead.
+- Keep local and remote branch names in sync: don't let the same branch carry different names locally vs. on `origin`, and don't keep a stale remote branch (e.g. an old integration branch name) around once it's been superseded — delete it after confirming the replacement is pushed and tracked correctly.
