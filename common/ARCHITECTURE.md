@@ -31,3 +31,14 @@
 - No separate invitation entity yet; joining still maps to group name plus secret/password semantics.
 - No backend use-case orchestration in this package.
 - No seed dataset or demo fixtures; `common` only owns schema and persistence primitives.
+
+## Delivery And Idempotency Primitives
+
+- `notification_outbox_events` stores one backend-owned notification per recipient, including
+  the event type, delivery payload, optional Mini App deep-link path, retry scheduling fields,
+  and the terminal delivery state.
+- `notification_delivery_attempts` records every bot acknowledgement or failure. Backend owns
+  claiming, backoff, and dead-letter decisions; the bot only uses backend transport contracts.
+- `idempotency_keys` reserves an idempotency key within an explicit `scope` and `actor_key`.
+  It stores a request fingerprint and optional completed response so backend write endpoints can
+  reject conflicting retries or replay a known result.

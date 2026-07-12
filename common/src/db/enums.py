@@ -29,3 +29,28 @@ class BalanceTransactionType(str, enum.Enum):
     SPRINT_SETTLEMENT = "sprint_settlement"
     SPRINT_BONUS = "sprint_bonus"
     MANUAL_ADJUSTMENT = "manual_adjustment"
+
+
+class NotificationEventType(str, enum.Enum):
+    TASK_APPROVAL_REQUESTED = "task_approval_requested"
+    TASK_APPROVED = "task_approved"
+    TASK_REJECTED = "task_rejected"
+    SPRINT_CLOSED = "sprint_closed"
+    REMINDER = "reminder"
+
+
+class NotificationOutboxStatus(str, enum.Enum):
+    PENDING = "pending"
+    DELIVERED = "delivered"
+    DEAD_LETTER = "dead_letter"
+
+
+class NotificationDeliveryAttemptStatus(str, enum.Enum):
+    ACKNOWLEDGED = "acknowledged"
+    FAILED = "failed"
+
+
+class IdempotencyStatus(str, enum.Enum):
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"

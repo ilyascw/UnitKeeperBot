@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
+from uuid import UUID, uuid4
 
 from sqlalchemy import (
     BigInteger,
@@ -19,10 +20,20 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db.database import Base
-from db.enums import BalanceTransactionType, SprintRunStatus, TaskLogStatus, Weekday
+from db.enums import (
+    BalanceTransactionType,
+    IdempotencyStatus,
+    NotificationDeliveryAttemptStatus,
+    NotificationEventType,
+    NotificationOutboxStatus,
+    SprintRunStatus,
+    TaskLogStatus,
+    Weekday,
+)
 from db.types import pg_enum
 
 
@@ -85,6 +96,10 @@ class User(TimestampMixin, Base):
     )
     sprint_results: Mapped[list["SprintMemberResult"]] = relationship(
         back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    notification_events: Mapped[list["NotificationOutboxEvent"]] = relationship(
+        back_populates="recipient",
         cascade="all, delete-orphan",
     )
 
@@ -151,6 +166,10 @@ class Group(TimestampMixin, Base):
         cascade="all, delete-orphan",
     )
     balance_transactions: Mapped[list["BalanceTransaction"]] = relationship(
+        back_populates="group",
+        cascade="all, delete-orphan",
+    )
+    notification_events: Mapped[list["NotificationOutboxEvent"]] = relationship(
         back_populates="group",
         cascade="all, delete-orphan",
     )
@@ -516,12 +535,139 @@ class BalanceTransaction(TimestampMixin, Base):
     )
 
 
+class NotificationOutboxEvent(TimestampMixin, Base):
+    __tablename__ = "notification_outbox_events"
+    __table_args__ = (
+        Index(
+            "ix_notification_outbox_events_pending_delivery",
+            "status",
+            "next_attempt_at",
+            "created_at",
+            postgresql_where=text("status = 'pending'"),
+        ),
+        Index(
+            "ix_notification_outbox_events_recipient_created_at",
+            "recipient_user_id",
+            "created_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    event_type: Mapped[NotificationEventType] = mapped_column(
+        pg_enum(NotificationEventType, name="notification_event_type_enum"),
+        nullable=False,
+    )
+    recipient_user_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    group_id: Mapped[int | None] = mapped_column(
+        ForeignKey("groups.id", ondelete="CASCADE"),
+        index=True,
+    )
+    payload: Mapped[dict[str, object]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=dict,
+        server_default=text("'{}'::jsonb"),
+    )
+    deep_link_path: Mapped[str | None] = mapped_column(String(512))
+    status: Mapped[NotificationOutboxStatus] = mapped_column(
+        pg_enum(NotificationOutboxStatus, name="notification_outbox_status_enum"),
+        nullable=False,
+        default=NotificationOutboxStatus.PENDING,
+        server_default=text("'pending'"),
+    )
+    attempt_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default=text("0"),
+    )
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error: Mapped[str | None] = mapped_column(Text)
+
+    recipient: Mapped["User"] = relationship(back_populates="notification_events")
+    group: Mapped["Group | None"] = relationship(back_populates="notification_events")
+    delivery_attempts: Mapped[list["NotificationDeliveryAttempt"]] = relationship(
+        back_populates="event",
+        cascade="all, delete-orphan",
+    )
+
+
+class NotificationDeliveryAttempt(Base):
+    __tablename__ = "notification_delivery_attempts"
+    __table_args__ = (
+        UniqueConstraint("event_id", "attempt_number"),
+        CheckConstraint(
+            "attempt_number > 0",
+            name="notification_delivery_attempts_attempt_number_positive",
+        ),
+        Index("ix_notification_delivery_attempts_event_id_created_at", "event_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    event_id: Mapped[UUID] = mapped_column(
+        ForeignKey("notification_outbox_events.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    attempt_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[NotificationDeliveryAttemptStatus] = mapped_column(
+        pg_enum(
+            NotificationDeliveryAttemptStatus,
+            name="notification_delivery_attempt_status_enum",
+        ),
+        nullable=False,
+    )
+    error_message: Mapped[str | None] = mapped_column(Text)
+    acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    event: Mapped["NotificationOutboxEvent"] = relationship(back_populates="delivery_attempts")
+
+
+class IdempotencyKey(TimestampMixin, Base):
+    __tablename__ = "idempotency_keys"
+    __table_args__ = (
+        UniqueConstraint("scope", "actor_key", "key"),
+        Index("ix_idempotency_keys_expires_at", "expires_at"),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    scope: Mapped[str] = mapped_column(String(128), nullable=False)
+    actor_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    key: Mapped[str] = mapped_column(String(255), nullable=False)
+    request_fingerprint: Mapped[str] = mapped_column(String(128), nullable=False)
+    status: Mapped[IdempotencyStatus] = mapped_column(
+        pg_enum(IdempotencyStatus, name="idempotency_status_enum"),
+        nullable=False,
+        default=IdempotencyStatus.PROCESSING,
+        server_default=text("'processing'"),
+    )
+    response_status_code: Mapped[int | None] = mapped_column(Integer)
+    response_payload: Mapped[dict[str, object] | None] = mapped_column(JSONB)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 __all__ = [
     "Balance",
     "BalanceTransaction",
     "Group",
     "GroupMemberWeight",
     "GroupMembership",
+    "IdempotencyKey",
+    "NotificationDeliveryAttempt",
+    "NotificationOutboxEvent",
     "SprintMemberResult",
     "SprintRun",
     "Task",
