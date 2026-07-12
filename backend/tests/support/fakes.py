@@ -78,6 +78,9 @@ class InMemoryGroupRepository:
             return None
         return replace(group, active_members=await self.list_active_memberships(group_id))
 
+    async def list_group_ids(self) -> list[int]:
+        return sorted(self.groups.keys())
+
     async def get_by_name(self, name: str) -> GroupInfo | None:
         for group in self.groups.values():
             if group.name == name:

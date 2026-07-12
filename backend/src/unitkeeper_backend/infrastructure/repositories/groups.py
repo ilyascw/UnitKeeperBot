@@ -20,6 +20,10 @@ class SqlAlchemyGroupRepository:
         model = await self._fetch_group(group_id=group_id)
         return map_group(model) if model is not None else None
 
+    async def list_group_ids(self) -> list[int]:
+        result = await self._session.execute(select(Group.id).order_by(Group.id))
+        return [row[0] for row in result.all()]
+
     async def get_by_name(self, name: str) -> GroupInfo | None:
         query = (
             select(Group)
