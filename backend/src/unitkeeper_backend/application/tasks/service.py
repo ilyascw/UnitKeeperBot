@@ -439,6 +439,7 @@ class TaskService:
             today=self._clock.today(),
             start_weekday=group.sprint_start_weekday,
             duration_days=group.sprint_duration_days,
+            anchor=group.created_at,
         )
 
     async def _require_pending_log(self, *, group_id: int, log_id: int) -> TaskLogInfo:

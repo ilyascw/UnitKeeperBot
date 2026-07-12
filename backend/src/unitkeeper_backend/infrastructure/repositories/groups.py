@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, date, datetime, time
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -76,6 +77,7 @@ class SqlAlchemyGroupRepository:
         sprint_start_weekday,
         sprint_duration_days: int,
         timezone: str,
+        created_at: date,
     ) -> GroupInfo:
         model = Group(
             name=name,
@@ -84,6 +86,7 @@ class SqlAlchemyGroupRepository:
             sprint_start_weekday=sprint_start_weekday,
             sprint_duration_days=sprint_duration_days,
             timezone=timezone,
+            created_at=datetime.combine(created_at, time.min, tzinfo=UTC),
         )
         self._session.add(model)
         await self._session.flush()

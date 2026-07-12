@@ -45,6 +45,7 @@ def map_group(model: Group) -> GroupInfo:
         sprint_duration_days=model.sprint_duration_days,
         timezone=model.timezone,
         balance=model.balance,
+        created_at=model.created_at.date(),
         active_members=active_members,
     )
 

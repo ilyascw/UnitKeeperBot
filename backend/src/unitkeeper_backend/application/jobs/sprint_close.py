@@ -47,6 +47,7 @@ async def list_due_group_ids(*, uow: UnitOfWork, clock: Clock) -> list[int]:
             today=today,
             start_weekday=group.sprint_start_weekday,
             duration_days=group.sprint_duration_days,
+            anchor=group.created_at,
         )
         if window.period_end != today:
             logger.debug(

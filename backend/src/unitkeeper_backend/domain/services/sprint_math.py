@@ -43,12 +43,29 @@ def weekday_index(weekday: Weekday) -> int:
     return mapping[weekday]
 
 
-def current_sprint_window(*, today: date, start_weekday: Weekday, duration_days: int) -> SprintWindow:
+def current_sprint_window(
+    *, today: date, start_weekday: Weekday, duration_days: int, anchor: date
+) -> SprintWindow:
+    """Return the sprint window that contains ``today``.
+
+    Sprint windows are ``duration_days``-long, back-to-back, non-overlapping
+    blocks starting from ``anchor`` (a group's ``created_at`` date) aligned to
+    the nearest ``start_weekday`` on or before ``anchor``. For a 7-day sprint
+    this always coincides with the calendar week containing ``today``, so a
+    weekday-only calculation (no anchor) used to work by coincidence. For any
+    longer, multi-week duration the cycle boundary depends on how many whole
+    ``duration_days`` blocks have elapsed since that anchor point — a
+    weekday-only calculation can never place ``today`` on the correct block,
+    which is why ``anchor`` is required rather than optional.
+    """
     if duration_days <= 0 or duration_days % 7 != 0:
         raise ValueError("Sprint duration must be positive and divisible by 7")
 
-    days_back = (today.weekday() - weekday_index(start_weekday)) % 7
-    period_start = today - timedelta(days=days_back)
+    anchor_days_back = (anchor.weekday() - weekday_index(start_weekday)) % 7
+    cycle_zero_start = anchor - timedelta(days=anchor_days_back)
+    elapsed_days = (today - cycle_zero_start).days
+    cycle_index = elapsed_days // duration_days
+    period_start = cycle_zero_start + timedelta(days=cycle_index * duration_days)
     period_end = period_start + timedelta(days=duration_days - 1)
     return SprintWindow(period_start=period_start, period_end=period_end)
 

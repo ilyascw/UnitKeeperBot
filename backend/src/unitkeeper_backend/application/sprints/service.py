@@ -33,6 +33,7 @@ class SprintService:
             today=self._clock.today(),
             start_weekday=group.sprint_start_weekday,
             duration_days=group.sprint_duration_days,
+            anchor=group.created_at,
         )
         tasks = await self._uow.tasks.list_tasks(group_id=group_id, active_only=True)
         total_task_units = sum(
@@ -83,6 +84,7 @@ class SprintService:
             today=self._clock.today(),
             start_weekday=group.sprint_start_weekday,
             duration_days=group.sprint_duration_days,
+            anchor=group.created_at,
         )
         existing = await self._uow.sprints.get_sprint_run(
             group_id=group_id,

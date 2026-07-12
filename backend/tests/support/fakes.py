@@ -115,6 +115,7 @@ class InMemoryGroupRepository:
         sprint_start_weekday: Weekday,
         sprint_duration_days: int,
         timezone: str,
+        created_at: date,
     ) -> GroupInfo:
         group = GroupInfo(
             id=self._group_seq,
@@ -125,6 +126,7 @@ class InMemoryGroupRepository:
             sprint_duration_days=sprint_duration_days,
             timezone=timezone,
             balance=Decimal("0.00"),
+            created_at=created_at,
             active_members=[],
         )
         self.groups[group.id] = group

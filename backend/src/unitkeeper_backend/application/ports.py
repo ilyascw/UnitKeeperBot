@@ -72,6 +72,7 @@ class GroupRepository(Protocol):
         sprint_start_weekday: Weekday,
         sprint_duration_days: int,
         timezone: str,
+        created_at: date,
     ) -> GroupInfo: ...
 
     async def create_membership(self, *, group_id: int, user_id: int) -> MembershipInfo: ...
