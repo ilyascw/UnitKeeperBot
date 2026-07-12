@@ -16,6 +16,7 @@ dependencies = [
     "asyncpg>=0.29.0",
     "pydantic>=2.10.0",
     "pydantic-settings>=2.8.0",
+    "apscheduler>=3.11.0",
     "unitkeeper-common",
 ]
 
@@ -46,3 +47,8 @@ target-version = "py311"
 python_version = "3.11"
 strict = true
 packages = ["unitkeeper_backend"]
+
+[dependency-groups]
+dev = [
+    "pytest-cov>=7.1.0",
+]

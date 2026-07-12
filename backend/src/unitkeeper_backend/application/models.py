@@ -49,6 +49,7 @@ class GroupInfo:
     sprint_duration_days: int
     timezone: str
     balance: Decimal
+    created_at: date
     active_members: list[MembershipInfo] = field(default_factory=list)
 
 

@@ -65,6 +65,7 @@ class GroupService:
             sprint_start_weekday=sprint_start_weekday,
             sprint_duration_days=sprint_duration_days,
             timezone=timezone,
+            created_at=self._clock.today(),
         )
         await self._uow.groups.create_membership(group_id=group.id, user_id=user_id)
         await self._uow.groups.replace_weights(group_id=group.id, weights_by_user_id={user_id: Decimal("100.00")})
@@ -157,6 +158,7 @@ class GroupService:
             today=self._clock.today(),
             start_weekday=group.sprint_start_weekday,
             duration_days=group.sprint_duration_days,
+            anchor=group.created_at,
         )
         sprint_ends_at = datetime.combine(
             window.period_end + timedelta(days=1),

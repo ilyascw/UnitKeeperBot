@@ -1,5 +1,7 @@
 # Issue 06: Sprint Close Jobs And Scheduler
 
+**Status:** Closed and archived
+
 ## Priority
 
 `P1`

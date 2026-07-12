@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, date, datetime, time
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -19,6 +20,10 @@ class SqlAlchemyGroupRepository:
     async def get_by_id(self, group_id: int) -> GroupInfo | None:
         model = await self._fetch_group(group_id=group_id)
         return map_group(model) if model is not None else None
+
+    async def list_group_ids(self) -> list[int]:
+        result = await self._session.execute(select(Group.id).order_by(Group.id))
+        return [row[0] for row in result.all()]
 
     async def get_by_name(self, name: str) -> GroupInfo | None:
         query = (
@@ -72,6 +77,7 @@ class SqlAlchemyGroupRepository:
         sprint_start_weekday,
         sprint_duration_days: int,
         timezone: str,
+        created_at: date,
     ) -> GroupInfo:
         model = Group(
             name=name,
@@ -80,6 +86,7 @@ class SqlAlchemyGroupRepository:
             sprint_start_weekday=sprint_start_weekday,
             sprint_duration_days=sprint_duration_days,
             timezone=timezone,
+            created_at=datetime.combine(created_at, time.min, tzinfo=UTC),
         )
         self._session.add(model)
         await self._session.flush()
