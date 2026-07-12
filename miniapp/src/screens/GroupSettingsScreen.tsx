@@ -128,10 +128,12 @@ export function GroupSettingsScreen() {
         </Field>
         <Stepper
           label="Длительность"
+          sublabel="7–28 дней, шаг 7"
           value={duration}
           suffix="дн"
-          min={1}
-          max={31}
+          min={7}
+          max={28}
+          step={7}
           onChange={setDuration}
           disabled={mutation.isPending}
         />
