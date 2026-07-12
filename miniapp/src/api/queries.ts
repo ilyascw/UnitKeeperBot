@@ -6,12 +6,21 @@ import { ApiError } from './client';
 import {
   getCurrentGroup,
   getSprintResults,
+  listBalanceTransactions,
   listGroupTaskLogs,
   listMyTaskLogs,
   listPendingApprovals,
   listTasks,
+  listTransferCandidates,
 } from './endpoints';
-import type { GroupCardResponse, SprintResultsResponse, TaskLogPageResponse, TaskResponse } from './types';
+import type {
+  BalanceTransactionPageResponse,
+  GroupCardResponse,
+  SprintResultsResponse,
+  TaskLogPageResponse,
+  TaskResponse,
+  TransferCandidatesResponse,
+} from './types';
 
 export const queryKeys = {
   currentGroup: ['groups', 'current'] as const,
@@ -20,6 +29,9 @@ export const queryKeys = {
   pendingApprovals: ['task-logs', 'pending-approval'] as const,
   myTaskLogs: ['task-logs', 'mine'] as const,
   groupTaskLogs: ['groups', 'current', 'task-logs'] as const,
+  transferCandidates: ['balances', 'transfer-candidates'] as const,
+  balanceTransactions: (limit: number, offset: number) =>
+    ['balances', 'transactions', limit, offset] as const,
 };
 
 /**
@@ -80,6 +92,28 @@ export function useGroupTaskLogs(enabled: boolean): UseQueryResult<TaskLogPageRe
   return useQuery({
     queryKey: queryKeys.groupTaskLogs,
     queryFn: () => listGroupTaskLogs(token),
+    enabled,
+  });
+}
+
+/** Active group members you can transfer units to, other than yourself. */
+export function useTransferCandidates(): UseQueryResult<TransferCandidatesResponse, Error> {
+  const token = useAuthToken();
+  return useQuery({
+    queryKey: queryKeys.transferCandidates,
+    queryFn: () => listTransferCandidates(token),
+  });
+}
+
+/** Paginated balance transaction history for the current user. */
+export function useBalanceTransactions(
+  { limit, offset }: { limit: number; offset: number },
+  enabled = true,
+): UseQueryResult<BalanceTransactionPageResponse, Error> {
+  const token = useAuthToken();
+  return useQuery({
+    queryKey: queryKeys.balanceTransactions(limit, offset),
+    queryFn: () => listBalanceTransactions(token, { limit, offset }),
     enabled,
   });
 }

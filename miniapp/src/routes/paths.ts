@@ -9,6 +9,7 @@ export const routes = {
   taskLogs: '/tasks/history',
   progress: '/progress',
   balance: '/balance',
+  balanceTransfer: '/balance/transfer',
   group: '/group',
   groupSettings: '/group/settings',
   groupWeights: '/group/weights',

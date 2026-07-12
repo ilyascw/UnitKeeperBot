@@ -1,20 +1,39 @@
-import { Navigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
 
-import { useCurrentGroup } from '@/api/queries';
+import { useBalanceTransactions, useCurrentGroup } from '@/api/queries';
 import { useAuth } from '@/auth/useAuth';
 import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
 import { routes } from '@/routes/paths';
 import { balanceColor, formatBalance, memberName } from '@/ui/format';
-import { Avatar, Card, Note, Screen } from '@/ui/kit';
+import { Avatar, Button, Card, Note, Segmented } from '@/ui/kit';
+import { Screen } from '@/ui/kit';
+
+const TRANSACTION_LABELS: Record<string, string> = {
+  transfer: 'Перевод',
+  sprint_settlement: 'Спринт-расчёт',
+  manual_adjustment: 'Ручная корректировка',
+};
+
+const HISTORY_PAGE_SIZE = 20;
 
 /**
  * Balance section. Leads with the member's own balance, then ranks the group so
  * everyone can see who is ahead of or behind their share of the load.
  */
 export function BalanceScreen() {
+  const navigate = useNavigate();
   const { context } = useAuth();
   const { data: group, isPending, isError, error, refetch } = useCurrentGroup();
+  const [tab, setTab] = useState<'overview' | 'history'>('overview');
+  const [historyLimit, setHistoryLimit] = useState(HISTORY_PAGE_SIZE);
+  const {
+    data: history,
+    isPending: historyPending,
+    isError: historyIsError,
+    error: historyError,
+  } = useBalanceTransactions({ limit: historyLimit, offset: 0 }, tab === 'history');
 
   if (isPending) return <Loader title="Загружаем баланс…" />;
   if (isError) {
@@ -65,53 +84,120 @@ export function BalanceScreen() {
         </div>
       </div>
 
-      {/* Group total */}
-      <Card style={{ padding: 16, borderRadius: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ font: "600 14px 'Manrope'", color: 'var(--uk-ink-70)' }}>Баланс группы</span>
-        <span style={{ font: "800 20px 'Manrope'", color: balanceColor(group.group_balance) }}>
-          {formatBalance(group.group_balance)} ю
-        </span>
-      </Card>
+      <Button variant="primary" onClick={() => navigate(routes.balanceTransfer)}>
+        Перевести юниты
+      </Button>
 
-      {/* Ranked members */}
-      <div className="uk-eyebrow">Участники</div>
-      <Card flush>
-        {ranked.map((member) => {
-          const you = member.user_id === myUserId;
-          return (
-            <div className="uk-row" key={member.user_id}>
-              <Avatar label={memberName(member)} seed={member.user_id} />
-              <div className="uk-row__grow">
-                <div
-                  style={{
-                    font: "600 15px 'Manrope'",
-                    display: 'flex',
-                    gap: 6,
-                    alignItems: 'center',
-                  }}
-                >
-                  {memberName(member)}
-                  {you ? (
-                    <span style={{ font: "500 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>(вы)</span>
-                  ) : null}
-                  {member.is_owner ? <span className="uk-badge">владелец</span> : null}
-                </div>
-                <div style={{ font: "400 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>
-                  Нагрузка {member.weight_percent}%
-                </div>
-              </div>
-              <span style={{ font: "700 15px 'Manrope'", color: balanceColor(member.balance) }}>
-                {formatBalance(member.balance)}
-              </span>
-            </div>
-          );
-        })}
-      </Card>
+      <Segmented
+        options={[
+          { value: 'overview', label: 'Обзор' },
+          { value: 'history', label: 'История' },
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
 
-      <Note tone="info">
-        Баланс — это вклад относительно вашей доли нагрузки. Плюс — вы сделали больше нормы, минус —
-        меньше.
-      </Note>
+      {tab === 'overview' ? (
+        <>
+          {/* Group total */}
+          <Card style={{ padding: 16, borderRadius: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ font: "600 14px 'Manrope'", color: 'var(--uk-ink-70)' }}>Баланс группы</span>
+            <span style={{ font: "800 20px 'Manrope'", color: balanceColor(group.group_balance) }}>
+              {formatBalance(group.group_balance)} ю
+            </span>
+          </Card>
+
+          {/* Ranked members */}
+          <div className="uk-eyebrow">Участники</div>
+          <Card flush>
+            {ranked.map((member) => {
+              const you = member.user_id === myUserId;
+              return (
+                <div className="uk-row" key={member.user_id}>
+                  <Avatar label={memberName(member)} seed={member.user_id} />
+                  <div className="uk-row__grow">
+                    <div
+                      style={{
+                        font: "600 15px 'Manrope'",
+                        display: 'flex',
+                        gap: 6,
+                        alignItems: 'center',
+                      }}
+                    >
+                      {memberName(member)}
+                      {you ? (
+                        <span style={{ font: "500 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>(вы)</span>
+                      ) : null}
+                      {member.is_owner ? <span className="uk-badge">владелец</span> : null}
+                    </div>
+                    <div style={{ font: "400 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>
+                      Нагрузка {member.weight_percent}%
+                    </div>
+                  </div>
+                  <span style={{ font: "700 15px 'Manrope'", color: balanceColor(member.balance) }}>
+                    {formatBalance(member.balance)}
+                  </span>
+                </div>
+              );
+            })}
+          </Card>
+
+          <Note tone="info">
+            Баланс — это вклад относительно вашей доли нагрузки. Плюс — вы сделали больше нормы, минус —
+            меньше.
+          </Note>
+        </>
+      ) : (
+        <>
+          {historyPending ? <Loader title="Загружаем историю…" /> : null}
+          {historyIsError ? <Note tone="error">{historyError.message}</Note> : null}
+          {history ? (
+            <>
+              {history.items.length === 0 ? (
+                <Note tone="info">Пока нет операций.</Note>
+              ) : (
+                <Card flush>
+                  {history.items.map((tx) => {
+                    const positive = Number.parseFloat(tx.amount_delta) >= 0;
+                    const label = TRANSACTION_LABELS[tx.transaction_type] ?? tx.transaction_type;
+                    return (
+                      <div className="uk-row" key={tx.id}>
+                        <div className="uk-row__grow">
+                          <div style={{ font: "600 14px 'Manrope'" }}>
+                            {label}
+                            {tx.description ? ` · ${tx.description}` : ''}
+                          </div>
+                          <div style={{ font: "400 11.5px 'Manrope'", color: 'var(--uk-ink-55)' }}>
+                            {new Date(tx.created_at).toLocaleString('ru-RU', {
+                              day: 'numeric',
+                              month: 'long',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </div>
+                        </div>
+                        <span
+                          style={{
+                            font: "700 15px 'Manrope'",
+                            color: positive ? 'var(--uk-positive)' : 'var(--uk-danger-soft)',
+                          }}
+                        >
+                          {formatBalance(tx.amount_delta)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </Card>
+              )}
+              {history.has_more ? (
+                <Button variant="ghost" onClick={() => setHistoryLimit((limit) => limit + HISTORY_PAGE_SIZE)}>
+                  Показать ещё
+                </Button>
+              ) : null}
+            </>
+          ) : null}
+        </>
+      )}
     </Screen>
   );
 }

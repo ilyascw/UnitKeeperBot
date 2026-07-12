@@ -230,3 +230,56 @@ export interface SprintResultsResponse {
   progress_percent: string;
   breakdown: CompletedTaskBreakdownResponse[];
 }
+
+export interface BalanceResponse {
+  group_id: number;
+  user_id: number;
+  current_balance: string;
+}
+
+export interface TransferCandidateResponse {
+  user: UserResponse;
+  current_balance: string;
+}
+
+export interface TransferCandidatesResponse {
+  candidates: TransferCandidateResponse[];
+}
+
+export interface CreateTransferRequest {
+  recipient_user_id: number;
+  amount: string;
+}
+
+export interface BalanceTransferResponse {
+  group_id: number;
+  sender_user_id: number;
+  recipient_user_id: number;
+  amount: string;
+  sender_balance: string;
+  recipient_balance: string;
+}
+
+export type BalanceTransactionType =
+  | 'transfer'
+  | 'sprint_settlement'
+  | 'manual_adjustment';
+
+export interface BalanceTransactionResponse {
+  id: number;
+  group_id: number;
+  user_id: number;
+  transaction_type: BalanceTransactionType | string;
+  amount_delta: string;
+  counterparty_user_id: number | null;
+  description: string | null;
+  created_at: string;
+}
+
+export interface BalanceTransactionPageResponse {
+  items: BalanceTransactionResponse[];
+  total: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
+}

@@ -1,7 +1,10 @@
 import { request } from './client';
 import type {
+  BalanceTransactionPageResponse,
+  BalanceTransferResponse,
   CreateGroupRequest,
   CreateTaskRequest,
+  CreateTransferRequest,
   BulkImportTaskItem,
   CurrentContextResponse,
   GroupCardResponse,
@@ -13,6 +16,7 @@ import type {
   TaskLogResponse,
   TaskLogPageResponse,
   TaskResponse,
+  TransferCandidatesResponse,
   UpdateTaskRequest,
   UpdateGroupSettingsRequest,
   UpdateWeightsRequest,
@@ -148,4 +152,26 @@ export function rejectTaskLog(token: string, logId: number, reason: string): Pro
 /** Provisional results for the running sprint. */
 export function getSprintResults(token: string): Promise<SprintResultsResponse> {
   return request<SprintResultsResponse>('/sprints/current/results', { token });
+}
+
+/** Active group members eligible to receive a transfer, other than yourself. */
+export function listTransferCandidates(token: string): Promise<TransferCandidatesResponse> {
+  return request<TransferCandidatesResponse>('/balances/transfer-candidates', { token });
+}
+
+export function createTransfer(
+  token: string,
+  body: CreateTransferRequest,
+): Promise<BalanceTransferResponse> {
+  return request<BalanceTransferResponse>('/balances/transfers', { method: 'POST', body, token });
+}
+
+export function listBalanceTransactions(
+  token: string,
+  { limit, offset }: { limit: number; offset: number },
+): Promise<BalanceTransactionPageResponse> {
+  return request<BalanceTransactionPageResponse>(
+    `/balances/transactions?limit=${limit}&offset=${offset}`,
+    { token },
+  );
 }

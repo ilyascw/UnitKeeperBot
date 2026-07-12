@@ -5,6 +5,7 @@ import { useAuthToken } from '@/auth/useAuth';
 import {
   createGroup,
   createTask,
+  createTransfer,
   importTasks,
   decreaseTaskFrequency,
   deleteTask,
@@ -20,8 +21,10 @@ import {
 } from './endpoints';
 import { queryKeys } from './queries';
 import type {
+  BalanceTransferResponse,
   CreateGroupRequest,
   CreateTaskRequest,
+  CreateTransferRequest,
   BulkImportTaskItem,
   CurrentContextResponse,
   GroupMembersResponse,
@@ -127,6 +130,24 @@ export function useUpdateGroupWeights(): UseMutationResult<
   return useMutation({
     mutationFn: (body: UpdateWeightsRequest) => updateCurrentGroupWeights(token, body),
     onSuccess: () => invalidate(),
+  });
+}
+
+export function useCreateTransfer(): UseMutationResult<
+  BalanceTransferResponse,
+  Error,
+  CreateTransferRequest
+> {
+  const token = useAuthToken();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CreateTransferRequest) => createTransfer(token, body),
+    onSuccess: () =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: queryKeys.currentGroup }),
+        qc.invalidateQueries({ queryKey: queryKeys.transferCandidates }),
+        qc.invalidateQueries({ queryKey: ['balances', 'transactions'] }),
+      ]),
   });
 }
 
