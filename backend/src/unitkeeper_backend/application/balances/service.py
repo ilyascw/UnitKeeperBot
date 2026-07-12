@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from uuid import uuid4
 
 from db.enums import BalanceTransactionType
 from unitkeeper_backend.application.models import (
@@ -62,6 +63,7 @@ class BalanceService:
             recipient_user_id=recipient_user_id,
             amount=amount,
         )
+        transaction_group_id = uuid4()
         await self._uow.sprints.add_balance_transaction(
             group_id=group_id,
             user_id=sender_user_id,
@@ -69,6 +71,7 @@ class BalanceService:
             amount_delta=-amount,
             counterparty_user_id=recipient_user_id,
             description=f"Transfer to user {recipient_user_id}",
+            transaction_group_id=transaction_group_id,
         )
         await self._uow.sprints.add_balance_transaction(
             group_id=group_id,
@@ -77,6 +80,7 @@ class BalanceService:
             amount_delta=amount,
             counterparty_user_id=sender_user_id,
             description=f"Transfer from user {sender_user_id}",
+            transaction_group_id=transaction_group_id,
         )
         await self._uow.commit()
         return BalanceTransferInfo(

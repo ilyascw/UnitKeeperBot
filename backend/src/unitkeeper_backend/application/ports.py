@@ -4,8 +4,10 @@ from collections.abc import Sequence
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Protocol
+from uuid import UUID
 
 from db.enums import (
+    BalanceTransactionAccountType,
     NotificationEventType,
     TaskLogStatus,
     Weekday,
@@ -244,10 +246,12 @@ class SprintRepository(Protocol):
         self,
         *,
         group_id: int,
-        user_id: int,
+        user_id: int | None,
         transaction_type: object,
         amount_delta: Decimal,
         description: str,
+        transaction_group_id: UUID,
+        account_type: object = BalanceTransactionAccountType.USER,
         sprint_run_id: int | None = None,
         task_log_id: int | None = None,
         counterparty_user_id: int | None = None,

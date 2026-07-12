@@ -42,6 +42,14 @@ Prereqs: `docker`, `uv`, `npm`, `ngrok` installed. Do these steps in order.
 - `bot/src/unitkeeper_bot/config.py`'s `Settings` was missing `env_prefix="UNITKEEPER_"`, so the un-prefixed env vars (`BOT_TOKEN`, etc) were required even though `bot/README.md` and `bot/.env.example` document `UNITKEEPER_`-prefixed names. Fixed by adding `env_prefix="UNITKEEPER_"` to `model_config` — `bot/.env` now matches `.env.example` as documented.
 - There was no root-level `docker-compose.yml` or Dockerfiles for `backend`/`bot` (only `common` had Docker wiring, for the DB). Added `backend/Dockerfile`, `bot/Dockerfile` (prod deps only, `pip install -e .`, no dev extras) and a root `docker-compose.yml`.
 
+## Balance ledger (double-entry)
+
+`balance_transactions` is an append-only double-entry ledger, not just an audit log: every logical operation (transfer, sprint settlement) writes one or more rows sharing a `transaction_group_id`, and the `amount_delta` of every row in a group must sum to zero. `account_type` distinguishes `user` legs (post to a member's balance, `user_id` required) from `group_pool` legs (the counter-leg for sprint settlements, which have no single counterparty user — `user_id` must be NULL). This is enforced by a DB CHECK constraint (`balance_transactions_account_type_user_id`). `Balance.current_balance` remains a mutated running-total cache; it must always equal the sum of that user's ledger rows — there's no reconciliation job yet, that's a gap if this drifts.
+
+Sprint settlement (`SprintService.close_current_sprint`) writes one `GROUP_POOL` leg for the total payout plus one `USER` leg per member with a nonzero delta, all sharing one `transaction_group_id`. Manual transfers (`BalanceService.transfer`) write a sender/recipient pair sharing one `transaction_group_id`. The legacy-CSV opening-balance import (`_migrate_legacy_data` in `20260315_0001_initial_unitkeeper_schema.py`) intentionally writes single-legged `manual_adjustment` rows — that's an external funding injection (analogous to a bank's opening deposit), not a bug.
+
+Since this schema had no data to preserve yet (migration decided with the user 2026-07-12), the ledger columns (`account_type`, `transaction_group_id`) were added by editing the existing `20260315_0001_initial_unitkeeper_schema.py` migration in place rather than stacking a new migration — if this schema is ever shared/deployed elsewhere, that approach stops being safe and a new migration must be used instead.
+
 ## Working Rules
 - New business logic goes to backend services, not to bot handlers or miniapp UI code.
 - Bot and miniapp should depend on backend contracts; direct business logic duplication is not allowed.

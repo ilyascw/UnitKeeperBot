@@ -6,6 +6,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 
 from db.enums import (
+    BalanceTransactionAccountType,
     BalanceTransactionType,
     NotificationEventType,
     NotificationOutboxStatus,
@@ -518,10 +519,12 @@ class InMemorySprintRepository:
         self,
         *,
         group_id: int,
-        user_id: int,
+        user_id: int | None,
         transaction_type,
         amount_delta: Decimal,
         description: str,
+        transaction_group_id: UUID | None = None,
+        account_type: object = BalanceTransactionAccountType.USER,
         sprint_run_id: int | None = None,
         task_log_id: int | None = None,
         counterparty_user_id: int | None = None,

@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from collections import defaultdict
 from decimal import Decimal
+from uuid import uuid4
 
-from db.enums import BalanceTransactionType, SprintRunStatus
+from db.enums import BalanceTransactionAccountType, BalanceTransactionType, SprintRunStatus
 from unitkeeper_backend.application.models import (
     CompletedTaskBreakdownItem,
     SprintMemberResultInfo,
@@ -154,14 +155,33 @@ class SprintService:
             closed_at=self._clock.now(),
             member_results=member_results,
         )
-        for item in member_results:
-            await self._uow.sprints.add_balance_transaction(
-                group_id=group_id,
-                user_id=item.user_id,
-                transaction_type=BalanceTransactionType.SPRINT_SETTLEMENT,
-                amount_delta=item.balance_delta,
-                description=f"Sprint settlement for {window.period_start}..{window.period_end}",
-                sprint_run_id=sprint_run.id,
-            )
+        pool_amount = sum((item.balance_delta for item in member_results), start=ZERO)
+        if pool_amount != ZERO or any(item.balance_delta != ZERO for item in member_results):
+            settlement_group_id = uuid4()
+            description = f"Sprint settlement for {window.period_start}..{window.period_end}"
+            if pool_amount != ZERO:
+                await self._uow.sprints.add_balance_transaction(
+                    group_id=group_id,
+                    user_id=None,
+                    account_type=BalanceTransactionAccountType.GROUP_POOL,
+                    transaction_type=BalanceTransactionType.SPRINT_SETTLEMENT,
+                    amount_delta=-pool_amount,
+                    description=description,
+                    transaction_group_id=settlement_group_id,
+                    sprint_run_id=sprint_run.id,
+                )
+            for item in member_results:
+                if item.balance_delta == ZERO:
+                    continue
+                await self._uow.sprints.add_balance_transaction(
+                    group_id=group_id,
+                    user_id=item.user_id,
+                    account_type=BalanceTransactionAccountType.USER,
+                    transaction_type=BalanceTransactionType.SPRINT_SETTLEMENT,
+                    amount_delta=item.balance_delta,
+                    description=description,
+                    transaction_group_id=settlement_group_id,
+                    sprint_run_id=sprint_run.id,
+                )
         await self._uow.commit()
         return sprint_run

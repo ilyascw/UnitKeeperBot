@@ -31,6 +31,19 @@ class BalanceTransactionType(str, enum.Enum):
     MANUAL_ADJUSTMENT = "manual_adjustment"
 
 
+class BalanceTransactionAccountType(str, enum.Enum):
+    """Which ledger account a balance_transactions row posts against.
+
+    USER rows post to a member's balance. GROUP_POOL rows post to the
+    group's settlement pool - the counter-leg for sprint settlements, which
+    have no single counterparty user - so every logical operation's legs
+    still sum to zero.
+    """
+
+    USER = "user"
+    GROUP_POOL = "group_pool"
+
+
 class NotificationEventType(str, enum.Enum):
     TASK_APPROVAL_REQUESTED = "task_approval_requested"
     TASK_APPROVED = "task_approved"

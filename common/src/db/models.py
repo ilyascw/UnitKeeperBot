@@ -25,6 +25,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db.database import Base
 from db.enums import (
+    BalanceTransactionAccountType,
     BalanceTransactionType,
     IdempotencyStatus,
     NotificationDeliveryAttemptStatus,
@@ -478,14 +479,33 @@ class SprintMemberResult(TimestampMixin, Base):
 
 
 class BalanceTransaction(TimestampMixin, Base):
+    """One leg of a double-entry ledger posting.
+
+    Every logical operation (transfer, sprint settlement, manual
+    adjustment) is recorded as a set of rows sharing the same
+    ``transaction_group_id`` whose ``amount_delta`` values sum to zero.
+    Transfers post two USER legs (sender/recipient); sprint settlements
+    post one GROUP_POOL leg (the pool funding the payout) plus one USER
+    leg per member.
+    """
+
     __tablename__ = "balance_transactions"
     __table_args__ = (
         CheckConstraint("amount_delta <> 0", name="balance_transactions_amount_nonzero"),
+        CheckConstraint(
+            "(account_type = 'user' AND user_id IS NOT NULL) "
+            "OR (account_type = 'group_pool' AND user_id IS NULL)",
+            name="balance_transactions_account_type_user_id",
+        ),
         Index(
             "ix_balance_transactions_group_user_created_at",
             "group_id",
             "user_id",
             "created_at",
+        ),
+        Index(
+            "ix_balance_transactions_transaction_group_id",
+            "transaction_group_id",
         ),
     )
 
@@ -495,10 +515,15 @@ class BalanceTransaction(TimestampMixin, Base):
         nullable=False,
         index=True,
     )
-    user_id: Mapped[int] = mapped_column(
+    account_type: Mapped[BalanceTransactionAccountType] = mapped_column(
+        pg_enum(BalanceTransactionAccountType, name="balance_transaction_account_type_enum"),
+        nullable=False,
+        default=BalanceTransactionAccountType.USER,
+        server_default=text("'user'"),
+    )
+    user_id: Mapped[int | None] = mapped_column(
         BigInteger,
         ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
         index=True,
     )
     transaction_type: Mapped[BalanceTransactionType] = mapped_column(
@@ -506,6 +531,11 @@ class BalanceTransaction(TimestampMixin, Base):
         nullable=False,
     )
     amount_delta: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    transaction_group_id: Mapped[UUID] = mapped_column(
+        nullable=False,
+        default=uuid4,
+        server_default=text("gen_random_uuid()"),
+    )
     counterparty_user_id: Mapped[int | None] = mapped_column(
         BigInteger,
         ForeignKey("users.id"),
