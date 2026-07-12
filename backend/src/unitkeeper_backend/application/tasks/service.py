@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 
-from db.enums import TaskLogStatus
-from unitkeeper_backend.application.models import TaskInfo, TaskLogInfo
+from db.enums import NotificationEventType, TaskLogStatus
+from unitkeeper_backend.application.models import TaskInfo, TaskLogInfo, TaskLogPage, TaskLogView
 from unitkeeper_backend.application.ports import Clock, UnitOfWork
 from unitkeeper_backend.domain.errors import AuthorizationError, BusinessRuleViolation, NotFoundError, ValidationError
 from unitkeeper_backend.domain.services.sprint_math import SprintWindow, current_sprint_window
@@ -175,6 +176,17 @@ class TaskService:
             approver_user_id=approver_user_id,
             decided_at=decided_at,
         )
+        if status is TaskLogStatus.PENDING:
+            for membership in memberships:
+                if membership.user_id == performer_user_id:
+                    continue
+                await self._uow.notifications.enqueue(
+                    event_type=NotificationEventType.TASK_APPROVAL_REQUESTED,
+                    recipient_user_id=membership.user_id,
+                    group_id=group_id,
+                    payload={"task_log_id": log.id, "task_title": task.title, "performer_user_id": performer_user_id},
+                    deep_link_path=f"/tasks/history?task_log_id={log.id}",
+                )
         await self._uow.commit()
         return log
 
@@ -201,6 +213,13 @@ class TaskService:
             approver_user_id=approver_user_id,
             decided_at=self._clock.now(),
         )
+        await self._uow.notifications.enqueue(
+            event_type=NotificationEventType.TASK_APPROVED,
+            recipient_user_id=updated.performer_user_id,
+            group_id=group_id,
+            payload={"task_log_id": updated.id, "task_title": task.title, "approver_user_id": approver_user_id},
+            deep_link_path=f"/tasks/history?task_log_id={updated.id}",
+        )
         await self._uow.commit()
         return updated
 
@@ -226,8 +245,161 @@ class TaskService:
             decided_at=self._clock.now(),
             rejection_reason=rejection_reason.strip(),
         )
+        task = await self.get_task(group_id=group_id, task_id=updated.task_id)
+        await self._uow.notifications.enqueue(
+            event_type=NotificationEventType.TASK_REJECTED,
+            recipient_user_id=updated.performer_user_id,
+            group_id=group_id,
+            payload={
+                "task_log_id": updated.id,
+                "task_title": task.title,
+                "approver_user_id": approver_user_id,
+                "rejection_reason": updated.rejection_reason or "",
+            },
+            deep_link_path=f"/tasks/history?task_log_id={updated.id}",
+        )
         await self._uow.commit()
         return updated
+
+    async def list_pending_approvals(
+        self,
+        *,
+        group_id: int,
+        user_id: int,
+        limit: int,
+        offset: int,
+    ) -> TaskLogPage:
+        """Return pending logs this member may review, never their own logs."""
+        await self._require_active_member(group_id=group_id, user_id=user_id)
+        return await self._list_log_page(
+            group_id=group_id,
+            exclude_performer_user_id=user_id,
+            statuses=[TaskLogStatus.PENDING],
+            limit=limit,
+            offset=offset,
+        )
+
+    async def list_my_task_logs(
+        self,
+        *,
+        group_id: int,
+        user_id: int,
+        task_id: int | None,
+        statuses: list[TaskLogStatus] | None,
+        limit: int,
+        offset: int,
+    ) -> TaskLogPage:
+        await self._require_active_member(group_id=group_id, user_id=user_id)
+        return await self._list_log_page(
+            group_id=group_id,
+            performer_user_id=user_id,
+            task_id=task_id,
+            statuses=statuses,
+            limit=limit,
+            offset=offset,
+        )
+
+    async def list_group_task_logs(
+        self,
+        *,
+        group_id: int,
+        user_id: int,
+        performer_user_id: int | None,
+        task_id: int | None,
+        statuses: list[TaskLogStatus] | None,
+        limit: int,
+        offset: int,
+    ) -> TaskLogPage:
+        await self._require_active_member(group_id=group_id, user_id=user_id)
+        return await self._list_log_page(
+            group_id=group_id,
+            performer_user_id=performer_user_id,
+            task_id=task_id,
+            statuses=statuses,
+            limit=limit,
+            offset=offset,
+        )
+
+    async def get_task_log_view(self, *, group_id: int, user_id: int, log_id: int) -> TaskLogView:
+        await self._require_active_member(group_id=group_id, user_id=user_id)
+        log = await self._uow.tasks.get_task_log(log_id=log_id)
+        if log is None or log.group_id != group_id:
+            raise NotFoundError("Task log was not found")
+        return (await self._build_log_views([log]))[0]
+
+    async def _list_log_page(
+        self,
+        *,
+        group_id: int,
+        limit: int,
+        offset: int,
+        performer_user_id: int | None = None,
+        exclude_performer_user_id: int | None = None,
+        task_id: int | None = None,
+        statuses: list[TaskLogStatus] | None = None,
+    ) -> TaskLogPage:
+        logs = await self._uow.tasks.list_task_logs(
+            group_id=group_id,
+            performer_user_id=performer_user_id,
+            exclude_performer_user_id=exclude_performer_user_id,
+            task_id=task_id,
+            statuses=statuses,
+            limit=limit,
+            offset=offset,
+        )
+        total = await self._uow.tasks.count_task_logs(
+            group_id=group_id,
+            performer_user_id=performer_user_id,
+            exclude_performer_user_id=exclude_performer_user_id,
+            task_id=task_id,
+            statuses=statuses,
+        )
+        return TaskLogPage(
+            items=await self._build_log_views(logs),
+            total=total,
+            limit=limit,
+            offset=offset,
+        )
+
+    async def _build_log_views(self, logs: Sequence[TaskLogInfo]) -> list[TaskLogView]:
+        log_list = list(logs)
+        if not log_list:
+            return []
+        task_ids = {log.task_id for log in log_list}
+        user_ids = {log.performer_user_id for log in log_list}
+        user_ids.update(log.approver_user_id for log in log_list if log.approver_user_id is not None)
+        group_id = log_list[0].group_id
+        tasks = await self._uow.tasks.list_tasks_by_ids(group_id=group_id, task_ids=tuple(task_ids))
+        users = await self._uow.users.list_by_ids(tuple(user_ids))
+        tasks_by_id = {task.id: task for task in tasks}
+        users_by_id = {user.id: user for user in users}
+        views: list[TaskLogView] = []
+        for log in log_list:
+            task = tasks_by_id.get(log.task_id)
+            performer = users_by_id.get(log.performer_user_id)
+            if task is None or performer is None:
+                raise NotFoundError("Task log references missing data")
+            views.append(
+                TaskLogView(
+                    id=log.id,
+                    group_id=log.group_id,
+                    task_id=task.id,
+                    task_title=task.title,
+                    unit_cost=task.unit_cost,
+                    task_is_active=task.is_active,
+                    status=log.status,
+                    performer=performer,
+                    approver=users_by_id.get(log.approver_user_id) if log.approver_user_id is not None else None,
+                    decided_at=log.decided_at,
+                    rejection_reason=log.rejection_reason,
+                    created_at=log.created_at,
+                )
+            )
+        return views
+
+    async def _require_active_member(self, *, group_id: int, user_id: int) -> None:
+        if await self._uow.groups.get_active_membership_in_group(group_id=group_id, user_id=user_id) is None:
+            raise AuthorizationError("User is not an active group member")
 
     async def _attach_remaining_counts(self, *, group_id: int, tasks: list[TaskInfo]) -> list[TaskInfo]:
         if not tasks:

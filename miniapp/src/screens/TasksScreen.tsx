@@ -1,15 +1,17 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 
 import {
   useCreateTask,
   useDecreaseTaskFrequency,
   useDeleteTask,
   useIncreaseTaskFrequency,
+  useImportTasks,
   useMarkTaskDone,
   useUpdateTask,
 } from '@/api/mutations';
 import { useCurrentGroup, useTasks } from '@/api/queries';
+import { ApiError } from '@/api/client';
 import { useAuth } from '@/auth/useAuth';
 import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
@@ -17,7 +19,7 @@ import { routes } from '@/routes/paths';
 import { formatUnits } from '@/ui/format';
 import { BottomSheet, Button, Card, Field, Note, Screen, Stepper, TextInput, Toast } from '@/ui/kit';
 import { CheckIcon, ClockIcon, PencilIcon, PlusIcon, TrashIcon } from '@/ui/icons';
-import type { TaskResponse } from '@/api/types';
+import type { BulkImportTaskItem, TaskImportRowError, TaskResponse } from '@/api/types';
 
 function parseCost(value: string): number {
   return Number.parseFloat(value.replace(',', '.'));
@@ -33,6 +35,73 @@ function taskIsComplete(task: TaskResponse): boolean {
 
 function taskIsHeldFull(task: TaskResponse): boolean {
   return !taskIsComplete(task) && !taskIsMarkable(task);
+}
+
+function parseImportRows(value: string): { items: BulkImportTaskItem[]; errors: TaskImportRowError[] } {
+  const errors: TaskImportRowError[] = [];
+  const items: BulkImportTaskItem[] = [];
+  value.split(/\r?\n/).forEach((raw, index) => {
+    if (!raw.trim()) return;
+    const cells = raw.split(raw.includes('\t') ? '\t' : ';').map((cell) => cell.trim());
+    if (cells.length !== 3) {
+      errors.push({ index, field: 'row', message: 'Нужны три колонки: название, частота, стоимость' });
+      return;
+    }
+    const [title, frequency, cost] = cells;
+    const parsedFrequency = Number(frequency);
+    const parsedCost = Number(cost.replace(',', '.'));
+    if (!title) errors.push({ index, field: 'title', message: 'Укажите название' });
+    if (!Number.isInteger(parsedFrequency) || parsedFrequency < 1) {
+      errors.push({ index, field: 'frequency_per_sprint', message: 'Частота должна быть целым числом больше нуля' });
+    }
+    if (!Number.isFinite(parsedCost) || parsedCost < 0) {
+      errors.push({ index, field: 'unit_cost', message: 'Стоимость должна быть числом не меньше нуля' });
+    }
+    items.push({ title, frequency_per_sprint: parsedFrequency, unit_cost: String(parsedCost) });
+  });
+  if (!items.length && !errors.length) errors.push({ index: 0, field: 'row', message: 'Добавьте хотя бы одну строку' });
+  return { items, errors };
+}
+
+function backendImportErrors(error: Error): TaskImportRowError[] {
+  if (!(error instanceof ApiError) || !error.details || typeof error.details !== 'object') return [];
+  const candidates = (error.details as { errors?: unknown }).errors;
+  if (!Array.isArray(candidates)) return [];
+  return candidates.flatMap((item) => {
+    if (!item || typeof item !== 'object') return [];
+    const row = item as Partial<TaskImportRowError>;
+    return typeof row.index === 'number' && typeof row.field === 'string' && typeof row.message === 'string'
+      ? [{ index: row.index, field: row.field, message: row.message }]
+      : [];
+  });
+}
+
+function ImportTasksSheet({ onClose, onImported }: { onClose: () => void; onImported: (count: number) => void }) {
+  const importTasks = useImportTasks();
+  const [source, setSource] = useState('');
+  const [localErrors, setLocalErrors] = useState<TaskImportRowError[]>([]);
+  const serverErrors = importTasks.isError ? backendImportErrors(importTasks.error) : [];
+  const errors = localErrors.length ? localErrors : serverErrors;
+  const submit = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    const result = parseImportRows(source);
+    setLocalErrors(result.errors);
+    if (result.errors.length) return;
+    importTasks.mutate(result.items, { onSuccess: (tasks) => { onImported(tasks.length); onClose(); } });
+  };
+  return (
+    <BottomSheet onClose={() => (importTasks.isPending ? undefined : onClose())}>
+      <div style={{ font: "800 20px 'Manrope'", textAlign: 'center', marginBottom: 12 }}>Импорт задач</div>
+      <form className="uk-stack" onSubmit={submit}>
+        <Field label="Таблица задач" hint="Вставьте строки из таблицы: название, частота, стоимость. Колонки разделяйте табуляцией или точкой с запятой.">
+          <textarea className="uk-input" value={source} onChange={(e) => { setSource(e.currentTarget.value); setLocalErrors([]); }} disabled={importTasks.isPending} rows={7} placeholder={'Мыть посуду\t3\t5\nПылесосить\t1\t10'} style={{ resize: 'vertical', paddingTop: 11 }} />
+        </Field>
+        {errors.length ? <Note tone="error">{errors.map((error) => <div key={`${error.index}-${error.field}`}>Строка {error.index + 1}: {error.message}</div>)}</Note> : null}
+        {importTasks.isError && !errors.length ? <Note tone="error">{importTasks.error.message}</Note> : null}
+        <Button type="submit" variant="primary" loading={importTasks.isPending}>Импортировать</Button>
+      </form>
+    </BottomSheet>
+  );
 }
 
 /** Owner-only sheet for adding or editing a recurring task. */
@@ -426,11 +495,13 @@ function TaskRow({
  * progress; any member can log a completion, and the owner can add tasks.
  */
 export function TasksScreen() {
+  const navigate = useNavigate();
   const { context } = useAuth();
   const group = useCurrentGroup();
   const { data: tasks, isPending, isError, error, refetch } = useTasks();
   const markDone = useMarkTaskDone();
   const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
@@ -490,16 +561,12 @@ export function TasksScreen() {
     <Screen>
       <div className="uk-header" style={{ justifyContent: 'space-between' }}>
         <div className="uk-header__title">Задачи</div>
-        {isOwner ? (
-          <button
-            type="button"
-            className="uk-back"
-            aria-label="Добавить задачу"
-            onClick={() => setAdding(true)}
-          >
-            <PlusIcon size={24} />
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button type="button" className="uk-back" aria-label="Открыть отметки" onClick={() => navigate(routes.taskLogs)}>
+            <ClockIcon size={22} />
           </button>
-        ) : null}
+          {isOwner ? <button type="button" className="uk-back" aria-label="Добавить задачу" onClick={() => setAdding(true)}><PlusIcon size={24} /></button> : null}
+        </div>
       </div>
 
       {tasks.length === 0 ? (
@@ -511,16 +578,18 @@ export function TasksScreen() {
               : 'Владелец группы ещё не добавил задачи.'}
           </div>
           {isOwner ? (
-            <div style={{ marginTop: 16 }}>
+            <div style={{ marginTop: 16, display: 'grid', gap: 8 }}>
               <Button variant="primary" onClick={() => setAdding(true)}>
                 <PlusIcon size={18} /> Добавить задачу
               </Button>
+              <Button variant="soft" onClick={() => setImporting(true)}>Импортировать таблицу</Button>
             </div>
           ) : null}
         </Card>
       ) : (
         <>
           <Note tone="info">Отметьте выполнение — оно уйдёт владельцу на подтверждение.</Note>
+          {isOwner ? <Button variant="soft" onClick={() => setImporting(true)}>Импортировать таблицу</Button> : null}
           <Card flush>
             {tasks.map((task) => (
               <TaskRow
@@ -543,6 +612,7 @@ export function TasksScreen() {
           onSaved={(text) => setToast({ tone: 'success', text })}
         />
       ) : null}
+      {importing ? <ImportTasksSheet onClose={() => setImporting(false)} onImported={(count) => setToast({ tone: 'success', text: `Импортировано задач: ${count}` })} /> : null}
       {selectedTask ? (
         <TaskDetailSheet
           task={selectedTask}

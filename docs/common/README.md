@@ -19,24 +19,23 @@
 - async engine, sessionmaker и transaction helpers;
 - нормализация legacy `weights` JSON, `group_balance` inconsistency и sprint bookkeeping;
 - package surface, который уже использует backend.
+- `uv` developer workflow, Ruff/mypy checks, package-surface tests и fresh-database migration smoke.
+- persistent outbox, delivery-attempt и idempotency schema primitives.
 
 ## What Is Still Missing
 
 Критические пробелы:
-- нет schema/test hardening вокруг миграций и package contract;
-- нет outbox/idempotency storage для bot delivery и repeated callbacks;
 - нет продуманной legacy bootstrap/cutover стратегии.
 
 ## Queue
 
-`P0`
-- [Issue 01](./issue-01-package-hardening-and-migration-smoke.md) Package hardening и migration smoke
-
-`P1`
-- [Issue 02](./issue-02-outbox-and-idempotency-schema.md) Outbox, delivery state и idempotency schema
-
 `P2`
 - [Issue 03](./issue-03-legacy-bootstrap-and-cutover-support.md) Legacy bootstrap, migration policy и cutover support
+
+## Archived
+
+- [Issue 01](../archive/common/issue-01-package-hardening-and-migration-smoke.md) Package hardening и migration smoke
+- [Issue 02](../archive/common/issue-02-outbox-and-idempotency-schema.md) Outbox, delivery state и idempotency schema
 
 ## Notes
 

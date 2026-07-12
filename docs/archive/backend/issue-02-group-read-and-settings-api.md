@@ -1,5 +1,7 @@
 # Issue 02: Group Read And Settings API
 
+**Status:** Closed and archived
+
 ## Priority
 
 `P0`

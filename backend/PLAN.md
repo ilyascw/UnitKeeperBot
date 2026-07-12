@@ -30,21 +30,22 @@
 - [x] Mark task completion.
 - [x] Approve or reject task completion.
 - [x] Read sprint progress and current results.
-- [ ] Read balance and transfer units.
+- [x] Read balance, transfer units, and expose transfer history. *(Issue 05: `/balances/me`, `/balances/transfer-candidates`, `/balances/transfers`, `/balances/transactions`.)*
 
 ## Phase 4: Scheduling And Notifications
 - [x] Expose manual current-sprint close use case with duplicate protection.
 - [ ] Rebuild sprint closing logic as backend jobs.
 - [x] Store scheduler-safe bookkeeping to avoid duplicate sprint closure.
-- [ ] Produce notification events for the bot.
-- [ ] Produce deep links for miniapp navigation from notifications.
-- [ ] Add reminder jobs for pending confirmations and sprint deadlines.
+- [x] Produce notification events for the bot.
+- [x] Produce deep links for miniapp navigation from notifications.
+- [x] Add reminder jobs for pending confirmations and sprint deadlines.
 
 ## Phase 5: Reliability
 - [x] Add validation and business error taxonomy.
 - [x] Add initial unit tests for group, task, sprint, and routing slices.
 - [ ] Add idempotency strategy for repeated Telegram actions.
-- [ ] Add tests for sprint math, weights, ownership changes, and balance transfers.
+- [ ] Add tests for sprint math, weights, and ownership changes.
+- [x] Add balance transfer tests.
 - [ ] Add observability hooks: structured logging, request IDs, and job logs.
 
 ## Legacy Coverage

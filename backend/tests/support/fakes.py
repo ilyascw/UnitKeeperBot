@@ -5,8 +5,17 @@ from dataclasses import replace
 from datetime import date, datetime, timezone
 from decimal import Decimal
 
-from db.enums import BalanceTransactionType, SprintRunStatus, TaskLogStatus, Weekday
+from db.enums import (
+    BalanceTransactionAccountType,
+    BalanceTransactionType,
+    NotificationEventType,
+    NotificationOutboxStatus,
+    SprintRunStatus,
+    TaskLogStatus,
+    Weekday,
+)
 from unitkeeper_backend.application.models import (
+    BalanceTransactionInfo,
     GroupInfo,
     MembershipInfo,
     SprintMemberResultInfo,
@@ -15,8 +24,10 @@ from unitkeeper_backend.application.models import (
     TaskLogInfo,
     TelegramIdentity,
     UserProfile,
+    NotificationOutboxEventInfo,
 )
-from unitkeeper_backend.domain.errors import NotFoundError
+from uuid import UUID, uuid4
+from unitkeeper_backend.domain.errors import BusinessRuleViolation, NotFoundError
 
 
 class FakeClock:
@@ -186,6 +197,24 @@ class InMemoryGroupRepository:
         self.balances[(group_id, user_id)] = updated
         return updated
 
+    async def transfer_balance(
+        self,
+        *,
+        group_id: int,
+        sender_user_id: int,
+        recipient_user_id: int,
+        amount: Decimal,
+    ) -> tuple[Decimal, Decimal]:
+        sender_balance = self.balances[(group_id, sender_user_id)]
+        if sender_balance < amount:
+            raise BusinessRuleViolation("Insufficient balance for this transfer")
+        recipient_balance = self.balances[(group_id, recipient_user_id)]
+        sender_balance -= amount
+        recipient_balance += amount
+        self.balances[(group_id, sender_user_id)] = sender_balance
+        self.balances[(group_id, recipient_user_id)] = recipient_balance
+        return sender_balance, recipient_balance
+
 
 class InMemoryTaskRepository:
     def __init__(self) -> None:
@@ -220,6 +249,10 @@ class InMemoryTaskRepository:
             for task in self.tasks.values()
             if task.group_id == group_id and (not active_only or task.deleted_at is None)
         ]
+
+    async def list_tasks_by_ids(self, *, group_id: int, task_ids: Sequence[int]) -> list[TaskInfo]:
+        requested = set(task_ids)
+        return [task for task in self.tasks.values() if task.group_id == group_id and task.id in requested]
 
     async def get_task(self, *, group_id: int, task_id: int) -> TaskInfo | None:
         task = self.tasks.get(task_id)
@@ -320,6 +353,68 @@ class InMemoryTaskRepository:
     async def get_task_log(self, *, log_id: int) -> TaskLogInfo | None:
         return self.logs.get(log_id)
 
+    async def list_task_logs(
+        self,
+        *,
+        group_id: int,
+        performer_user_id: int | None = None,
+        exclude_performer_user_id: int | None = None,
+        task_id: int | None = None,
+        statuses: Sequence[TaskLogStatus] | None = None,
+        limit: int,
+        offset: int,
+    ) -> Sequence[TaskLogInfo]:
+        logs = self._filtered_logs(
+            group_id=group_id,
+            performer_user_id=performer_user_id,
+            exclude_performer_user_id=exclude_performer_user_id,
+            task_id=task_id,
+            statuses=statuses,
+        )
+        return logs[offset : offset + limit]
+
+    async def count_task_logs(
+        self,
+        *,
+        group_id: int,
+        performer_user_id: int | None = None,
+        exclude_performer_user_id: int | None = None,
+        task_id: int | None = None,
+        statuses: Sequence[TaskLogStatus] | None = None,
+    ) -> int:
+        return len(
+            self._filtered_logs(
+                group_id=group_id,
+                performer_user_id=performer_user_id,
+                exclude_performer_user_id=exclude_performer_user_id,
+                task_id=task_id,
+                statuses=statuses,
+            )
+        )
+
+    def _filtered_logs(
+        self,
+        *,
+        group_id: int,
+        performer_user_id: int | None,
+        exclude_performer_user_id: int | None,
+        task_id: int | None,
+        statuses: Sequence[TaskLogStatus] | None,
+    ) -> list[TaskLogInfo]:
+        return sorted(
+            (
+                log
+                for log in self.logs.values()
+                if log.group_id == group_id
+                and (performer_user_id is None or log.performer_user_id == performer_user_id)
+                and (exclude_performer_user_id is None or log.performer_user_id != exclude_performer_user_id)
+                and (task_id is None or log.task_id == task_id)
+                and (not statuses or log.status in statuses)
+            ),
+            key=lambda log: (log.created_at, log.id),
+            reverse=True,
+        )
+
     async def approve_task_log(
         self,
         *,
@@ -378,6 +473,7 @@ class InMemorySprintRepository:
     def __init__(self) -> None:
         self.sprint_runs: dict[tuple[int, date, date], SprintRunInfo] = {}
         self.transactions: list[tuple[int, int, BalanceTransactionType, Decimal, int | None]] = []
+        self.balance_transactions: list[BalanceTransactionInfo] = []
         self._seq = 1
 
     async def get_sprint_run(
@@ -423,15 +519,143 @@ class InMemorySprintRepository:
         self,
         *,
         group_id: int,
-        user_id: int,
+        user_id: int | None,
         transaction_type,
         amount_delta: Decimal,
         description: str,
+        transaction_group_id: UUID | None = None,
+        account_type: object = BalanceTransactionAccountType.USER,
         sprint_run_id: int | None = None,
         task_log_id: int | None = None,
         counterparty_user_id: int | None = None,
     ) -> None:
         self.transactions.append((group_id, user_id, transaction_type, amount_delta, sprint_run_id))
+        self.balance_transactions.append(
+            BalanceTransactionInfo(
+                id=len(self.balance_transactions) + 1,
+                group_id=group_id,
+                user_id=user_id,
+                transaction_type=transaction_type,
+                amount_delta=amount_delta,
+                counterparty_user_id=counterparty_user_id,
+                description=description,
+                created_at=utc_datetime(2026, 3, 16),
+            )
+        )
+
+    async def list_balance_transactions(
+        self,
+        *,
+        group_id: int,
+        user_id: int,
+        limit: int,
+        offset: int,
+    ) -> tuple[list[BalanceTransactionInfo], int]:
+        matching = [
+            item
+            for item in self.balance_transactions
+            if item.group_id == group_id and item.user_id == user_id
+        ]
+        matching.sort(key=lambda item: (item.created_at, item.id), reverse=True)
+        return matching[offset : offset + limit], len(matching)
+
+
+class InMemoryNotificationRepository:
+    def __init__(self) -> None:
+        self.events: dict[UUID, NotificationOutboxEventInfo] = {}
+
+    async def enqueue(
+        self,
+        *,
+        event_type: NotificationEventType,
+        recipient_user_id: int,
+        group_id: int | None,
+        payload: dict[str, object],
+        deep_link_path: str | None,
+    ) -> NotificationOutboxEventInfo:
+        event = NotificationOutboxEventInfo(
+            id=uuid4(),
+            event_type=event_type,
+            recipient_user_id=recipient_user_id,
+            group_id=group_id,
+            payload=payload,
+            deep_link_path=deep_link_path,
+            correlation_id=None,
+            status=NotificationOutboxStatus.PENDING,
+            attempt_count=0,
+            next_attempt_at=None,
+            delivered_at=None,
+            last_error=None,
+            created_at=utc_datetime(2026, 3, 16),
+        )
+        self.events[event.id] = event
+        return event
+
+    async def enqueue_once(
+        self,
+        *,
+        dedupe_key: str,
+        correlation_id: str | None,
+        event_type: NotificationEventType,
+        recipient_user_id: int,
+        group_id: int | None,
+        payload: dict[str, object],
+        deep_link_path: str | None,
+    ) -> tuple[NotificationOutboxEventInfo, bool]:
+        for event in self.events.values():
+            if event.payload.get("dedupe_key") == dedupe_key:
+                return event, False
+        event = await self.enqueue(
+            event_type=event_type,
+            recipient_user_id=recipient_user_id,
+            group_id=group_id,
+            payload={**payload, "dedupe_key": dedupe_key},
+            deep_link_path=deep_link_path,
+        )
+        event = replace(event, correlation_id=correlation_id)
+        self.events[event.id] = event
+        return event, True
+
+    async def list_ready(self, *, now: datetime, limit: int) -> list[NotificationOutboxEventInfo]:
+        return [
+            event
+            for event in self.events.values()
+            if event.status is NotificationOutboxStatus.PENDING
+            and (event.next_attempt_at is None or event.next_attempt_at <= now)
+        ][:limit]
+
+    async def acknowledge(self, *, event_id: UUID, acknowledged_at: datetime) -> NotificationOutboxEventInfo:
+        event = self.events[event_id]
+        updated = replace(
+            event,
+            status=NotificationOutboxStatus.DELIVERED,
+            attempt_count=event.attempt_count + 1,
+            delivered_at=acknowledged_at,
+            next_attempt_at=None,
+            last_error=None,
+        )
+        self.events[event_id] = updated
+        return updated
+
+    async def fail(
+        self,
+        *,
+        event_id: UUID,
+        failed_at: datetime,
+        error_message: str,
+        retry_at: datetime | None,
+        terminal: bool,
+    ) -> NotificationOutboxEventInfo:
+        event = self.events[event_id]
+        updated = replace(
+            event,
+            status=NotificationOutboxStatus.DEAD_LETTER if terminal else NotificationOutboxStatus.PENDING,
+            attempt_count=event.attempt_count + 1,
+            next_attempt_at=None if terminal else retry_at,
+            last_error=error_message,
+        )
+        self.events[event_id] = updated
+        return updated
 
 
 class InMemoryUnitOfWork:
@@ -440,6 +664,7 @@ class InMemoryUnitOfWork:
         self.groups = InMemoryGroupRepository()
         self.tasks = InMemoryTaskRepository()
         self.sprints = InMemorySprintRepository()
+        self.notifications = InMemoryNotificationRepository()
         self.commit_count = 0
 
     async def commit(self) -> None:

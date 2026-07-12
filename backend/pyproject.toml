@@ -28,6 +28,9 @@ dev = [
     "mypy>=1.15.0",
 ]
 
+[tool.uv.sources]
+unitkeeper-common = { path = "../common", editable = true }
+
 [tool.setuptools.packages.find]
 where = ["src"]
 

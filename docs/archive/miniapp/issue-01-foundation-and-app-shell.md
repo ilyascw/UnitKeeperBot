@@ -1,5 +1,7 @@
 # Issue 01: Foundation And App Shell
 
+**Status:** Closed and archived
+
 ## Priority
 
 `P0`

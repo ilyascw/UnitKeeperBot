@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, time, timedelta, timezone
 from decimal import Decimal
 
-from db.enums import Weekday
+from db.enums import NotificationEventType, Weekday
 from unitkeeper_backend.application.context.service import CurrentContextService
 from unitkeeper_backend.application.models import (
     CurrentContext,
@@ -84,6 +84,21 @@ class GroupService:
         await self._uow.groups.create_membership(group_id=group.id, user_id=user_id)
         await self._uow.groups.ensure_balance(group_id=group.id, user_id=user_id)
         await self._rebalance_group(group.id)
+        memberships = await self._uow.groups.list_active_memberships(group.id)
+        for membership in memberships:
+            if membership.user_id == user_id:
+                continue
+            await self._uow.notifications.enqueue(
+                event_type=NotificationEventType.REMINDER,
+                recipient_user_id=membership.user_id,
+                group_id=group.id,
+                payload={
+                    "kind": "membership_event",
+                    "group_name": group.name,
+                    "message": "В группу вступил новый участник.",
+                },
+                deep_link_path="/group",
+            )
         await self._uow.commit()
         return await self._context_service.resolve(user_id)
 
@@ -99,6 +114,7 @@ class GroupService:
         await self._uow.groups.deactivate_membership(membership.id, left_at=left_at)
         remaining = await self._uow.groups.list_active_memberships(group.id)
 
+        next_owner_id = None
         if group.owner_user_id == user_id and remaining:
             next_owner_id = sorted(member.user_id for member in remaining)[0]
             await self._uow.groups.set_owner(group_id=group.id, owner_user_id=next_owner_id)
@@ -108,6 +124,23 @@ class GroupService:
                 group_id=group.id,
                 weights_by_user_id=distribute_equally([member.user_id for member in remaining]),
             )
+            for member in remaining:
+                owner_changed = member.user_id == next_owner_id
+                await self._uow.notifications.enqueue(
+                    event_type=NotificationEventType.REMINDER,
+                    recipient_user_id=member.user_id,
+                    group_id=group.id,
+                    payload={
+                        "kind": "group_event" if owner_changed else "membership_event",
+                        "group_name": group.name,
+                        "message": (
+                            "Вы назначены новым владельцем группы."
+                            if owner_changed
+                            else "Один из участников покинул группу."
+                        ),
+                    },
+                    deep_link_path="/group",
+                )
 
         await self._uow.commit()
 

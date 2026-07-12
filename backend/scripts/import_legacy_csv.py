@@ -144,10 +144,17 @@ def normalize_frequency(value: str | None) -> int:
     return max(1, frequency)
 
 
+# Legacy CSVs carry no names, only Telegram ids - and only real Telegram auth
+# ever fills in first_name/username. Dev-seeded users would otherwise render
+# as "Участник <id>" everywhere until someone actually logs in as them, so we
+# assign a deterministic placeholder name for local testing.
+DEV_PLACEHOLDER_NAMES = ["Аня", "Марк", "Соня", "Дима", "Катя", "Женя", "Паша", "Лена"]
+
+
 async def ensure_user(session: AsyncSession, user_id: int) -> User:
     user = await session.get(User, user_id)
     if user is None:
-        user = User(id=user_id)
+        user = User(id=user_id, first_name=DEV_PLACEHOLDER_NAMES[user_id % len(DEV_PLACEHOLDER_NAMES)])
         session.add(user)
         await session.flush()
     return user
@@ -254,6 +261,8 @@ async def upsert_task_log(session: AsyncSession, row: dict[str, str]) -> None:
 
 
 async def upsert_balance(session: AsyncSession, row: dict[str, str]) -> None:
+    # Dev seed data: balances always start at zero. Legacy CSV opening
+    # balances are dropped on purpose - only task/log seed state carries over.
     balance_id = parse_int(row.get("id"))
     user_id = parse_int(row.get("user_id"))
     group_id = parse_int(row.get("group_id"))
@@ -267,20 +276,11 @@ async def upsert_balance(session: AsyncSession, row: dict[str, str]) -> None:
 
     balance.user_id = user_id
     balance.group_id = group_id
-    balance.current_balance = parse_decimal(row.get("balance")).quantize(Decimal("0.01"))
+    balance.current_balance = Decimal("0.00")
     await session.flush()
 
 
-async def ensure_opening_transaction(
-    session: AsyncSession,
-    *,
-    group_id: int,
-    user_id: int,
-    amount_delta: Decimal,
-) -> None:
-    if amount_delta == 0:
-        return
-
+async def clear_opening_transaction(session: AsyncSession, *, group_id: int, user_id: int) -> None:
     description = "Imported opening balance from legacy CSV"
     query = select(BalanceTransaction).where(
         BalanceTransaction.group_id == group_id,
@@ -290,17 +290,9 @@ async def ensure_opening_transaction(
     )
     result = await session.execute(query)
     transaction = result.scalar_one_or_none()
-    if transaction is None:
-        transaction = BalanceTransaction(
-            group_id=group_id,
-            user_id=user_id,
-            transaction_type=BalanceTransactionType.MANUAL_ADJUSTMENT,
-            description=description,
-        )
-        session.add(transaction)
-
-    transaction.amount_delta = amount_delta
-    await session.flush()
+    if transaction is not None:
+        await session.delete(transaction)
+        await session.flush()
 
 
 async def reset_sequences(session: AsyncSession) -> None:
@@ -413,12 +405,7 @@ async def import_legacy_csv(data_dir: Path, database_url: str) -> list[int]:
                 user_id = parse_int(row.get("user_id"))
                 group_id = parse_int(row.get("group_id"))
                 if user_id is not None and group_id is not None:
-                    await ensure_opening_transaction(
-                        session,
-                        group_id=group_id,
-                        user_id=user_id,
-                        amount_delta=parse_decimal(row.get("balance")).quantize(Decimal("0.01")),
-                    )
+                    await clear_opening_transaction(session, group_id=group_id, user_id=user_id)
 
             await reset_sequences(session)
 

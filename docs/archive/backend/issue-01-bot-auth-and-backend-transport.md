@@ -1,5 +1,7 @@
 # Issue 01: Bot Auth And Backend Transport
 
+**Status:** Closed and archived
+
 ## Priority
 
 `P0`

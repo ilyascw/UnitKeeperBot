@@ -4,9 +4,16 @@ from collections.abc import Sequence
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Protocol
+from uuid import UUID
 
-from db.enums import TaskLogStatus, Weekday
+from db.enums import (
+    BalanceTransactionAccountType,
+    NotificationEventType,
+    TaskLogStatus,
+    Weekday,
+)
 from unitkeeper_backend.application.models import (
+    BalanceTransactionInfo,
     GroupInfo,
     MembershipInfo,
     SprintMemberResultInfo,
@@ -15,6 +22,7 @@ from unitkeeper_backend.application.models import (
     TaskLogInfo,
     TelegramIdentity,
     UserProfile,
+    NotificationOutboxEventInfo,
 )
 
 
@@ -90,6 +98,15 @@ class GroupRepository(Protocol):
     async def get_balance(self, *, group_id: int, user_id: int) -> Decimal: ...
 
     async def apply_balance_delta(self, *, group_id: int, user_id: int, amount_delta: Decimal) -> Decimal: ...
+
+    async def transfer_balance(
+        self,
+        *,
+        group_id: int,
+        sender_user_id: int,
+        recipient_user_id: int,
+        amount: Decimal,
+    ) -> tuple[Decimal, Decimal]: ...
 
 
 class TaskRepository(Protocol):
@@ -229,14 +246,68 @@ class SprintRepository(Protocol):
         self,
         *,
         group_id: int,
-        user_id: int,
+        user_id: int | None,
         transaction_type: object,
         amount_delta: Decimal,
         description: str,
+        transaction_group_id: UUID,
+        account_type: object = BalanceTransactionAccountType.USER,
         sprint_run_id: int | None = None,
         task_log_id: int | None = None,
         counterparty_user_id: int | None = None,
     ) -> None: ...
+
+    async def list_balance_transactions(
+        self,
+        *,
+        group_id: int,
+        user_id: int,
+        limit: int,
+        offset: int,
+    ) -> tuple[list[BalanceTransactionInfo], int]: ...
+
+
+class NotificationRepository(Protocol):
+    async def enqueue(
+        self,
+        *,
+        event_type: NotificationEventType,
+        recipient_user_id: int,
+        group_id: int | None,
+        payload: dict[str, object],
+        deep_link_path: str | None,
+    ) -> NotificationOutboxEventInfo: ...
+
+    async def enqueue_once(
+        self,
+        *,
+        dedupe_key: str,
+        correlation_id: str | None,
+        event_type: NotificationEventType,
+        recipient_user_id: int,
+        group_id: int | None,
+        payload: dict[str, object],
+        deep_link_path: str | None,
+    ) -> tuple[NotificationOutboxEventInfo, bool]: ...
+
+    async def list_ready(self, *, now: datetime, limit: int) -> list[NotificationOutboxEventInfo]: ...
+
+    async def acknowledge(
+        self,
+        *,
+        event_id: object,
+        acknowledged_at: datetime,
+    ) -> NotificationOutboxEventInfo: ...
+
+    async def fail(
+        self,
+        *,
+        event_id: object,
+        failed_at: datetime,
+        error_message: str,
+        retry_at: datetime | None,
+        terminal: bool,
+    ) -> NotificationOutboxEventInfo: ...
 
 
 class UnitOfWork(Protocol):
@@ -244,6 +315,7 @@ class UnitOfWork(Protocol):
     groups: GroupRepository
     tasks: TaskRepository
     sprints: SprintRepository
+    notifications: NotificationRepository
 
     async def commit(self) -> None: ...
 

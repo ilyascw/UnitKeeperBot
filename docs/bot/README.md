@@ -21,12 +21,8 @@
 
 ## Queue
 
-`P0`
-- [Issue 01](./issue-01-thin-bot-shell-and-backend-transport.md) Thin bot shell и backend transport
-
-`P1`
-- [Issue 02](./issue-02-approvals-notifications-and-deep-links.md) Approval notifications и deep links
-- [Issue 03](./issue-03-reports-reminders-and-fallback-ops.md) Reports, reminders и fallback ops
+Активных bot issues нет. Issues 01-03 реализованы и находятся в
+[`docs/archive/bot`](../archive/bot/).
 
 ## Notes
 

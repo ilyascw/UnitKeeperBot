@@ -51,6 +51,12 @@ balance_transaction_type_enum = postgresql.ENUM(
     name="balance_transaction_type_enum",
     create_type=False,
 )
+balance_transaction_account_type_enum = postgresql.ENUM(
+    "user",
+    "group_pool",
+    name="balance_transaction_account_type_enum",
+    create_type=False,
+)
 
 
 LEGACY_TABLES = ("groups", "users", "tasks", "logs", "balances")
@@ -354,6 +360,7 @@ def upgrade() -> None:
     task_log_status_enum.create(bind, checkfirst=True)
     sprint_run_status_enum.create(bind, checkfirst=True)
     balance_transaction_type_enum.create(bind, checkfirst=True)
+    balance_transaction_account_type_enum.create(bind, checkfirst=True)
 
     op.create_table(
         "users",
@@ -563,9 +570,21 @@ def upgrade() -> None:
         "balance_transactions",
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("group_id", sa.Integer(), nullable=False),
-        sa.Column("user_id", sa.BigInteger(), nullable=False),
+        sa.Column(
+            "account_type",
+            balance_transaction_account_type_enum,
+            nullable=False,
+            server_default=sa.text("'user'"),
+        ),
+        sa.Column("user_id", sa.BigInteger(), nullable=True),
         sa.Column("transaction_type", balance_transaction_type_enum, nullable=False),
         sa.Column("amount_delta", sa.Numeric(precision=12, scale=2), nullable=False),
+        sa.Column(
+            "transaction_group_id",
+            postgresql.UUID(as_uuid=True),
+            nullable=False,
+            server_default=sa.text("gen_random_uuid()"),
+        ),
         sa.Column("counterparty_user_id", sa.BigInteger(), nullable=True),
         sa.Column("sprint_run_id", sa.Integer(), nullable=True),
         sa.Column("task_log_id", sa.Integer(), nullable=True),
@@ -573,6 +592,11 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.CheckConstraint("amount_delta <> 0", name=op.f("ck_balance_transactions_balance_transactions_amount_nonzero")),
+        sa.CheckConstraint(
+            "(account_type = 'user' AND user_id IS NOT NULL) "
+            "OR (account_type = 'group_pool' AND user_id IS NULL)",
+            name=op.f("ck_balance_transactions_balance_transactions_account_type_user_id"),
+        ),
         sa.ForeignKeyConstraint(["counterparty_user_id"], ["users.id"], name=op.f("fk_balance_transactions_counterparty_user_id_users")),
         sa.ForeignKeyConstraint(["group_id"], ["groups.id"], name=op.f("fk_balance_transactions_group_id_groups"), ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["sprint_run_id"], ["sprint_runs.id"], name=op.f("fk_balance_transactions_sprint_run_id_sprint_runs"), ondelete="SET NULL"),
@@ -586,6 +610,12 @@ def upgrade() -> None:
         "ix_balance_transactions_group_user_created_at",
         "balance_transactions",
         ["group_id", "user_id", "created_at"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_balance_transactions_transaction_group_id",
+        "balance_transactions",
+        ["transaction_group_id"],
         unique=False,
     )
 

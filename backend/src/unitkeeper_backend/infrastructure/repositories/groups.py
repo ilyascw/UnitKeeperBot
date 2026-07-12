@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from db.models import Balance, Group, GroupMemberWeight, GroupMembership
 from unitkeeper_backend.application.models import GroupInfo, MembershipInfo
-from unitkeeper_backend.domain.errors import NotFoundError
+from unitkeeper_backend.domain.errors import BusinessRuleViolation, NotFoundError
 from unitkeeper_backend.infrastructure.repositories.mappers import map_group, map_membership
 
 
@@ -188,6 +188,33 @@ class SqlAlchemyGroupRepository:
         model.current_balance += amount_delta
         await self._session.flush()
         return model.current_balance
+
+    async def transfer_balance(
+        self,
+        *,
+        group_id: int,
+        sender_user_id: int,
+        recipient_user_id: int,
+        amount: Decimal,
+    ) -> tuple[Decimal, Decimal]:
+        query = (
+            select(Balance)
+            .where(Balance.group_id == group_id, Balance.user_id.in_((sender_user_id, recipient_user_id)))
+            .order_by(Balance.user_id)
+            .with_for_update()
+        )
+        result = await self._session.execute(query)
+        balances = {model.user_id: model for model in result.scalars().all()}
+        sender = balances.get(sender_user_id)
+        recipient = balances.get(recipient_user_id)
+        if sender is None or recipient is None:
+            raise NotFoundError("Balance was not found")
+        if sender.current_balance < amount:
+            raise BusinessRuleViolation("Insufficient balance for this transfer")
+        sender.current_balance -= amount
+        recipient.current_balance += amount
+        await self._session.flush()
+        return sender.current_balance, recipient.current_balance
 
     async def _fetch_group(self, *, group_id: int) -> Group | None:
         query = (

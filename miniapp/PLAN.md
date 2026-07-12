@@ -21,8 +21,8 @@
 - [x] Onboarding screen with create group and join group actions.
 - [ ] Dashboard with current sprint summary, personal balance, and pending approvals count.
 - [x] Group screen with group info, members, weights, owner marker, and sprint settings.
-- [ ] Task catalog screen with active tasks, remaining executions, and task details.
-- [ ] Task management screen for add, edit, soft-delete, and quick frequency adjustments.
+- [x] Task catalog screen with active tasks, remaining executions, and task details.
+- [x] Task management screen for add, edit, soft-delete, and quick frequency adjustments.
 - [ ] Balance screen with current balance, transfer flow, and transfer history placeholder.
 - [ ] Sprint progress screen with plan vs fact, completed tasks, and progress visualization.
 
@@ -30,10 +30,10 @@
 - [x] Create group flow with name, password, start weekday, and sprint duration.
 - [x] Join group flow with group name and password.
 - [x] Leave group flow with explicit confirmation and owner handover UX.
-- [ ] Add single task flow.
-- [ ] Bulk task import flow using uploaded spreadsheet.
-- [ ] Execute task flow with optimistic UI and pending approval state.
-- [ ] Review pending approvals inside the miniapp inbox as a second surface after bot notifications.
+- [x] Add single task flow.
+- [x] Bulk task import flow using pasted tabular data.
+- [x] Execute task flow with pending approval state.
+- [x] Review pending approvals inside the miniapp inbox.
 - [ ] Unit transfer flow with recipient picker and amount validation.
 - [x] Group settings flow for owner-only actions.
 

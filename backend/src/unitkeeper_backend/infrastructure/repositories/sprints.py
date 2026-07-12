@@ -2,14 +2,15 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
+from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from db.enums import SprintRunStatus
+from db.enums import BalanceTransactionAccountType, SprintRunStatus
 from db.models import BalanceTransaction, SprintMemberResult, SprintRun
-from unitkeeper_backend.application.models import SprintMemberResultInfo, SprintRunInfo
+from unitkeeper_backend.application.models import BalanceTransactionInfo, SprintMemberResultInfo, SprintRunInfo
 from unitkeeper_backend.infrastructure.repositories.mappers import map_sprint_run
 
 
@@ -92,10 +93,12 @@ class SqlAlchemySprintRepository:
         self,
         *,
         group_id: int,
-        user_id: int,
+        user_id: int | None,
         transaction_type,
         amount_delta: Decimal,
         description: str,
+        transaction_group_id: UUID,
+        account_type: BalanceTransactionAccountType = BalanceTransactionAccountType.USER,
         sprint_run_id: int | None = None,
         task_log_id: int | None = None,
         counterparty_user_id: int | None = None,
@@ -103,13 +106,51 @@ class SqlAlchemySprintRepository:
         self._session.add(
             BalanceTransaction(
                 group_id=group_id,
+                account_type=account_type,
                 user_id=user_id,
                 transaction_type=transaction_type,
                 amount_delta=amount_delta,
                 description=description,
+                transaction_group_id=transaction_group_id,
                 sprint_run_id=sprint_run_id,
                 task_log_id=task_log_id,
                 counterparty_user_id=counterparty_user_id,
             )
         )
         await self._session.flush()
+
+    async def list_balance_transactions(
+        self,
+        *,
+        group_id: int,
+        user_id: int,
+        limit: int,
+        offset: int,
+    ) -> tuple[list[BalanceTransactionInfo], int]:
+        query = (
+            select(BalanceTransaction)
+            .where(BalanceTransaction.group_id == group_id, BalanceTransaction.user_id == user_id)
+            .order_by(BalanceTransaction.created_at.desc(), BalanceTransaction.id.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self._session.execute(query)
+        items = [
+            BalanceTransactionInfo(
+                id=model.id,
+                group_id=model.group_id,
+                user_id=model.user_id,
+                transaction_type=model.transaction_type,
+                amount_delta=model.amount_delta,
+                counterparty_user_id=model.counterparty_user_id,
+                description=model.description,
+                created_at=model.created_at,
+            )
+            for model in result.scalars().all()
+        ]
+        total_query = select(func.count()).select_from(BalanceTransaction).where(
+            BalanceTransaction.group_id == group_id,
+            BalanceTransaction.user_id == user_id,
+        )
+        total = (await self._session.execute(total_query)).scalar_one()
+        return items, total

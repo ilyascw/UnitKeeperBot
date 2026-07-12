@@ -18,6 +18,9 @@ def test_internal_bot_routes_are_registered_under_v1_prefix() -> None:
     assert "/api/v1/internal/bot/users/{telegram_user_id}/context" in paths
     assert "/api/v1/internal/bot/task-logs/{log_id}/approve" in paths
     assert "/api/v1/internal/bot/task-logs/{log_id}/reject" in paths
+    assert "/api/v1/internal/bot/notifications/outbox" in paths
+    assert "/api/v1/internal/bot/notifications/{event_id}/ack" in paths
+    assert "/api/v1/internal/bot/notifications/{event_id}/fail" in paths
 
 
 @pytest.mark.asyncio

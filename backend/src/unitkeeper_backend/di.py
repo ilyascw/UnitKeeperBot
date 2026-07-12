@@ -7,9 +7,11 @@ from dishka.integrations.fastapi import setup_dishka
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from unitkeeper_backend.application.auth.service import AuthService
+from unitkeeper_backend.application.balances.service import BalanceService
 from unitkeeper_backend.application.bot.service import BotService
 from unitkeeper_backend.application.context.service import CurrentContextService
 from unitkeeper_backend.application.groups.service import GroupService
+from unitkeeper_backend.application.notifications.service import NotificationOutboxService
 from unitkeeper_backend.application.sprints.service import SprintService
 from unitkeeper_backend.application.tasks.service import TaskService
 from unitkeeper_backend.config import Settings, settings
@@ -102,6 +104,18 @@ class AppProvider(Provider):
     @provide(scope=Scope.REQUEST)
     def provide_task_service(self, uow: SqlAlchemyUnitOfWork, clock: UtcClock) -> TaskService:
         return TaskService(uow=uow, clock=clock)
+
+    @provide(scope=Scope.REQUEST)
+    def provide_notification_outbox_service(
+        self,
+        uow: SqlAlchemyUnitOfWork,
+        clock: UtcClock,
+    ) -> NotificationOutboxService:
+        return NotificationOutboxService(uow=uow, clock=clock)
+
+    @provide(scope=Scope.REQUEST)
+    def provide_balance_service(self, uow: SqlAlchemyUnitOfWork) -> BalanceService:
+        return BalanceService(uow=uow)
 
     @provide(scope=Scope.REQUEST)
     def provide_sprint_service(

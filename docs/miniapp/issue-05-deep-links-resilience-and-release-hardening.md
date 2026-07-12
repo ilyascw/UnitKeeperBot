@@ -33,7 +33,7 @@
 
 - После `docs/backend/issue-07-notification-outbox-and-deep-links.md`.
 - После `docs/backend/issue-08-reminders-idempotency-observability-and-tests.md`.
-- Сильно связана с `docs/bot/issue-02-approvals-notifications-and-deep-links.md`.
+- Сильно связана с `docs/archive/bot/issue-02-approvals-notifications-and-deep-links.md`.
 
 ## References
 

@@ -1,5 +1,7 @@
 # Issue 02: Outbox And Idempotency Schema
 
+**Status:** Closed and archived
+
 ## Priority
 
 `P1`
@@ -44,4 +46,4 @@
 
 - `docs/backend/issue-07-notification-outbox-and-deep-links.md`
 - `docs/backend/issue-08-reminders-idempotency-observability-and-tests.md`
-- `docs/bot/issue-02-approvals-notifications-and-deep-links.md`
+- `docs/archive/bot/issue-02-approvals-notifications-and-deep-links.md`

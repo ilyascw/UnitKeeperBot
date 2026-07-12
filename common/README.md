@@ -15,10 +15,13 @@ Run everything from `common/`.
 
 ```bash
 cp .env.example .env
-uv pip install .
+uv sync --group dev
 make up
 make migrate
 ```
+
+`uv sync` creates and maintains `common/.venv`; do not create a repository-root
+virtual environment for this service.
 
 The default `.env.example` values point to a local PostgreSQL instance on `127.0.0.1:5432`.
 
@@ -30,6 +33,12 @@ The default `.env.example` values point to a local PostgreSQL instance on `127.0
 | `make down` | Stop local PostgreSQL |
 | `make migrate` | Apply all Alembic migrations |
 | `make revision m="..."` | Create a new migration with autogenerate |
+| `make install` | Sync the `common/.venv` development environment with uv |
+| `make lint` | Run Ruff against package and tests |
+| `make typecheck` | Run mypy against the package |
+| `make test` | Run unit and package-surface tests without PostgreSQL |
+| `make test-migrations` | Start a disposable PostgreSQL on port 5433 and verify a fresh upgrade to `head` |
+| `make check` | Run lint, type checking, and non-integration tests |
 
 ## Package Surface
 
@@ -69,6 +78,17 @@ More detail is captured in `ARCHITECTURE.md`.
 2. Generate a migration: `make revision m="describe change"`.
 3. Review the generated file in `alembic/versions/`.
 4. Apply it locally with `make migrate`.
+
+Before merging a schema change, run:
+
+```bash
+make check
+make test-migrations
+```
+
+`make test-migrations` owns the `unitkeeper-common-test` Docker Compose project
+and removes its volume on completion. It never uses the development database on
+port 5432.
 
 ## Legacy Data Bootstrap
 

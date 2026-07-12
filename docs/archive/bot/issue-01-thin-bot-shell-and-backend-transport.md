@@ -1,5 +1,7 @@
 # Issue 01: Thin Bot Shell And Backend Transport
 
+**Status:** Closed and archived
+
 ## Priority
 
 `P0`
@@ -17,21 +19,21 @@
 
 ## Scope
 
-- Bootstrap bot app structure и config.
-- Подключить backend internal transport/auth.
-- Реализовать:
+- [x] Bootstrap bot app structure и config.
+- [x] Подключить backend internal transport/auth.
+- [x] Реализовать:
   - `/start`;
   - `/help`;
   - `/about`;
   - fallback для команд, переехавших в miniapp.
-- Добавить ensure-user/current-context path через backend, а не прямую БД.
+- [x] Добавить ensure-user/current-context path через backend, а не прямую БД.
 
 ## Acceptance Criteria
 
-- bot не содержит прямых бизнес-решений для group/task/balance flows;
-- `/start` открывает miniapp и умеет инициализировать пользователя через backend;
-- unsupported legacy commands получают понятный redirect в miniapp;
-- transport/auth bot -> backend задокументирован и покрыт минимальными тестами.
+- [x] bot не содержит прямых бизнес-решений для group/task/balance flows;
+- [x] `/start` открывает miniapp и умеет инициализировать пользователя через backend;
+- [x] unsupported legacy commands получают понятный redirect в miniapp;
+- [x] transport/auth bot -> backend задокументирован и покрыт минимальными тестами.
 
 ## Dependencies
 
