@@ -56,6 +56,7 @@ export function BalanceScreen() {
   const ranked = [...group.members].sort(
     (a, b) => Number.parseFloat(b.balance) - Number.parseFloat(a.balance),
   );
+  const membersById = new Map(group.members.map((m) => [m.user_id, m]));
 
   return (
     <Screen>
@@ -159,14 +160,19 @@ export function BalanceScreen() {
                 <Card flush>
                   {history.items.map((tx) => {
                     const positive = Number.parseFloat(tx.amount_delta) >= 0;
-                    const label = TRANSACTION_LABELS[tx.transaction_type] ?? tx.transaction_type;
+                    const counterparty =
+                      tx.counterparty_user_id != null ? membersById.get(tx.counterparty_user_id) : undefined;
+                    let label = TRANSACTION_LABELS[tx.transaction_type] ?? tx.transaction_type;
+                    if (tx.transaction_type === 'transfer') {
+                      const who = counterparty ? memberName(counterparty) : `Участник ${tx.counterparty_user_id}`;
+                      label = positive ? `Перевод · от ${who}` : `Перевод · ${who}`;
+                    } else if (tx.transaction_type === 'manual_adjustment' && tx.description) {
+                      label = `${label} · ${tx.description}`;
+                    }
                     return (
                       <div className="uk-row" key={tx.id}>
                         <div className="uk-row__grow">
-                          <div style={{ font: "600 14px 'Manrope'" }}>
-                            {label}
-                            {tx.description ? ` · ${tx.description}` : ''}
-                          </div>
+                          <div style={{ font: "600 14px 'Manrope'" }}>{label}</div>
                           <div style={{ font: "400 11.5px 'Manrope'", color: 'var(--uk-ink-55)' }}>
                             {new Date(tx.created_at).toLocaleString('ru-RU', {
                               day: 'numeric',

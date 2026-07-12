@@ -111,7 +111,7 @@ export function TransferScreen() {
             <div style={{ font: "400 15px/1.6 'Manrope'", color: 'var(--uk-ink-70)', maxWidth: 260 }}>
               {candidateName(recipient.user)} получил юниты. Ваш новый баланс —{' '}
               <span style={{ color: 'var(--uk-positive)', fontWeight: 600 }}>
-                {formatBalance(String(remaining))} ю
+                {formatBalance(mutation.data?.sender_balance ?? String(remaining))} ю
               </span>
               .
             </div>

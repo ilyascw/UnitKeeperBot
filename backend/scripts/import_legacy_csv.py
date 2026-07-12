@@ -144,10 +144,17 @@ def normalize_frequency(value: str | None) -> int:
     return max(1, frequency)
 
 
+# Legacy CSVs carry no names, only Telegram ids - and only real Telegram auth
+# ever fills in first_name/username. Dev-seeded users would otherwise render
+# as "Участник <id>" everywhere until someone actually logs in as them, so we
+# assign a deterministic placeholder name for local testing.
+DEV_PLACEHOLDER_NAMES = ["Аня", "Марк", "Соня", "Дима", "Катя", "Женя", "Паша", "Лена"]
+
+
 async def ensure_user(session: AsyncSession, user_id: int) -> User:
     user = await session.get(User, user_id)
     if user is None:
-        user = User(id=user_id)
+        user = User(id=user_id, first_name=DEV_PLACEHOLDER_NAMES[user_id % len(DEV_PLACEHOLDER_NAMES)])
         session.add(user)
         await session.flush()
     return user
