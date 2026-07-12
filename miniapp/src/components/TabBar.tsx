@@ -39,7 +39,9 @@ export function TabBar() {
             aria-current={active ? 'page' : undefined}
             onClick={() => (active ? undefined : navigate(to))}
           >
-            <Icon size={23} />
+            <span className="uk-tabbar__icon">
+              <Icon size={23} />
+            </span>
             <span>{label}</span>
           </button>
         );
