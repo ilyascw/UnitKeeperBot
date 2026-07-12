@@ -16,5 +16,33 @@ dependencies = [
     "pydantic-settings>=2.8.0",
 ]
 
+[dependency-groups]
+dev = [
+    "mypy>=1.15.0",
+    "psycopg[binary]>=3.2.0",
+    "pytest>=8.3.0",
+    "ruff>=0.11.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+    "integration: requires a disposable PostgreSQL database",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["src"]
+strict = true
+warn_unused_configs = true
+
 [tool.setuptools.packages.find]
 where = ["src"]
