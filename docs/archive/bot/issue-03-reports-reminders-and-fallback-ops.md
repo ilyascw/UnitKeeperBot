@@ -1,5 +1,7 @@
 # Issue 03: Reports, Reminders, And Fallback Ops
 
+**Status:** Closed and archived
+
 ## Priority
 
 `P1`
@@ -17,19 +19,19 @@
 
 ## Scope
 
-- Доставка personal sprint reports и owner summary.
-- Reminders:
+- [x] Доставка personal sprint reports и owner summary.
+- [x] Reminders:
   - pending approvals;
   - sprint deadline;
   - critical membership/group events.
-- Minimal fallback/recovery flows, если часть miniapp временно недоступна.
-- Решение по admin-like операциям и cutover checklist совместно с backend.
+- [x] Minimal fallback/recovery flows, если часть miniapp временно недоступна.
+- [x] Решение по admin-like операциям: recovery не возвращает business flows в bot.
 
 ## Acceptance Criteria
 
-- bot отправляет sprint summaries на событиях/данных из backend;
-- reminders формируются не внутри handlers, а на backend-owned job/outbox layer;
-- минимальные recovery actions задокументированы и не расползаются в полноценный старый UX.
+- [x] bot отправляет sprint summaries на событиях/данных из backend;
+- [x] reminders формируются не внутри handlers, а на backend-owned job/outbox layer;
+- [x] минимальные recovery actions задокументированы и не расползаются в полноценный старый UX.
 
 ## Dependencies
 

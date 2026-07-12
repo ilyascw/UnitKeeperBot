@@ -9,11 +9,11 @@
 | Layer | Done | Partial | Not started |
 | --- | --- | --- | --- |
 | `common` | base schema, Issues 01-02 | Issue 03 | - |
-| `backend` | archived Issues 01-05 | Issue 06 | Issues 07-09 |
+| `backend` | archived Issues 01-05 | Issues 06-08 | Issue 09 |
 | `miniapp` | archived Issues 01-03 | Issues 04-05 | - |
-| `bot` | - | - | Issues 01-03 |
+| `bot` | Issues 01-03 | - | - |
 
-The ten completed issues are stored in `docs/archive` and explicitly marked
+The thirteen completed issues are stored in `docs/archive` and explicitly marked
 `Closed and archived`. Common Issue 02, Backend Issue 05 and Miniapp Issue 03
 were implemented, verified and moved after the second delivery pass.
 
@@ -34,9 +34,9 @@ were implemented, verified and moved after the second delivery pass.
 | 01-03: archived baseline | done | Auth, internal bot transport, group APIs, task CRUD/import, task completion/approval/rejection, temp results and manual sprint close are present. |
 | 04: task approval inbox and log query API | done | Archived after adding pending-approval, personal history, group history and detail read endpoints with enriched paginated responses, visibility rules and filter coverage. |
 | 05: balances and unit transfers | done | Archived after adding balance, transfer-candidate, transfer and transaction-history APIs; transfers lock balances, prevent invalid operations and write paired ledger rows. |
-| 06: sprint close jobs and scheduler | partial | `SprintService.close_current_sprint` and a protected manual endpoint exist. There is no job module, scheduler entrypoint, due-group scan, scheduling policy, or duplicate-run integration test. |
-| 07: notification outbox and deep links | not started | No persistent outbox, event producer, internal delivery endpoints, retry state machine, or deep-link contract exists. |
-| 08: reminders, idempotency, observability and tests | not started | There are focused unit/API tests, but no reminder jobs, persistent idempotency, request/job correlation IDs, structured logging, DB integration tests, transfer tests, or notification tests. |
+| 06: sprint close jobs and scheduler | partial | Application job orchestration and duplicate-close tests now exist, but runtime scheduler startup, due-group scanning and scheduling policy are still absent. |
+| 07: notification outbox and deep links | partial | Persistent outbox, task event producers, internal fetch/ack/fail endpoints, retries, dedupe/correlation and deep links are implemented. Sprint-close publication still needs runtime scheduler wiring. |
+| 08: reminders, idempotency, observability and tests | partial | Backend reminder publishers use deterministic dedupe keys and correlation IDs, with notification tests. Request tracing, generalized write idempotency, DB integration coverage and production job lifecycle remain open. |
 | 09: admin ops and legacy cutover | not started | No admin/fallback decision for `kill_tasks`, no cutover checklist, and the replacement thin bot does not yet exist. |
 
 ### Miniapp
@@ -52,19 +52,20 @@ were implemented, verified and moved after the second delivery pass.
 
 | Issue | Status | Evidence and remaining work |
 | --- | --- | --- |
-| 01: thin bot shell and backend transport | not started | `bot/` contains only `PLAN.md`; there is no package, configuration, Telegram application, backend client, handler, or test. |
-| 02: approvals, notifications and deep links | not started | Depends on the missing backend outbox and thin bot shell. |
-| 03: reports, reminders and fallback ops | not started | Depends on scheduler, outbox, reliability work, and the thin bot shell. |
+| 01: thin bot shell and backend transport | done | Archived after adding the aiogram service shell, backend-only transport, `/start`, `/help`, `/about`, fallback redirects, configuration and tests. |
+| 02: approvals, notifications and deep links | done | Archived after adding backend-owned approval events, outbox polling, inline approve/reject actions, exact Mini App links and ack/fail delivery handling. |
+| 03: reports, reminders and fallback ops | done | Archived after adding sprint/reminder/group-event rendering, backend job publishers, durable dedupe/correlation, owner-handover notifications and a recovery runbook. |
 
 ## Verification Results
 
 - `miniapp`: `npm run typecheck`, `npm run lint`, and `npm run build` pass.
-- `backend`: Ruff passes and all 34 tests pass with the existing local import path setup. Backend-wide mypy and the default pytest invocation remain follow-up work.
-- `common`: `make check` passes (Ruff, mypy, 4 tests) and `make test-migrations` passes against a disposable PostgreSQL database.
+- `backend`: Ruff passes and all 37 tests pass with the existing local import path setup. Backend-wide mypy and the default pytest invocation remain follow-up work.
+- `bot`: Ruff, mypy and all 9 tests pass from the service-local virtual environment.
+- `common`: Ruff, mypy and 4 non-integration tests pass; migrations through `20260712_0003` pass against disposable PostgreSQL.
 
 ## Recommended Next Work
 
 1. Complete `miniapp/Issue 04` with transfers and transfer history. The progress surface is already usable.
-2. Implement `backend/Issues 06-08` in order: scheduler, persistent outbox/deep-link delivery contract, reminders/idempotency/observability.
-3. Create the bot package and deliver `bot/Issues 01-03` only on those backend-owned contracts. Close with the coordinated `common/Issue 03` and `backend/Issue 09` cutover work.
+2. Finish runtime scheduler wiring in `backend/Issue 06`, then close the remaining reliability gaps in Issues 07-08.
+3. Close the coordinated `common/Issue 03` and `backend/Issue 09` legacy cutover work.
 4. Repair the backend quality gate: make the default test command and backend-wide mypy pass.
