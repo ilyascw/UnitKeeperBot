@@ -9,7 +9,7 @@ from unitkeeper_backend.application.context.service import CurrentContextService
 from unitkeeper_backend.application.groups.service import GroupService
 from unitkeeper_backend.application.models import UserProfile
 from unitkeeper_backend.application.tasks.service import TaskImportItem, TaskService
-from unitkeeper_backend.domain.errors import AuthorizationError, BusinessRuleViolation, ValidationError
+from unitkeeper_backend.domain.errors import AuthorizationError, BusinessRuleViolation, NotFoundError, ValidationError
 from tests.support.fakes import FakeClock, InMemoryUnitOfWork, utc_datetime
 
 
@@ -216,3 +216,86 @@ async def test_adjust_frequency_rejects_soft_deleted_task() -> None:
 
     with pytest.raises(BusinessRuleViolation):
         await task_service.adjust_frequency(group_id=1, task_id=task.id, delta=1)
+
+
+@pytest.mark.asyncio
+async def test_task_log_queries_enforce_visibility_and_return_enriched_filtered_pages() -> None:
+    uow = InMemoryUnitOfWork()
+    for user_id in (1, 2, 3):
+        uow.users.users[user_id] = UserProfile(user_id, f"user{user_id}", f"User {user_id}", None, "en", False)
+    clock = FakeClock(utc_datetime(2026, 3, 16))
+    group_service = GroupService(uow=uow, context_service=CurrentContextService(uow=uow), clock=clock)
+    await group_service.create_group(
+        user_id=1,
+        name="team",
+        join_secret="secret",
+        sprint_start_weekday=Weekday.MONDAY,
+        sprint_duration_days=7,
+        timezone="UTC",
+    )
+    await group_service.join_group(user_id=2, group_name="team", join_secret="secret")
+    task_service = TaskService(uow=uow, clock=clock)
+    first_task = await task_service.create_task(
+        group_id=1, title="Dishes", frequency_per_sprint=3, unit_cost=Decimal("2")
+    )
+    second_task = await task_service.create_task(
+        group_id=1, title="Vacuum", frequency_per_sprint=3, unit_cost=Decimal("4")
+    )
+    own_pending = await task_service.mark_done(group_id=1, performer_user_id=1, task_id=first_task.id)
+    other_pending = await task_service.mark_done(group_id=1, performer_user_id=2, task_id=second_task.id)
+    rejected = await task_service.reject(
+        group_id=1,
+        approver_user_id=2,
+        log_id=own_pending.id,
+        rejection_reason="Needs a photo",
+    )
+
+    pending_for_user_1 = await task_service.list_pending_approvals(
+        group_id=1, user_id=1, limit=50, offset=0
+    )
+    assert [item.id for item in pending_for_user_1.items] == [other_pending.id]
+    assert pending_for_user_1.items[0].task_title == "Vacuum"
+    assert pending_for_user_1.items[0].performer.id == 2
+
+    mine = await task_service.list_my_task_logs(
+        group_id=1,
+        user_id=1,
+        task_id=first_task.id,
+        statuses=[TaskLogStatus.REJECTED],
+        limit=1,
+        offset=0,
+    )
+    assert mine.total == 1
+    assert mine.has_more is False
+    assert mine.items[0].id == rejected.id
+    assert mine.items[0].rejection_reason == "Needs a photo"
+    assert mine.items[0].approver is not None
+    assert mine.items[0].approver.id == 2
+
+    history = await task_service.list_group_task_logs(
+        group_id=1,
+        user_id=2,
+        performer_user_id=None,
+        task_id=None,
+        statuses=None,
+        limit=1,
+        offset=1,
+    )
+    assert history.total == 2
+    assert len(history.items) == 1
+
+    detail = await task_service.get_task_log_view(group_id=1, user_id=2, log_id=rejected.id)
+    assert detail.task_title == "Dishes"
+
+    with pytest.raises(AuthorizationError):
+        await task_service.list_group_task_logs(
+            group_id=1,
+            user_id=3,
+            performer_user_id=None,
+            task_id=None,
+            statuses=None,
+            limit=50,
+            offset=0,
+        )
+    with pytest.raises(NotFoundError):
+        await task_service.get_task_log_view(group_id=1, user_id=2, log_id=999)

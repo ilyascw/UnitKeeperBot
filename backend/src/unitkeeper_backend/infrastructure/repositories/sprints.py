@@ -3,13 +3,13 @@ from __future__ import annotations
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from db.enums import SprintRunStatus
 from db.models import BalanceTransaction, SprintMemberResult, SprintRun
-from unitkeeper_backend.application.models import SprintMemberResultInfo, SprintRunInfo
+from unitkeeper_backend.application.models import BalanceTransactionInfo, SprintMemberResultInfo, SprintRunInfo
 from unitkeeper_backend.infrastructure.repositories.mappers import map_sprint_run
 
 
@@ -113,3 +113,39 @@ class SqlAlchemySprintRepository:
             )
         )
         await self._session.flush()
+
+    async def list_balance_transactions(
+        self,
+        *,
+        group_id: int,
+        user_id: int,
+        limit: int,
+        offset: int,
+    ) -> tuple[list[BalanceTransactionInfo], int]:
+        query = (
+            select(BalanceTransaction)
+            .where(BalanceTransaction.group_id == group_id, BalanceTransaction.user_id == user_id)
+            .order_by(BalanceTransaction.created_at.desc(), BalanceTransaction.id.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self._session.execute(query)
+        items = [
+            BalanceTransactionInfo(
+                id=model.id,
+                group_id=model.group_id,
+                user_id=model.user_id,
+                transaction_type=model.transaction_type,
+                amount_delta=model.amount_delta,
+                counterparty_user_id=model.counterparty_user_id,
+                description=model.description,
+                created_at=model.created_at,
+            )
+            for model in result.scalars().all()
+        ]
+        total_query = select(func.count()).select_from(BalanceTransaction).where(
+            BalanceTransaction.group_id == group_id,
+            BalanceTransaction.user_id == user_id,
+        )
+        total = (await self._session.execute(total_query)).scalar_one()
+        return items, total

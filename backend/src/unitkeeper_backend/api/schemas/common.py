@@ -2,8 +2,12 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict
+
+if TYPE_CHECKING:
+    from unitkeeper_backend.application.models import TaskLogView
 
 
 class ErrorResponse(BaseModel):
@@ -78,6 +82,58 @@ class TaskLogResponse(BaseModel):
     decided_at: datetime | None
     rejection_reason: str | None
     created_at: datetime
+
+
+class TaskLogTaskResponse(BaseModel):
+    id: int
+    title: str
+    unit_cost: Decimal
+    is_active: bool
+
+
+class TaskLogViewResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    group_id: int
+    task: TaskLogTaskResponse
+    status: str
+    performer: UserResponse
+    approver: UserResponse | None
+    decided_at: datetime | None
+    rejection_reason: str | None
+    created_at: datetime
+
+    @classmethod
+    def from_view(cls, view: TaskLogView) -> "TaskLogViewResponse":
+        return cls(
+            id=view.id,
+            group_id=view.group_id,
+            task=TaskLogTaskResponse(
+                id=view.task_id,
+                title=view.task_title,
+                unit_cost=view.unit_cost,
+                is_active=view.task_is_active,
+            ),
+            status=view.status,
+            performer=UserResponse.model_validate(view.performer, from_attributes=True),
+            approver=(
+                UserResponse.model_validate(view.approver, from_attributes=True)
+                if view.approver is not None
+                else None
+            ),
+            decided_at=view.decided_at,
+            rejection_reason=view.rejection_reason,
+            created_at=view.created_at,
+        )
+
+
+class TaskLogPageResponse(BaseModel):
+    items: list[TaskLogViewResponse]
+    total: int
+    limit: int
+    offset: int
+    has_more: bool
 
 
 class CompletedTaskBreakdownResponse(BaseModel):

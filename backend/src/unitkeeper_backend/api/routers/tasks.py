@@ -1,11 +1,17 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
 
 from unitkeeper_backend.api.dependencies.auth import require_user_id
-from unitkeeper_backend.api.schemas.common import TaskLogResponse, TaskResponse
+from db.enums import TaskLogStatus
+from unitkeeper_backend.api.schemas.common import (
+    TaskLogPageResponse,
+    TaskLogResponse,
+    TaskLogViewResponse,
+    TaskResponse,
+)
 from unitkeeper_backend.api.schemas.tasks import (
     BulkImportTasksRequest,
     CreateTaskRequest,
@@ -14,6 +20,7 @@ from unitkeeper_backend.api.schemas.tasks import (
     UpdateTaskRequest,
 )
 from unitkeeper_backend.application.context.service import CurrentContextService
+from unitkeeper_backend.application.models import TaskLogPage
 from unitkeeper_backend.application.tasks.service import TaskImportItem, TaskService
 from unitkeeper_backend.domain.errors import NotFoundError
 
@@ -144,6 +151,75 @@ async def mark_task_done(
     return TaskLogResponse.model_validate(log, from_attributes=True)
 
 
+@router.get("/task-logs/pending-approval", response_model=TaskLogPageResponse)
+async def list_pending_approvals(
+    user_id: int = Depends(require_user_id),
+    group_id: int = Depends(require_group_id),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    task_service: FromDishka[TaskService] = None,
+) -> TaskLogPageResponse:
+    page = await task_service.list_pending_approvals(
+        group_id=group_id, user_id=user_id, limit=limit, offset=offset
+    )
+    return _task_log_page_response(page)
+
+
+@router.get("/task-logs/mine", response_model=TaskLogPageResponse)
+async def list_my_task_logs(
+    user_id: int = Depends(require_user_id),
+    group_id: int = Depends(require_group_id),
+    task_id: int | None = Query(default=None, ge=1),
+    statuses: list[TaskLogStatus] | None = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    task_service: FromDishka[TaskService] = None,
+) -> TaskLogPageResponse:
+    page = await task_service.list_my_task_logs(
+        group_id=group_id,
+        user_id=user_id,
+        task_id=task_id,
+        statuses=statuses,
+        limit=limit,
+        offset=offset,
+    )
+    return _task_log_page_response(page)
+
+
+@router.get("/groups/current/task-logs", response_model=TaskLogPageResponse)
+async def list_group_task_logs(
+    user_id: int = Depends(require_user_id),
+    group_id: int = Depends(require_group_id),
+    performer_user_id: int | None = Query(default=None, ge=1),
+    task_id: int | None = Query(default=None, ge=1),
+    statuses: list[TaskLogStatus] | None = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    task_service: FromDishka[TaskService] = None,
+) -> TaskLogPageResponse:
+    page = await task_service.list_group_task_logs(
+        group_id=group_id,
+        user_id=user_id,
+        performer_user_id=performer_user_id,
+        task_id=task_id,
+        statuses=statuses,
+        limit=limit,
+        offset=offset,
+    )
+    return _task_log_page_response(page)
+
+
+@router.get("/task-logs/{log_id}", response_model=TaskLogViewResponse)
+async def get_task_log(
+    log_id: int,
+    user_id: int = Depends(require_user_id),
+    group_id: int = Depends(require_group_id),
+    task_service: FromDishka[TaskService] = None,
+) -> TaskLogViewResponse:
+    view = await task_service.get_task_log_view(group_id=group_id, user_id=user_id, log_id=log_id)
+    return TaskLogViewResponse.from_view(view)
+
+
 @router.post("/task-logs/{log_id}/approve", response_model=TaskLogResponse)
 async def approve_task_log(
     log_id: int,
@@ -170,3 +246,13 @@ async def reject_task_log(
         rejection_reason=request.reason,
     )
     return TaskLogResponse.model_validate(log, from_attributes=True)
+
+
+def _task_log_page_response(page: TaskLogPage) -> TaskLogPageResponse:
+    return TaskLogPageResponse(
+        items=[TaskLogViewResponse.from_view(item) for item in page.items],
+        total=page.total,
+        limit=page.limit,
+        offset=page.offset,
+        has_more=page.has_more,
+    )

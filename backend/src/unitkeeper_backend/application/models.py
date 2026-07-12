@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal
 
-from db.enums import SprintRunStatus, TaskLogStatus, Weekday
+from db.enums import BalanceTransactionType, SprintRunStatus, TaskLogStatus, Weekday
 
 
 @dataclass(slots=True)
@@ -134,6 +134,53 @@ class TaskLogView:
 @dataclass(slots=True)
 class TaskLogPage:
     items: list[TaskLogView]
+    total: int
+    limit: int
+    offset: int
+
+    @property
+    def has_more(self) -> bool:
+        return self.offset + len(self.items) < self.total
+
+
+@dataclass(slots=True)
+class BalanceInfo:
+    group_id: int
+    user_id: int
+    current_balance: Decimal
+
+
+@dataclass(slots=True)
+class TransferCandidateInfo:
+    user: UserProfile
+    current_balance: Decimal
+
+
+@dataclass(slots=True)
+class BalanceTransferInfo:
+    group_id: int
+    sender_user_id: int
+    recipient_user_id: int
+    amount: Decimal
+    sender_balance: Decimal
+    recipient_balance: Decimal
+
+
+@dataclass(slots=True)
+class BalanceTransactionInfo:
+    id: int
+    group_id: int
+    user_id: int
+    transaction_type: BalanceTransactionType
+    amount_delta: Decimal
+    counterparty_user_id: int | None
+    description: str | None
+    created_at: datetime
+
+
+@dataclass(slots=True)
+class BalanceTransactionPage:
+    items: list[BalanceTransactionInfo]
     total: int
     limit: int
     offset: int

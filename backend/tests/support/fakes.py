@@ -7,6 +7,7 @@ from decimal import Decimal
 
 from db.enums import BalanceTransactionType, SprintRunStatus, TaskLogStatus, Weekday
 from unitkeeper_backend.application.models import (
+    BalanceTransactionInfo,
     GroupInfo,
     MembershipInfo,
     SprintMemberResultInfo,
@@ -16,7 +17,7 @@ from unitkeeper_backend.application.models import (
     TelegramIdentity,
     UserProfile,
 )
-from unitkeeper_backend.domain.errors import NotFoundError
+from unitkeeper_backend.domain.errors import BusinessRuleViolation, NotFoundError
 
 
 class FakeClock:
@@ -186,6 +187,24 @@ class InMemoryGroupRepository:
         self.balances[(group_id, user_id)] = updated
         return updated
 
+    async def transfer_balance(
+        self,
+        *,
+        group_id: int,
+        sender_user_id: int,
+        recipient_user_id: int,
+        amount: Decimal,
+    ) -> tuple[Decimal, Decimal]:
+        sender_balance = self.balances[(group_id, sender_user_id)]
+        if sender_balance < amount:
+            raise BusinessRuleViolation("Insufficient balance for this transfer")
+        recipient_balance = self.balances[(group_id, recipient_user_id)]
+        sender_balance -= amount
+        recipient_balance += amount
+        self.balances[(group_id, sender_user_id)] = sender_balance
+        self.balances[(group_id, recipient_user_id)] = recipient_balance
+        return sender_balance, recipient_balance
+
 
 class InMemoryTaskRepository:
     def __init__(self) -> None:
@@ -220,6 +239,10 @@ class InMemoryTaskRepository:
             for task in self.tasks.values()
             if task.group_id == group_id and (not active_only or task.deleted_at is None)
         ]
+
+    async def list_tasks_by_ids(self, *, group_id: int, task_ids: Sequence[int]) -> list[TaskInfo]:
+        requested = set(task_ids)
+        return [task for task in self.tasks.values() if task.group_id == group_id and task.id in requested]
 
     async def get_task(self, *, group_id: int, task_id: int) -> TaskInfo | None:
         task = self.tasks.get(task_id)
@@ -320,6 +343,68 @@ class InMemoryTaskRepository:
     async def get_task_log(self, *, log_id: int) -> TaskLogInfo | None:
         return self.logs.get(log_id)
 
+    async def list_task_logs(
+        self,
+        *,
+        group_id: int,
+        performer_user_id: int | None = None,
+        exclude_performer_user_id: int | None = None,
+        task_id: int | None = None,
+        statuses: Sequence[TaskLogStatus] | None = None,
+        limit: int,
+        offset: int,
+    ) -> Sequence[TaskLogInfo]:
+        logs = self._filtered_logs(
+            group_id=group_id,
+            performer_user_id=performer_user_id,
+            exclude_performer_user_id=exclude_performer_user_id,
+            task_id=task_id,
+            statuses=statuses,
+        )
+        return logs[offset : offset + limit]
+
+    async def count_task_logs(
+        self,
+        *,
+        group_id: int,
+        performer_user_id: int | None = None,
+        exclude_performer_user_id: int | None = None,
+        task_id: int | None = None,
+        statuses: Sequence[TaskLogStatus] | None = None,
+    ) -> int:
+        return len(
+            self._filtered_logs(
+                group_id=group_id,
+                performer_user_id=performer_user_id,
+                exclude_performer_user_id=exclude_performer_user_id,
+                task_id=task_id,
+                statuses=statuses,
+            )
+        )
+
+    def _filtered_logs(
+        self,
+        *,
+        group_id: int,
+        performer_user_id: int | None,
+        exclude_performer_user_id: int | None,
+        task_id: int | None,
+        statuses: Sequence[TaskLogStatus] | None,
+    ) -> list[TaskLogInfo]:
+        return sorted(
+            (
+                log
+                for log in self.logs.values()
+                if log.group_id == group_id
+                and (performer_user_id is None or log.performer_user_id == performer_user_id)
+                and (exclude_performer_user_id is None or log.performer_user_id != exclude_performer_user_id)
+                and (task_id is None or log.task_id == task_id)
+                and (not statuses or log.status in statuses)
+            ),
+            key=lambda log: (log.created_at, log.id),
+            reverse=True,
+        )
+
     async def approve_task_log(
         self,
         *,
@@ -378,6 +463,7 @@ class InMemorySprintRepository:
     def __init__(self) -> None:
         self.sprint_runs: dict[tuple[int, date, date], SprintRunInfo] = {}
         self.transactions: list[tuple[int, int, BalanceTransactionType, Decimal, int | None]] = []
+        self.balance_transactions: list[BalanceTransactionInfo] = []
         self._seq = 1
 
     async def get_sprint_run(
@@ -432,6 +518,34 @@ class InMemorySprintRepository:
         counterparty_user_id: int | None = None,
     ) -> None:
         self.transactions.append((group_id, user_id, transaction_type, amount_delta, sprint_run_id))
+        self.balance_transactions.append(
+            BalanceTransactionInfo(
+                id=len(self.balance_transactions) + 1,
+                group_id=group_id,
+                user_id=user_id,
+                transaction_type=transaction_type,
+                amount_delta=amount_delta,
+                counterparty_user_id=counterparty_user_id,
+                description=description,
+                created_at=utc_datetime(2026, 3, 16),
+            )
+        )
+
+    async def list_balance_transactions(
+        self,
+        *,
+        group_id: int,
+        user_id: int,
+        limit: int,
+        offset: int,
+    ) -> tuple[list[BalanceTransactionInfo], int]:
+        matching = [
+            item
+            for item in self.balance_transactions
+            if item.group_id == group_id and item.user_id == user_id
+        ]
+        matching.sort(key=lambda item: (item.created_at, item.id), reverse=True)
+        return matching[offset : offset + limit], len(matching)
 
 
 class InMemoryUnitOfWork:

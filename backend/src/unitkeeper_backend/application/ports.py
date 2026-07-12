@@ -7,6 +7,7 @@ from typing import Protocol
 
 from db.enums import TaskLogStatus, Weekday
 from unitkeeper_backend.application.models import (
+    BalanceTransactionInfo,
     GroupInfo,
     MembershipInfo,
     SprintMemberResultInfo,
@@ -90,6 +91,15 @@ class GroupRepository(Protocol):
     async def get_balance(self, *, group_id: int, user_id: int) -> Decimal: ...
 
     async def apply_balance_delta(self, *, group_id: int, user_id: int, amount_delta: Decimal) -> Decimal: ...
+
+    async def transfer_balance(
+        self,
+        *,
+        group_id: int,
+        sender_user_id: int,
+        recipient_user_id: int,
+        amount: Decimal,
+    ) -> tuple[Decimal, Decimal]: ...
 
 
 class TaskRepository(Protocol):
@@ -237,6 +247,15 @@ class SprintRepository(Protocol):
         task_log_id: int | None = None,
         counterparty_user_id: int | None = None,
     ) -> None: ...
+
+    async def list_balance_transactions(
+        self,
+        *,
+        group_id: int,
+        user_id: int,
+        limit: int,
+        offset: int,
+    ) -> tuple[list[BalanceTransactionInfo], int]: ...
 
 
 class UnitOfWork(Protocol):
