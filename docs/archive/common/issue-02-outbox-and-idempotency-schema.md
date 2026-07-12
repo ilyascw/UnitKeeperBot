@@ -1,5 +1,7 @@
 # Issue 02: Outbox And Idempotency Schema
 
+**Status:** Closed and archived
+
 ## Priority
 
 `P1`

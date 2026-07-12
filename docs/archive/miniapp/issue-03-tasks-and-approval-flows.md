@@ -1,5 +1,7 @@
 # Issue 03: Tasks And Approval Flows
 
+**Status:** Closed and archived
+
 ## Priority
 
 `P0`
@@ -27,8 +29,8 @@ Miniapp должен закрыть:
 - [x] Soft-delete task flow с явным подтверждением.
 - [x] Quick frequency adjustment UX (`+1` / `-1`) для владельца.
 - [x] Mark done UX с pending/completed/limit состояниями.
-- [ ] Bulk import entrypoint и error presentation.
-- [ ] Approval inbox/history screen как UI поверх backend `task_logs` read model.
+- [x] Bulk import entrypoint и error presentation.
+- [x] Approval inbox/history screen как UI поверх backend `task_logs` read model.
 
 ## Current Done Slice
 
@@ -73,9 +75,9 @@ Miniapp должен закрыть:
 - [x] Пользователь видит task catalog без legacy `/list_of_tasks`.
 - [x] Владелец добавляет, редактирует, удаляет задачи и меняет частоту без legacy `/add_task`, `/edit_task`, `/delete_task`.
 - [x] Mark done использует только backend contract.
-- [ ] Miniapp показывает pending approvals и историю без прямого SQL или расчётов на клиенте.
-- [ ] Approve / reject используют только backend contracts.
-- [ ] Bulk import UX соответствует выбранному backend import contract.
+- [x] Miniapp показывает pending approvals и историю без прямого SQL или расчётов на клиенте.
+- [x] Approve / reject используют только backend contracts.
+- [x] Bulk import UX соответствует выбранному backend import contract.
 
 ## Dependencies
 

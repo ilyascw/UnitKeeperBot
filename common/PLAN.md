@@ -17,8 +17,10 @@
 - [x] Initial normalized UnitKeeper schema and baseline migration.
 - [x] Documentation for schema choices and legacy deviations.
 - [ ] Seed/bootstrap dataset for local development.
-- [ ] Migration smoke tests and forward migration policy for the next iterations.
-- [ ] Additional persistence primitives for outbox, idempotency, and cutover support.
+- [x] Migration smoke tests for a fresh database upgrade.
+- [ ] Forward migration policy for the next iterations.
+- [x] Persistence primitives for notification outbox and idempotency.
+- [ ] Cutover support.
 
 ## Phase 1: Package Skeleton
 - [x] Create Python package structure for shared DB code.
@@ -42,8 +44,8 @@
 ## Phase 4: Shared Access Layer
 - [x] Prepare import path conventions so backend and bot share the package cleanly.
 - [ ] Decide which shared repository/query helpers belong in `common` versus backend infrastructure.
-- [ ] Expose storage primitives for bot notification delivery and internal workers.
-- [ ] Add migration and schema smoke tests around the shared package surface.
+- [x] Expose storage primitives for bot notification delivery and idempotent external actions.
+- [x] Add migration and schema smoke tests around the shared package surface.
 
 ## Migration Tasks From Legacy
 - [x] Map `Group.weights` JSON to the new representation.

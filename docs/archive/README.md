@@ -15,8 +15,19 @@ Miniapp:
 - [Issue 01](./miniapp/issue-01-foundation-and-app-shell.md) Foundation и app shell
 - [Issue 02](./miniapp/issue-02-onboarding-and-group-surface.md) Onboarding и group surface
 
+## Archived On 2026-07-12
+
+Common:
+- [Issue 01](./common/issue-01-package-hardening-and-migration-smoke.md) Package hardening и migration smoke
+- [Issue 02](./common/issue-02-outbox-and-idempotency-schema.md) Outbox and idempotency schema
+
+Backend:
+- [Issue 04](./backend/issue-04-task-approval-inbox-and-log-query-api.md) Task approval inbox и task-log query API
+- [Issue 05](./backend/issue-05-balances-and-unit-transfers.md) Balances и unit transfers
+
+Miniapp:
+- [Issue 03](./miniapp/issue-03-tasks-and-approval-flows.md) Tasks, execution и approval flows
+
 ## Review Notes
 
-- `common/Issue 01` оставлен активным: migration smoke checks и schema-level test harness всё ещё не закрыты в плане.
-- `backend/Issue 04` оставлен активным: approve/reject есть, но task log inbox/history query API ещё не выделен как first-class read model.
-- `backend/Issue 05+`, `miniapp/Issue 03+`, все `bot` issue и cutover tasks остаются активными.
+- `backend/Issue 06+`, `common/Issue 03`, `miniapp/Issue 04+`, все `bot` issue и cutover tasks остаются активными.

@@ -1,5 +1,7 @@
 # Issue 05: Balances And Unit Transfers
 
+**Status:** Closed and archived
+
 ## Priority
 
 `P0`

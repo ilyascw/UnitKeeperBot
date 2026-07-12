@@ -1,5 +1,7 @@
 # Issue 03: Task Management Parity
 
+**Status:** Closed and archived
+
 ## Priority
 
 `P0`

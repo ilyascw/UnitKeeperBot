@@ -1,5 +1,7 @@
 # Issue 01: Package Hardening And Migration Smoke
 
+**Status:** Closed and archived
+
 ## Priority
 
 `P0`

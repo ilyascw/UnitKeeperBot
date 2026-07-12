@@ -1,5 +1,7 @@
 # Issue 04: Task Approval Inbox And Log Query API
 
+**Status:** Closed and archived
+
 ## Priority
 
 `P0`

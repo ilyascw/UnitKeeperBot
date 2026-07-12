@@ -25,24 +25,20 @@
 - детальный group read/settings API;
 - tasks CRUD, bulk import и quick frequency adjustments;
 - mark done / approve / reject;
+- task-log inbox, history, detail and paginated query API;
+- personal balances, transfer candidates, unit transfers and ledger history;
 - temp results;
 - manual current sprint close с защитой от повторного закрытия периода.
 
 ## Что ещё мешает писать miniapp и thin bot
 
 Критические пробелы:
-- нет approval inbox / query API для task logs;
-- нет balances / transfers;
 - нет scheduler jobs и notification outbox;
 - нет deep link и delivery-контрактов для бота;
 - нет reminder jobs;
 - нет полного покрытия тестами, idempotency и observability.
 
 ## Очередь задач
-
-`P0`
-- [Issue 04](./issue-04-task-approval-inbox-and-log-query-api.md) Approval inbox и task log query API
-- [Issue 05](./issue-05-balances-and-unit-transfers.md) Balances и unit transfers
 
 `P1`
 - [Issue 06](./issue-06-sprint-close-jobs-and-scheduler.md) Sprint close jobs и scheduler
@@ -54,18 +50,18 @@
 
 ## Suggested execution order
 
-1. Issue 04
-2. Issue 05
-3. Issue 06
-4. Issue 07
-5. Issue 08
-6. Issue 09
+1. Issue 06
+2. Issue 07
+3. Issue 08
+4. Issue 09
 
 ## Archived
 
 - [Issue 01](../archive/backend/issue-01-bot-auth-and-backend-transport.md) Bot auth и internal transport
 - [Issue 02](../archive/backend/issue-02-group-read-and-settings-api.md) Group read/settings API
 - [Issue 03](../archive/backend/issue-03-task-management-parity.md) Task management parity
+- [Issue 04](../archive/backend/issue-04-task-approval-inbox-and-log-query-api.md) Task approval inbox и task log query API
+- [Issue 05](../archive/backend/issue-05-balances-and-unit-transfers.md) Balances и unit transfers
 
 ## Notes
 

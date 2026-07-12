@@ -1,5 +1,7 @@
 # Issue 02: Onboarding And Group Surface
 
+**Status:** Closed and archived
+
 ## Priority
 
 `P0`
