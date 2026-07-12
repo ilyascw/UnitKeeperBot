@@ -538,6 +538,7 @@ class BalanceTransaction(TimestampMixin, Base):
 class NotificationOutboxEvent(TimestampMixin, Base):
     __tablename__ = "notification_outbox_events"
     __table_args__ = (
+        UniqueConstraint("dedupe_key"),
         Index(
             "ix_notification_outbox_events_pending_delivery",
             "status",
@@ -574,6 +575,8 @@ class NotificationOutboxEvent(TimestampMixin, Base):
         server_default=text("'{}'::jsonb"),
     )
     deep_link_path: Mapped[str | None] = mapped_column(String(512))
+    dedupe_key: Mapped[str | None] = mapped_column(String(255))
+    correlation_id: Mapped[str | None] = mapped_column(String(128), index=True)
     status: Mapped[NotificationOutboxStatus] = mapped_column(
         pg_enum(NotificationOutboxStatus, name="notification_outbox_status_enum"),
         nullable=False,

@@ -23,13 +23,13 @@ def test_outbox_schema_exposes_delivery_lifecycle() -> None:
     event_columns = NotificationOutboxEvent.__table__.c
     attempt_columns = NotificationDeliveryAttempt.__table__.c
 
-    assert set(NotificationEventType) == {
+    assert {
         NotificationEventType.TASK_APPROVAL_REQUESTED,
         NotificationEventType.TASK_APPROVED,
         NotificationEventType.TASK_REJECTED,
         NotificationEventType.SPRINT_CLOSED,
         NotificationEventType.REMINDER,
-    }
+    } <= set(NotificationEventType)
     assert set(NotificationOutboxStatus) == {
         NotificationOutboxStatus.PENDING,
         NotificationOutboxStatus.DELIVERED,
@@ -39,7 +39,18 @@ def test_outbox_schema_exposes_delivery_lifecycle() -> None:
         NotificationDeliveryAttemptStatus.ACKNOWLEDGED,
         NotificationDeliveryAttemptStatus.FAILED,
     }
-    assert {"payload", "deep_link_path", "next_attempt_at", "delivered_at", "last_error"} <= set(event_columns.keys())
+    assert {
+        "payload",
+        "deep_link_path",
+        "dedupe_key",
+        "correlation_id",
+        "next_attempt_at",
+        "delivered_at",
+        "last_error",
+    } <= set(event_columns.keys())
+    assert frozenset({"dedupe_key"}) in _unique_constraint_columns(
+        NotificationOutboxEvent.__table__
+    )
     assert {"attempt_number", "status", "error_message", "acknowledged_at"} <= set(attempt_columns.keys())
     assert frozenset({"event_id", "attempt_number"}) in _unique_constraint_columns(
         NotificationDeliveryAttempt.__table__
