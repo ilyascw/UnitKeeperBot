@@ -1,0 +1,136 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.10.6"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Install
+        working-directory: backend
+        run: uv sync --frozen --extra dev --group dev
+      - name: Lint
+        working-directory: backend
+        run: uv run ruff check .
+      - name: Format
+        working-directory: backend
+        run: uv run ruff format --check .
+      - name: Type-check
+        working-directory: backend
+        run: uv run mypy
+      - name: Test
+        working-directory: backend
+        run: uv run pytest
+
+  bot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.10.6"
+          enable-cache: true
+          cache-dependency-glob: bot/uv.lock
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Install
+        working-directory: bot
+        run: uv sync --frozen --extra dev
+      - name: Lint
+        working-directory: bot
+        run: uv run ruff check .
+      - name: Format
+        working-directory: bot
+        run: uv run ruff format --check .
+      - name: Type-check
+        working-directory: bot
+        run: uv run mypy
+      - name: Test
+        working-directory: bot
+        run: uv run pytest
+
+  common:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: unitkeeper
+          POSTGRES_PASSWORD: unitkeeper
+          POSTGRES_DB: unitkeeper_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U unitkeeper -d unitkeeper_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql+asyncpg://unitkeeper:unitkeeper@127.0.0.1:5432/unitkeeper_test
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.10.6"
+          enable-cache: true
+          cache-dependency-glob: common/uv.lock
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Install
+        working-directory: common
+        run: uv sync --frozen --group dev
+      - name: Lint
+        working-directory: common
+        run: uv run ruff check .
+      - name: Format
+        working-directory: common
+        run: uv run ruff format --check .
+      - name: Type-check
+        working-directory: common
+        run: uv run mypy
+      - name: Test schema and migrations
+        working-directory: common
+        run: uv run pytest
+
+  miniapp:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: miniapp
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: miniapp/package-lock.json
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: cp .env.example .env
+      - run: docker compose config --quiet
+      - run: docker compose build backend bot miniapp migrate
