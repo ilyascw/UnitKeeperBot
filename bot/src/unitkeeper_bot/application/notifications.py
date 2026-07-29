@@ -42,12 +42,18 @@ class NotificationWorker:
             if event.event_type == "task_approval_requested" and isinstance(log_id, int):
                 rows.append(
                     [
-                        InlineKeyboardButton(text="Подтвердить", callback_data=f"approval:{log_id}:approve"),
-                        InlineKeyboardButton(text="Отклонить", callback_data=f"approval:{log_id}:reject"),
+                        InlineKeyboardButton(
+                            text="Подтвердить", callback_data=f"approval:{log_id}:approve"
+                        ),
+                        InlineKeyboardButton(
+                            text="Отклонить", callback_data=f"approval:{log_id}:reject"
+                        ),
                     ]
                 )
             if rendered.miniapp_url and rendered.button_label:
-                rows.append([InlineKeyboardButton(text=rendered.button_label, url=rendered.miniapp_url)])
+                rows.append(
+                    [InlineKeyboardButton(text=rendered.button_label, url=rendered.miniapp_url)]
+                )
             try:
                 await self._bot.send_message(
                     chat_id=event.recipient_user_id,
@@ -58,6 +64,10 @@ class NotificationWorker:
             except Exception as error:
                 _logger.exception("Unable to deliver notification", extra={"event_id": event.id})
                 try:
-                    await self._backend.fail_notification(event_id=event.id, error_message=str(error)[:4000])
+                    await self._backend.fail_notification(
+                        event_id=event.id, error_message=str(error)[:4000]
+                    )
                 except BackendTransportError:
-                    _logger.exception("Unable to record notification failure", extra={"event_id": event.id})
+                    _logger.exception(
+                        "Unable to record notification failure", extra={"event_id": event.id}
+                    )

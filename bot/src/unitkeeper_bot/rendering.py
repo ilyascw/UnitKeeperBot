@@ -58,7 +58,8 @@ def render_notification(event: NotificationEvent, *, app_url: str) -> RenderedNo
             text = f"<b>Задача подтверждена</b>\n{task_title} засчитана."
             label = "Открыть историю"
         case "task_rejected":
-            text = f"<b>Задача отклонена</b>\n{task_title}\nПричина: {_text(payload, 'rejection_reason', 'не указана')}"
+            reason = _text(payload, "rejection_reason", "не указана")
+            text = f"<b>Задача отклонена</b>\n{task_title}\nПричина: {reason}"
             label = "Открыть историю"
         case "sprint_personal_report":
             text = (
@@ -77,13 +78,16 @@ def render_notification(event: NotificationEvent, *, app_url: str) -> RenderedNo
             )
             label = "Открыть результаты"
         case "pending_approval_reminder":
-            text = f"<b>Есть отметки на подтверждении</b>\n{_text(payload, 'count', '1')} шт. ждут вашего решения."
+            count = _text(payload, "count", "1")
+            text = f"<b>Есть отметки на подтверждении</b>\n{count} шт. ждут вашего решения."
             label = "Проверить отметки"
         case "sprint_deadline_reminder":
-            text = f"<b>Спринт скоро завершится</b>\nДо конца: {_text(payload, 'deadline', 'совсем скоро')}."
+            deadline = _text(payload, "deadline", "совсем скоро")
+            text = f"<b>Спринт скоро завершится</b>\nДо конца: {deadline}."
             label = "Открыть задачи"
         case "membership_event" | "group_event":
-            text = f"<b>Обновление в группе «{group_name}»</b>\n{_text(payload, 'message', 'Состав группы изменился.')}"
+            message = _text(payload, "message", "Состав группы изменился.")
+            text = f"<b>Обновление в группе «{group_name}»</b>\n{message}"
             label = "Открыть группу"
         case _:
             text = _text(payload, "message", "У вас новое событие в UnitKeeper.")

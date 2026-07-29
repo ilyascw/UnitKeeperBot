@@ -3,21 +3,30 @@ from __future__ import annotations
 from decimal import Decimal
 
 import pytest
-
 from db.enums import NotificationEventType, TaskLogStatus, Weekday
+
+from tests.support.fakes import FakeClock, InMemoryUnitOfWork, utc_datetime
 from unitkeeper_backend.application.context.service import CurrentContextService
 from unitkeeper_backend.application.groups.service import GroupService
 from unitkeeper_backend.application.models import UserProfile
 from unitkeeper_backend.application.tasks.service import TaskImportItem, TaskService
-from unitkeeper_backend.domain.errors import AuthorizationError, BusinessRuleViolation, NotFoundError, ValidationError
-from tests.support.fakes import FakeClock, InMemoryUnitOfWork, utc_datetime
+from unitkeeper_backend.domain.errors import (
+    AuthorizationError,
+    BusinessRuleViolation,
+    NotFoundError,
+    ValidationError,
+)
 
 
 @pytest.mark.asyncio
 async def test_single_member_group_auto_completes_task() -> None:
     uow = InMemoryUnitOfWork()
     uow.users.users[1] = UserProfile(1, "solo", "Solo", None, "en", False)
-    group_service = GroupService(uow=uow, context_service=CurrentContextService(uow=uow), clock=FakeClock(utc_datetime(2026, 3, 16)))
+    group_service = GroupService(
+        uow=uow,
+        context_service=CurrentContextService(uow=uow),
+        clock=FakeClock(utc_datetime(2026, 3, 16)),
+    )
     await group_service.create_group(
         user_id=1,
         name="solo-group",
@@ -44,8 +53,14 @@ async def test_single_member_group_auto_completes_task() -> None:
 async def test_multi_member_group_rejects_self_approval_and_frequency_overflow() -> None:
     uow = InMemoryUnitOfWork()
     for user_id in (1, 2):
-        uow.users.users[user_id] = UserProfile(user_id, f"user{user_id}", f"User {user_id}", None, "en", False)
-    group_service = GroupService(uow=uow, context_service=CurrentContextService(uow=uow), clock=FakeClock(utc_datetime(2026, 3, 16)))
+        uow.users.users[user_id] = UserProfile(
+            user_id, f"user{user_id}", f"User {user_id}", None, "en", False
+        )
+    group_service = GroupService(
+        uow=uow,
+        context_service=CurrentContextService(uow=uow),
+        clock=FakeClock(utc_datetime(2026, 3, 16)),
+    )
     await group_service.create_group(
         user_id=1,
         name="team",
@@ -92,8 +107,14 @@ async def test_multi_member_group_rejects_self_approval_and_frequency_overflow()
 async def test_pending_hold_consumes_a_slot_and_blocks_over_marking() -> None:
     uow = InMemoryUnitOfWork()
     for user_id in (1, 2):
-        uow.users.users[user_id] = UserProfile(user_id, f"user{user_id}", f"User {user_id}", None, "en", False)
-    group_service = GroupService(uow=uow, context_service=CurrentContextService(uow=uow), clock=FakeClock(utc_datetime(2026, 3, 16)))
+        uow.users.users[user_id] = UserProfile(
+            user_id, f"user{user_id}", f"User {user_id}", None, "en", False
+        )
+    group_service = GroupService(
+        uow=uow,
+        context_service=CurrentContextService(uow=uow),
+        clock=FakeClock(utc_datetime(2026, 3, 16)),
+    )
     await group_service.create_group(
         user_id=1,
         name="team",
@@ -136,7 +157,11 @@ async def test_pending_hold_consumes_a_slot_and_blocks_over_marking() -> None:
 async def _bootstrap_solo_group() -> tuple[InMemoryUnitOfWork, TaskService]:
     uow = InMemoryUnitOfWork()
     uow.users.users[1] = UserProfile(1, "solo", "Solo", None, "en", False)
-    group_service = GroupService(uow=uow, context_service=CurrentContextService(uow=uow), clock=FakeClock(utc_datetime(2026, 3, 16)))
+    group_service = GroupService(
+        uow=uow,
+        context_service=CurrentContextService(uow=uow),
+        clock=FakeClock(utc_datetime(2026, 3, 16)),
+    )
     await group_service.create_group(
         user_id=1,
         name="solo-group",
@@ -234,9 +259,13 @@ async def test_adjust_frequency_rejects_soft_deleted_task() -> None:
 async def test_task_log_queries_enforce_visibility_and_return_enriched_filtered_pages() -> None:
     uow = InMemoryUnitOfWork()
     for user_id in (1, 2, 3):
-        uow.users.users[user_id] = UserProfile(user_id, f"user{user_id}", f"User {user_id}", None, "en", False)
+        uow.users.users[user_id] = UserProfile(
+            user_id, f"user{user_id}", f"User {user_id}", None, "en", False
+        )
     clock = FakeClock(utc_datetime(2026, 3, 16))
-    group_service = GroupService(uow=uow, context_service=CurrentContextService(uow=uow), clock=clock)
+    group_service = GroupService(
+        uow=uow, context_service=CurrentContextService(uow=uow), clock=clock
+    )
     await group_service.create_group(
         user_id=1,
         name="team",
@@ -253,8 +282,12 @@ async def test_task_log_queries_enforce_visibility_and_return_enriched_filtered_
     second_task = await task_service.create_task(
         group_id=1, title="Vacuum", frequency_per_sprint=3, unit_cost=Decimal("4")
     )
-    own_pending = await task_service.mark_done(group_id=1, performer_user_id=1, task_id=first_task.id)
-    other_pending = await task_service.mark_done(group_id=1, performer_user_id=2, task_id=second_task.id)
+    own_pending = await task_service.mark_done(
+        group_id=1, performer_user_id=1, task_id=first_task.id
+    )
+    other_pending = await task_service.mark_done(
+        group_id=1, performer_user_id=2, task_id=second_task.id
+    )
     rejected = await task_service.reject(
         group_id=1,
         approver_user_id=2,

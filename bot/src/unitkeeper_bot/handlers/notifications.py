@@ -19,7 +19,9 @@ def build_notification_router(*, backend: BackendGateway) -> Router:
             return
         try:
             if action == "approve":
-                await backend.approve_task_log(log_id=int(raw_log_id), telegram_user_id=callback.from_user.id)
+                await backend.approve_task_log(
+                    log_id=int(raw_log_id), telegram_user_id=callback.from_user.id
+                )
                 result = "Отметка подтверждена"
             else:
                 await backend.reject_task_log(

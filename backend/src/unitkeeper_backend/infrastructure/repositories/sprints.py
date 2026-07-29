@@ -4,13 +4,17 @@ from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID
 
+from db.enums import BalanceTransactionAccountType, BalanceTransactionType, SprintRunStatus
+from db.models import BalanceTransaction, SprintMemberResult, SprintRun
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from db.enums import BalanceTransactionAccountType, SprintRunStatus
-from db.models import BalanceTransaction, SprintMemberResult, SprintRun
-from unitkeeper_backend.application.models import BalanceTransactionInfo, SprintMemberResultInfo, SprintRunInfo
+from unitkeeper_backend.application.models import (
+    BalanceTransactionInfo,
+    SprintMemberResultInfo,
+    SprintRunInfo,
+)
 from unitkeeper_backend.infrastructure.repositories.mappers import map_sprint_run
 
 
@@ -94,7 +98,7 @@ class SqlAlchemySprintRepository:
         *,
         group_id: int,
         user_id: int | None,
-        transaction_type,
+        transaction_type: BalanceTransactionType,
         amount_delta: Decimal,
         description: str,
         transaction_group_id: UUID,
@@ -135,22 +139,29 @@ class SqlAlchemySprintRepository:
             .offset(offset)
         )
         result = await self._session.execute(query)
-        items = [
-            BalanceTransactionInfo(
-                id=model.id,
-                group_id=model.group_id,
-                user_id=model.user_id,
-                transaction_type=model.transaction_type,
-                amount_delta=model.amount_delta,
-                counterparty_user_id=model.counterparty_user_id,
-                description=model.description,
-                created_at=model.created_at,
+        items: list[BalanceTransactionInfo] = []
+        for model in result.scalars().all():
+            if model.user_id is None:
+                continue
+            items.append(
+                BalanceTransactionInfo(
+                    id=model.id,
+                    group_id=model.group_id,
+                    user_id=model.user_id,
+                    transaction_type=model.transaction_type,
+                    amount_delta=model.amount_delta,
+                    counterparty_user_id=model.counterparty_user_id,
+                    description=model.description,
+                    created_at=model.created_at,
+                )
             )
-            for model in result.scalars().all()
-        ]
-        total_query = select(func.count()).select_from(BalanceTransaction).where(
-            BalanceTransaction.group_id == group_id,
-            BalanceTransaction.user_id == user_id,
+        total_query = (
+            select(func.count())
+            .select_from(BalanceTransaction)
+            .where(
+                BalanceTransaction.group_id == group_id,
+                BalanceTransaction.user_id == user_id,
+            )
         )
         total = (await self._session.execute(total_query)).scalar_one()
         return items, total

@@ -3,7 +3,12 @@ from __future__ import annotations
 import logging
 
 from unitkeeper_backend.application.context.service import CurrentContextService
-from unitkeeper_backend.application.models import CurrentContext, TaskLogInfo, TelegramIdentity, UserProfile
+from unitkeeper_backend.application.models import (
+    CurrentContext,
+    TaskLogInfo,
+    TelegramIdentity,
+    UserProfile,
+)
 from unitkeeper_backend.application.ports import UnitOfWork
 from unitkeeper_backend.application.tasks.service import TaskService
 from unitkeeper_backend.domain.errors import NotFoundError

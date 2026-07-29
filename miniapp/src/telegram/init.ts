@@ -5,7 +5,7 @@ import {
   setDebug,
   themeParams,
   viewport,
-} from '@telegram-apps/sdk-react';
+} from '@tma.js/sdk-react';
 
 import { config } from '@/config/env';
 
@@ -29,13 +29,13 @@ export function initTelegram(): boolean {
   try {
     initSDK();
 
-    if (miniApp.mountSync.isAvailable()) {
-      miniApp.mountSync();
+    if (miniApp.mount.isAvailable()) {
+      miniApp.mount();
       miniApp.bindCssVars();
     }
 
-    if (themeParams.mountSync.isAvailable()) {
-      themeParams.mountSync();
+    if (themeParams.mount.isAvailable()) {
+      themeParams.mount();
       themeParams.bindCssVars();
     }
 

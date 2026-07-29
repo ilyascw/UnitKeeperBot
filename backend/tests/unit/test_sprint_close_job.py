@@ -4,21 +4,27 @@ from datetime import timedelta
 from decimal import Decimal
 
 import pytest
-
 from db.enums import Weekday
+
+from tests.support.fakes import FakeClock, InMemoryUnitOfWork, utc_datetime
 from unitkeeper_backend.application.context.service import CurrentContextService
 from unitkeeper_backend.application.groups.service import GroupService
 from unitkeeper_backend.application.jobs.sprint_close import SprintCloseRunner, list_due_group_ids
 from unitkeeper_backend.application.models import UserProfile
 from unitkeeper_backend.application.sprints.service import SprintService
 from unitkeeper_backend.application.tasks.service import TaskService
-from tests.support.fakes import FakeClock, InMemoryUnitOfWork, utc_datetime
 
 
-async def _build_group(uow: InMemoryUnitOfWork, *, clock: FakeClock, sprint_duration_days: int = 7) -> None:
+async def _build_group(
+    uow: InMemoryUnitOfWork, *, clock: FakeClock, sprint_duration_days: int = 7
+) -> None:
     for user_id in (1, 2):
-        uow.users.users[user_id] = UserProfile(user_id, f"user{user_id}", f"User {user_id}", None, "en", False)
-    group_service = GroupService(uow=uow, context_service=CurrentContextService(uow=uow), clock=clock)
+        uow.users.users[user_id] = UserProfile(
+            user_id, f"user{user_id}", f"User {user_id}", None, "en", False
+        )
+    group_service = GroupService(
+        uow=uow, context_service=CurrentContextService(uow=uow), clock=clock
+    )
     await group_service.create_group(
         user_id=1,
         name="team",
@@ -29,7 +35,9 @@ async def _build_group(uow: InMemoryUnitOfWork, *, clock: FakeClock, sprint_dura
     )
     await group_service.join_group(user_id=2, group_name="team", join_secret="secret")
     task_service = TaskService(uow=uow, clock=clock)
-    task = await task_service.create_task(group_id=1, title="Laundry", frequency_per_sprint=2, unit_cost=Decimal("3.00"))
+    task = await task_service.create_task(
+        group_id=1, title="Laundry", frequency_per_sprint=2, unit_cost=Decimal("3.00")
+    )
     pending = await task_service.mark_done(group_id=1, performer_user_id=1, task_id=task.id)
     await task_service.approve(group_id=1, approver_user_id=2, log_id=pending.id)
 
@@ -96,7 +104,9 @@ async def test_sprint_close_runner_closes_multi_week_sprint_and_skips_duplicate_
 
 
 @pytest.mark.asyncio
-async def test_sprint_close_runner_closes_once_and_skips_duplicate_close(caplog: pytest.LogCaptureFixture) -> None:
+async def test_sprint_close_runner_closes_once_and_skips_duplicate_close(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     uow = InMemoryUnitOfWork()
     clock = FakeClock(utc_datetime(2026, 3, 22))
     await _build_group(uow, clock=clock)

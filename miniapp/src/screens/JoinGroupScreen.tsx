@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '@/routes/navigation';
 
 import { useJoinGroup } from '@/api/mutations';
 import { routes } from '@/routes/paths';

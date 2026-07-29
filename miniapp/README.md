@@ -7,9 +7,9 @@ The main user interface for UnitKeeper, delivered as a Telegram Mini App.
 - **Vite** — build tool and dev server
 - **React + TypeScript** — UI
 - **Telegram UI Kit** (`@telegram-apps/telegram-ui`) — native Telegram look and feel
-- **Telegram Mini Apps SDK** (`@telegram-apps/sdk-react`) — runtime, theme, init data
+- **Telegram Mini Apps SDK** (`@tma.js/sdk-react`) — runtime, theme, init data
 - **TanStack Query** — data fetching, caching, loading/error states
-- **React Router** — client-side routing
+- **wouter** — lightweight client-side routing behind a local navigation adapter
 
 ## Project layout
 
@@ -31,18 +31,21 @@ signed Telegram **init data** for a session token (`POST /auth/telegram`); the
 backend derives the user from the signature. The token is persisted and
 restored on reload (validated against `GET /auth/me`).
 
-## Backend contract used in this foundation
+## Backend contract
 
 - `POST /auth/telegram` `{ init_data }` → session `{ access_token, expires_at, context }`
 - `GET /auth/me` → current context (user / membership / group)
 - `GET /groups/current` → current group card (404 ⇒ onboarding)
+- `/tasks`, `/task-logs/*` → task catalog and approval flows
+- `/sprints/current/*` → sprint progress and closing
+- `/balances/*` → balance, transfers and transaction history
 
 Contract types live in `src/api/types.ts` and mirror
 `backend/src/unitkeeper_backend/api/schemas`.
 
 ## Developer setup
 
-Requires Node.js 20+ and npm.
+Requires Node.js 22.13+ and npm.
 
 ```bash
 cd miniapp
@@ -55,7 +58,7 @@ npm run dev                 # http://localhost:5173
 
 | Variable               | Purpose                                                                 |
 | ---------------------- | ----------------------------------------------------------------------- |
-| `VITE_API_BASE_URL`    | Backend base URL incl. `/api/v1` (default `http://localhost:8000/api/v1`) |
+| `VITE_API_BASE_URL`    | Backend base URL incl. `/api/v1` (default `/api/v1`) |
 | `VITE_TELEGRAM_DEBUG`  | `true` to enable verbose Telegram SDK logging                           |
 | `VITE_DEV_INIT_DATA`   | Dev-only raw init data to bootstrap auth outside Telegram (never in prod) |
 
@@ -82,4 +85,3 @@ data and the full theme.
 | `npm run typecheck` | Type-check without emitting          |
 | `npm run lint`      | Run ESLint                           |
 | `npm run format`    | Format with Prettier                 |
-```

@@ -10,23 +10,22 @@ from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
-from sqlalchemy import select, text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
 from db.enums import BalanceTransactionType, TaskLogStatus, Weekday
 from db.models import (
     Balance,
     BalanceTransaction,
     Group,
-    GroupMemberWeight,
     GroupMembership,
+    GroupMemberWeight,
     Task,
     TaskLog,
     User,
 )
+from sqlalchemy import select, text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 from unitkeeper_backend.config import settings
 from unitkeeper_backend.infrastructure.auth.session_tokens import HmacSessionTokenManager
-
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DATA_DIR = REPO_ROOT / "data"
@@ -154,7 +153,9 @@ DEV_PLACEHOLDER_NAMES = ["Аня", "Марк", "Соня", "Дима", "Катя
 async def ensure_user(session: AsyncSession, user_id: int) -> User:
     user = await session.get(User, user_id)
     if user is None:
-        user = User(id=user_id, first_name=DEV_PLACEHOLDER_NAMES[user_id % len(DEV_PLACEHOLDER_NAMES)])
+        user = User(
+            id=user_id, first_name=DEV_PLACEHOLDER_NAMES[user_id % len(DEV_PLACEHOLDER_NAMES)]
+        )
         session.add(user)
         await session.flush()
     return user
@@ -362,7 +363,9 @@ async def import_legacy_csv(data_dir: Path, database_url: str) -> list[int]:
 
     async with session_maker() as session:
         async with session.begin():
-            for user_id in sorted(collect_user_ids(groups=groups, users=users, logs=logs, balances=balances)):
+            for user_id in sorted(
+                collect_user_ids(groups=groups, users=users, logs=logs, balances=balances)
+            ):
                 await ensure_user(session, user_id)
 
             for row in groups:
@@ -409,7 +412,9 @@ async def import_legacy_csv(data_dir: Path, database_url: str) -> list[int]:
 
             await reset_sequences(session)
 
-        imported_user_ids = sorted(collect_user_ids(groups=groups, users=users, logs=logs, balances=balances))
+        imported_user_ids = sorted(
+            collect_user_ids(groups=groups, users=users, logs=logs, balances=balances)
+        )
 
     await engine.dispose()
     return imported_user_ids
@@ -428,7 +433,9 @@ def print_tokens(user_ids: list[int]) -> None:
 
 
 async def main() -> None:
-    parser = argparse.ArgumentParser(description="Import legacy UnitKeeper CSV files into v1 DB schema.")
+    parser = argparse.ArgumentParser(
+        description="Import legacy UnitKeeper CSV files into v1 DB schema."
+    )
     parser.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR)
     parser.add_argument("--database-url", default=settings.database_url)
     parser.add_argument("--no-tokens", action="store_true")

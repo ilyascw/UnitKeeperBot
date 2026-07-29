@@ -18,4 +18,3 @@ class Settings(BaseSettings):
     internal_bot_secret: SecretStr
     miniapp_url: AnyHttpUrl
     request_timeout_seconds: float = 10.0
-

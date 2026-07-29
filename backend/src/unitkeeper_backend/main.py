@@ -17,7 +17,9 @@ def create_app() -> FastAPI:
     return app
 
 
-async def domain_error_handler(_: Request, exc: DomainError) -> JSONResponse:
+async def domain_error_handler(_: Request, exc: Exception) -> JSONResponse:
+    if not isinstance(exc, DomainError):
+        raise exc
     payload: dict[str, object] = {"code": exc.code, "message": exc.message}
     if exc.details is not None:
         payload["details"] = exc.details

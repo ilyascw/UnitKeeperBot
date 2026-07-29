@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+from db.enums import Weekday
+from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, Depends, status
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
-from db.enums import Weekday
-
 from unitkeeper_backend.api.dependencies.auth import require_user_id
+from unitkeeper_backend.api.dependencies.injection import INJECTED
 from unitkeeper_backend.api.schemas.common import CurrentContextResponse, GroupResponse
 from unitkeeper_backend.api.schemas.groups import (
     CreateGroupRequest,
@@ -25,7 +25,7 @@ router = APIRouter(prefix="/groups", tags=["groups"], route_class=DishkaRoute)
 @router.get("/current", response_model=GroupCardResponse)
 async def get_current_group(
     user_id: int = Depends(require_user_id),
-    group_service: FromDishka[GroupService] = None,
+    group_service: FromDishka[GroupService] = INJECTED,
 ) -> GroupCardResponse:
     card = await group_service.get_current_group_card(user_id=user_id)
     return GroupCardResponse.model_validate(card, from_attributes=True)
@@ -34,7 +34,7 @@ async def get_current_group(
 @router.get("/current/summary", response_model=GroupResponse)
 async def get_current_group_summary(
     user_id: int = Depends(require_user_id),
-    group_service: FromDishka[GroupService] = None,
+    group_service: FromDishka[GroupService] = INJECTED,
 ) -> GroupResponse:
     group = await group_service.get_current_group(user_id=user_id)
     return GroupResponse.model_validate(group, from_attributes=True)
@@ -43,7 +43,7 @@ async def get_current_group_summary(
 @router.get("/current/members", response_model=GroupMembersResponse)
 async def list_current_group_members(
     user_id: int = Depends(require_user_id),
-    group_service: FromDishka[GroupService] = None,
+    group_service: FromDishka[GroupService] = INJECTED,
 ) -> GroupMembersResponse:
     members = await group_service.list_current_group_members(user_id=user_id)
     return GroupMembersResponse(
@@ -55,9 +55,11 @@ async def list_current_group_members(
 async def update_current_group_settings(
     request: UpdateGroupSettingsRequest,
     user_id: int = Depends(require_user_id),
-    group_service: FromDishka[GroupService] = None,
+    group_service: FromDishka[GroupService] = INJECTED,
 ) -> GroupResponse:
-    weekday = Weekday(request.sprint_start_weekday) if request.sprint_start_weekday is not None else None
+    weekday = (
+        Weekday(request.sprint_start_weekday) if request.sprint_start_weekday is not None else None
+    )
     group = await group_service.update_current_group_settings(
         user_id=user_id,
         join_secret=request.join_secret,
@@ -71,7 +73,7 @@ async def update_current_group_settings(
 async def update_current_group_weights(
     request: UpdateWeightsRequest,
     user_id: int = Depends(require_user_id),
-    group_service: FromDishka[GroupService] = None,
+    group_service: FromDishka[GroupService] = INJECTED,
 ) -> GroupMembersResponse:
     members = await group_service.update_current_group_weights(
         user_id=user_id,
@@ -86,7 +88,7 @@ async def update_current_group_weights(
 async def create_group(
     request: CreateGroupRequest,
     user_id: int = Depends(require_user_id),
-    group_service: FromDishka[GroupService] = None,
+    group_service: FromDishka[GroupService] = INJECTED,
 ) -> CurrentContextResponse:
     context = await group_service.create_group(
         user_id=user_id,
@@ -103,7 +105,7 @@ async def create_group(
 async def join_group(
     request: JoinGroupRequest,
     user_id: int = Depends(require_user_id),
-    group_service: FromDishka[GroupService] = None,
+    group_service: FromDishka[GroupService] = INJECTED,
 ) -> CurrentContextResponse:
     context = await group_service.join_group(
         user_id=user_id,
@@ -116,7 +118,7 @@ async def join_group(
 @router.post("/leave", status_code=status.HTTP_204_NO_CONTENT)
 async def leave_group(
     user_id: int = Depends(require_user_id),
-    group_service: FromDishka[GroupService] = None,
-    clock: FromDishka[UtcClock] = None,
+    group_service: FromDishka[GroupService] = INJECTED,
+    clock: FromDishka[UtcClock] = INJECTED,
 ) -> None:
     await group_service.leave_group(user_id=user_id, left_at=clock.now())

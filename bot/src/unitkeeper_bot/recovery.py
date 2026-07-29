@@ -14,7 +14,10 @@ class RecoveryReply:
 
 def miniapp_unavailable() -> RecoveryReply:
     return RecoveryReply(
-        text="Мини-приложение временно недоступно. Попробуйте открыть его ещё раз через несколько минут.",
+        text=(
+            "Мини-приложение временно недоступно. "
+            "Попробуйте открыть его ещё раз через несколько минут."
+        ),
         miniapp_path="/",
         retry_after_seconds=60,
     )

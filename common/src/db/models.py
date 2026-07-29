@@ -493,8 +493,7 @@ class BalanceTransaction(TimestampMixin, Base):
     __table_args__ = (
         CheckConstraint("amount_delta <> 0", name="balance_transactions_amount_nonzero"),
         CheckConstraint(
-            "(account_type = 'user' AND user_id IS NOT NULL) "
-            "OR (account_type = 'group_pool' AND user_id IS NULL)",
+            "(account_type = 'user' AND user_id IS NOT NULL) OR (account_type = 'group_pool' AND user_id IS NULL)",
             name="balance_transactions_account_type_user_id",
         ),
         Index(

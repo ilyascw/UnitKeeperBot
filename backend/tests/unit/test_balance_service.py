@@ -3,22 +3,26 @@ from __future__ import annotations
 from decimal import Decimal
 
 import pytest
-
 from db.enums import Weekday
+
+from tests.support.fakes import FakeClock, InMemoryUnitOfWork, utc_datetime
 from unitkeeper_backend.application.balances.service import BalanceService
 from unitkeeper_backend.application.context.service import CurrentContextService
 from unitkeeper_backend.application.groups.service import GroupService
 from unitkeeper_backend.application.models import UserProfile
 from unitkeeper_backend.domain.errors import BusinessRuleViolation, ValidationError
-from tests.support.fakes import FakeClock, InMemoryUnitOfWork, utc_datetime
 
 
 async def _seed_group() -> tuple[InMemoryUnitOfWork, BalanceService]:
     uow = InMemoryUnitOfWork()
     for user_id in (1, 2, 3):
-        uow.users.users[user_id] = UserProfile(user_id, f"user{user_id}", f"User {user_id}", None, "en", False)
+        uow.users.users[user_id] = UserProfile(
+            user_id, f"user{user_id}", f"User {user_id}", None, "en", False
+        )
     clock = FakeClock(utc_datetime(2026, 3, 16))
-    group_service = GroupService(uow=uow, context_service=CurrentContextService(uow=uow), clock=clock)
+    group_service = GroupService(
+        uow=uow, context_service=CurrentContextService(uow=uow), clock=clock
+    )
     await group_service.create_group(
         user_id=1,
         name="primary",
@@ -41,7 +45,10 @@ async def test_transfer_updates_balances_and_writes_double_ledger_entries() -> N
     assert transfer.sender_balance == Decimal("9.25")
     assert transfer.recipient_balance == Decimal("3.25")
     assert uow.commit_count == 3
-    assert [(item.user_id, item.amount_delta, item.counterparty_user_id) for item in uow.sprints.balance_transactions] == [
+    assert [
+        (item.user_id, item.amount_delta, item.counterparty_user_id)
+        for item in uow.sprints.balance_transactions
+    ] == [
         (1, Decimal("-3.25"), 2),
         (2, Decimal("3.25"), 1),
     ]

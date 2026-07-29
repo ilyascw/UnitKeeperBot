@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from fastapi import FastAPI
 import pytest
+from fastapi import FastAPI
 
 from unitkeeper_backend.api.dependencies.internal import require_internal_auth
 from unitkeeper_backend.api.router import build_api_router
@@ -24,7 +24,9 @@ def test_internal_bot_routes_are_registered_under_v1_prefix() -> None:
 
 
 @pytest.mark.asyncio
-async def test_internal_auth_rejects_when_secret_not_configured(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_internal_auth_rejects_when_secret_not_configured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(settings, "internal_bot_secret", "")
 
     with pytest.raises(AuthenticationError):

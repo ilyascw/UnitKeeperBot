@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '@/routes/navigation';
 
 import { useCreateGroup } from '@/api/mutations';
 import { WEEKDAYS, type Weekday } from '@/api/types';

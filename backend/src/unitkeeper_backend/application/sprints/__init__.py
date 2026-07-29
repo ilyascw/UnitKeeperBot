@@ -1,2 +1,1 @@
 """Sprint application services."""
-

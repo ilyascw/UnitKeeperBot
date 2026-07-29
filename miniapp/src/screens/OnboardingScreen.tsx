@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from '@/routes/navigation';
 
 import { useAuth } from '@/auth/useAuth';
 import { routes } from '@/routes/paths';

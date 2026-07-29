@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+from dishka.integrations.fastapi import DishkaRoute, FromDishka
 from fastapi import APIRouter, Depends, Query, status
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka
-
 from unitkeeper_backend.api.dependencies.auth import require_user_id
+from unitkeeper_backend.api.dependencies.injection import INJECTED
 from unitkeeper_backend.api.schemas.balances import (
     BalanceResponse,
     BalanceTransactionPageResponse,
@@ -23,7 +23,7 @@ router = APIRouter(prefix="/balances", tags=["balances"], route_class=DishkaRout
 @router.get("/me", response_model=BalanceResponse)
 async def get_my_balance(
     user_id: int = Depends(require_user_id),
-    balance_service: FromDishka[BalanceService] = None,
+    balance_service: FromDishka[BalanceService] = INJECTED,
 ) -> BalanceResponse:
     balance = await balance_service.get_my_balance(user_id=user_id)
     return BalanceResponse.model_validate(balance, from_attributes=True)
@@ -32,7 +32,7 @@ async def get_my_balance(
 @router.get("/transfer-candidates", response_model=TransferCandidatesResponse)
 async def list_transfer_candidates(
     user_id: int = Depends(require_user_id),
-    balance_service: FromDishka[BalanceService] = None,
+    balance_service: FromDishka[BalanceService] = INJECTED,
 ) -> TransferCandidatesResponse:
     candidates = await balance_service.list_transfer_candidates(user_id=user_id)
     return TransferCandidatesResponse(
@@ -46,11 +46,13 @@ async def list_transfer_candidates(
     )
 
 
-@router.post("/transfers", response_model=BalanceTransferResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/transfers", response_model=BalanceTransferResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_transfer(
     request: CreateTransferRequest,
     user_id: int = Depends(require_user_id),
-    balance_service: FromDishka[BalanceService] = None,
+    balance_service: FromDishka[BalanceService] = INJECTED,
 ) -> BalanceTransferResponse:
     transfer = await balance_service.transfer(
         sender_user_id=user_id,
@@ -65,11 +67,14 @@ async def list_my_balance_transactions(
     user_id: int = Depends(require_user_id),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
-    balance_service: FromDishka[BalanceService] = None,
+    balance_service: FromDishka[BalanceService] = INJECTED,
 ) -> BalanceTransactionPageResponse:
     page = await balance_service.list_my_transactions(user_id=user_id, limit=limit, offset=offset)
     return BalanceTransactionPageResponse(
-        items=[BalanceTransactionResponse.model_validate(item, from_attributes=True) for item in page.items],
+        items=[
+            BalanceTransactionResponse.model_validate(item, from_attributes=True)
+            for item in page.items
+        ],
         total=page.total,
         limit=page.limit,
         offset=page.offset,

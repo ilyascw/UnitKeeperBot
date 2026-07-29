@@ -3,7 +3,9 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from unitkeeper_backend.infrastructure.repositories.groups import SqlAlchemyGroupRepository
-from unitkeeper_backend.infrastructure.repositories.notifications import SqlAlchemyNotificationRepository
+from unitkeeper_backend.infrastructure.repositories.notifications import (
+    SqlAlchemyNotificationRepository,
+)
 from unitkeeper_backend.infrastructure.repositories.sprints import SqlAlchemySprintRepository
 from unitkeeper_backend.infrastructure.repositories.tasks import SqlAlchemyTaskRepository
 from unitkeeper_backend.infrastructure.repositories.users import SqlAlchemyUserRepository

@@ -8,21 +8,23 @@ from uuid import UUID
 
 from db.enums import (
     BalanceTransactionAccountType,
+    BalanceTransactionType,
     NotificationEventType,
     TaskLogStatus,
     Weekday,
 )
+
 from unitkeeper_backend.application.models import (
     BalanceTransactionInfo,
     GroupInfo,
     MembershipInfo,
+    NotificationOutboxEventInfo,
     SprintMemberResultInfo,
     SprintRunInfo,
     TaskInfo,
     TaskLogInfo,
     TelegramIdentity,
     UserProfile,
-    NotificationOutboxEventInfo,
 )
 
 
@@ -59,7 +61,9 @@ class GroupRepository(Protocol):
 
     async def get_active_membership(self, user_id: int) -> MembershipInfo | None: ...
 
-    async def get_active_membership_in_group(self, *, group_id: int, user_id: int) -> MembershipInfo | None: ...
+    async def get_active_membership_in_group(
+        self, *, group_id: int, user_id: int
+    ) -> MembershipInfo | None: ...
 
     async def list_active_memberships(self, group_id: int) -> list[MembershipInfo]: ...
 
@@ -85,7 +89,9 @@ class GroupRepository(Protocol):
 
     async def deactivate_membership(self, membership_id: int, *, left_at: datetime) -> None: ...
 
-    async def replace_weights(self, *, group_id: int, weights_by_user_id: dict[int, Decimal]) -> None: ...
+    async def replace_weights(
+        self, *, group_id: int, weights_by_user_id: dict[int, Decimal]
+    ) -> None: ...
 
     async def update_settings(
         self,
@@ -100,7 +106,9 @@ class GroupRepository(Protocol):
 
     async def get_balance(self, *, group_id: int, user_id: int) -> Decimal: ...
 
-    async def apply_balance_delta(self, *, group_id: int, user_id: int, amount_delta: Decimal) -> Decimal: ...
+    async def apply_balance_delta(
+        self, *, group_id: int, user_id: int, amount_delta: Decimal
+    ) -> Decimal: ...
 
     async def transfer_balance(
         self,
@@ -124,7 +132,9 @@ class TaskRepository(Protocol):
 
     async def list_tasks(self, *, group_id: int, active_only: bool = True) -> list[TaskInfo]: ...
 
-    async def list_tasks_by_ids(self, *, group_id: int, task_ids: Sequence[int]) -> list[TaskInfo]: ...
+    async def list_tasks_by_ids(
+        self, *, group_id: int, task_ids: Sequence[int]
+    ) -> list[TaskInfo]: ...
 
     async def get_task(self, *, group_id: int, task_id: int) -> TaskInfo | None: ...
 
@@ -138,7 +148,9 @@ class TaskRepository(Protocol):
         unit_cost: Decimal | None,
     ) -> TaskInfo: ...
 
-    async def soft_delete_task(self, *, group_id: int, task_id: int, deleted_at: datetime) -> None: ...
+    async def soft_delete_task(
+        self, *, group_id: int, task_id: int, deleted_at: datetime
+    ) -> None: ...
 
     async def count_completed_in_window(
         self,
@@ -164,7 +176,7 @@ class TaskRepository(Protocol):
         group_id: int,
         task_id: int,
         performer_user_id: int,
-        status: object,
+        status: TaskLogStatus,
         created_at: datetime,
         approver_user_id: int | None = None,
         decided_at: datetime | None = None,
@@ -250,11 +262,11 @@ class SprintRepository(Protocol):
         *,
         group_id: int,
         user_id: int | None,
-        transaction_type: object,
+        transaction_type: BalanceTransactionType,
         amount_delta: Decimal,
         description: str,
         transaction_group_id: UUID,
-        account_type: object = BalanceTransactionAccountType.USER,
+        account_type: BalanceTransactionAccountType = BalanceTransactionAccountType.USER,
         sprint_run_id: int | None = None,
         task_log_id: int | None = None,
         counterparty_user_id: int | None = None,
@@ -293,19 +305,21 @@ class NotificationRepository(Protocol):
         deep_link_path: str | None,
     ) -> tuple[NotificationOutboxEventInfo, bool]: ...
 
-    async def list_ready(self, *, now: datetime, limit: int) -> list[NotificationOutboxEventInfo]: ...
+    async def list_ready(
+        self, *, now: datetime, limit: int
+    ) -> list[NotificationOutboxEventInfo]: ...
 
     async def acknowledge(
         self,
         *,
-        event_id: object,
+        event_id: UUID,
         acknowledged_at: datetime,
     ) -> NotificationOutboxEventInfo: ...
 
     async def fail(
         self,
         *,
-        event_id: object,
+        event_id: UUID,
         failed_at: datetime,
         error_message: str,
         retry_at: datetime | None,
@@ -314,11 +328,20 @@ class NotificationRepository(Protocol):
 
 
 class UnitOfWork(Protocol):
-    users: UserRepository
-    groups: GroupRepository
-    tasks: TaskRepository
-    sprints: SprintRepository
-    notifications: NotificationRepository
+    @property
+    def users(self) -> UserRepository: ...
+
+    @property
+    def groups(self) -> GroupRepository: ...
+
+    @property
+    def tasks(self) -> TaskRepository: ...
+
+    @property
+    def sprints(self) -> SprintRepository: ...
+
+    @property
+    def notifications(self) -> NotificationRepository: ...
 
     async def commit(self) -> None: ...
 

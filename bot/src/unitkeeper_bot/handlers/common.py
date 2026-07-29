@@ -30,7 +30,9 @@ def build_common_router(*, start_service: StartService, miniapp_url: str) -> Rou
         try:
             context = await start_service.initialize_user(user)
         except BackendTransportError:
-            _logger.exception("Unable to initialize Telegram user", extra={"telegram_user_id": user.id})
+            _logger.exception(
+                "Unable to initialize Telegram user", extra={"telegram_user_id": user.id}
+            )
             await message.answer("UnitKeeper временно недоступен. Попробуйте ещё раз позже.")
             return
 
@@ -41,7 +43,10 @@ def build_common_router(*, start_service: StartService, miniapp_url: str) -> Rou
 
     @bound_router.message(Command("help"))
     async def help_command(message: Message) -> None:
-        await message.answer("Основные действия доступны в приложении UnitKeeper.", reply_markup=_miniapp_keyboard(miniapp_url))
+        await message.answer(
+            "Основные действия доступны в приложении UnitKeeper.",
+            reply_markup=_miniapp_keyboard(miniapp_url),
+        )
 
     @bound_router.message(Command("about"))
     async def about(message: Message) -> None:
@@ -52,16 +57,24 @@ def build_common_router(*, start_service: StartService, miniapp_url: str) -> Rou
 
     @bound_router.message(F.text.startswith("/"))
     async def legacy_command(message: Message) -> None:
-        await message.answer("Эта команда переехала в приложение UnitKeeper.", reply_markup=_miniapp_keyboard(miniapp_url))
+        await message.answer(
+            "Эта команда переехала в приложение UnitKeeper.",
+            reply_markup=_miniapp_keyboard(miniapp_url),
+        )
 
     @bound_router.message()
     async def fallback(message: Message) -> None:
-        await message.answer("Откройте UnitKeeper для работы с задачами и группой.", reply_markup=_miniapp_keyboard(miniapp_url))
+        await message.answer(
+            "Откройте UnitKeeper для работы с задачами и группой.",
+            reply_markup=_miniapp_keyboard(miniapp_url),
+        )
 
     return bound_router
 
 
 def _miniapp_keyboard(miniapp_url: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
-        inline_keyboard=[[InlineKeyboardButton(text="Открыть UnitKeeper", web_app=WebAppInfo(url=miniapp_url))]],
+        inline_keyboard=[
+            [InlineKeyboardButton(text="Открыть UnitKeeper", web_app=WebAppInfo(url=miniapp_url))]
+        ],
     )

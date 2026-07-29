@@ -3,12 +3,16 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
+from db.enums import (
+    NotificationDeliveryAttemptStatus,
+    NotificationEventType,
+    NotificationOutboxStatus,
+)
+from db.models import NotificationDeliveryAttempt, NotificationOutboxEvent
 from sqlalchemy import or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.enums import NotificationDeliveryAttemptStatus, NotificationEventType, NotificationOutboxStatus
-from db.models import NotificationDeliveryAttempt, NotificationOutboxEvent
 from unitkeeper_backend.application.models import NotificationOutboxEventInfo
 from unitkeeper_backend.domain.errors import NotFoundError
 
@@ -86,7 +90,9 @@ class SqlAlchemyNotificationRepository:
         created = event_id is not None
         if event_id is None:
             event_id = await self._session.scalar(
-                select(NotificationOutboxEvent.id).where(NotificationOutboxEvent.dedupe_key == dedupe_key)
+                select(NotificationOutboxEvent.id).where(
+                    NotificationOutboxEvent.dedupe_key == dedupe_key
+                )
             )
         if event_id is None:
             raise NotFoundError("Notification event was not found after idempotent enqueue")
@@ -109,7 +115,9 @@ class SqlAlchemyNotificationRepository:
         result = await self._session.execute(query)
         return [_map_event(item) for item in result.scalars().all()]
 
-    async def acknowledge(self, *, event_id: UUID, acknowledged_at: datetime) -> NotificationOutboxEventInfo:
+    async def acknowledge(
+        self, *, event_id: UUID, acknowledged_at: datetime
+    ) -> NotificationOutboxEventInfo:
         event = await self._require_event(event_id)
         if event.status is NotificationOutboxStatus.DELIVERED:
             return _map_event(event)
@@ -146,7 +154,9 @@ class SqlAlchemyNotificationRepository:
         event.last_attempt_at = failed_at
         event.last_error = error_message
         event.next_attempt_at = None if terminal else retry_at
-        event.status = NotificationOutboxStatus.DEAD_LETTER if terminal else NotificationOutboxStatus.PENDING
+        event.status = (
+            NotificationOutboxStatus.DEAD_LETTER if terminal else NotificationOutboxStatus.PENDING
+        )
         self._session.add(
             NotificationDeliveryAttempt(
                 event_id=event.id,

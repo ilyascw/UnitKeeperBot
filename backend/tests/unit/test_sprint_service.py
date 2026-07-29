@@ -3,23 +3,29 @@ from __future__ import annotations
 from decimal import Decimal
 
 import pytest
-
 from db.enums import SprintRunStatus, Weekday
+
+from tests.support.fakes import FakeClock, InMemoryUnitOfWork, utc_datetime
 from unitkeeper_backend.application.context.service import CurrentContextService
 from unitkeeper_backend.application.groups.service import GroupService
 from unitkeeper_backend.application.models import UserProfile
 from unitkeeper_backend.application.sprints.service import SprintService
 from unitkeeper_backend.application.tasks.service import TaskService
 from unitkeeper_backend.domain.errors import BusinessRuleViolation
-from tests.support.fakes import FakeClock, InMemoryUnitOfWork, utc_datetime
 
 
 @pytest.mark.asyncio
 async def test_temp_results_and_sprint_close_persist_balances() -> None:
     uow = InMemoryUnitOfWork()
     for user_id in (1, 2):
-        uow.users.users[user_id] = UserProfile(user_id, f"user{user_id}", f"User {user_id}", None, "en", False)
-    group_service = GroupService(uow=uow, context_service=CurrentContextService(uow=uow), clock=FakeClock(utc_datetime(2026, 3, 16)))
+        uow.users.users[user_id] = UserProfile(
+            user_id, f"user{user_id}", f"User {user_id}", None, "en", False
+        )
+    group_service = GroupService(
+        uow=uow,
+        context_service=CurrentContextService(uow=uow),
+        clock=FakeClock(utc_datetime(2026, 3, 16)),
+    )
     await group_service.create_group(
         user_id=1,
         name="team",

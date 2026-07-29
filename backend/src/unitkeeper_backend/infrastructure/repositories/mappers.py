@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from db.models import Group, GroupMembership, SprintMemberResult, SprintRun, Task, TaskLog, User
+
 from unitkeeper_backend.application.models import (
     GroupInfo,
     MembershipInfo,
@@ -9,8 +11,6 @@ from unitkeeper_backend.application.models import (
     TaskLogInfo,
     UserProfile,
 )
-
-from db.models import Group, GroupMembership, SprintMemberResult, SprintRun, Task, TaskLog, User
 
 
 def map_user(model: User) -> UserProfile:

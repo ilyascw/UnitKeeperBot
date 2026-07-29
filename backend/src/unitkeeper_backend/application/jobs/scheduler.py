@@ -9,7 +9,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from unitkeeper_backend.application.jobs.notifications import SprintMemberReport, SprintReportPublisher
+from unitkeeper_backend.application.jobs.notifications import (
+    SprintMemberReport,
+    SprintReportPublisher,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,7 +27,9 @@ class ClosedSprint:
 
 
 class SprintCloser(Protocol):
-    async def close_due_sprint(self, *, group_id: int, correlation_id: str) -> ClosedSprint | None: ...
+    async def close_due_sprint(
+        self, *, group_id: int, correlation_id: str
+    ) -> ClosedSprint | None: ...
 
 
 class SprintCloseJob:
@@ -35,7 +40,9 @@ class SprintCloseJob:
     async def run(self, *, due_group_ids: list[int], correlation_id: str) -> int:
         closed_count = 0
         for group_id in due_group_ids:
-            closed = await self._closer.close_due_sprint(group_id=group_id, correlation_id=correlation_id)
+            closed = await self._closer.close_due_sprint(
+                group_id=group_id, correlation_id=correlation_id
+            )
             if closed is None:
                 continue
             await self._reports.publish(

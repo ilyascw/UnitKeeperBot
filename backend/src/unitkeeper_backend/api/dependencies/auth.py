@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from dishka.integrations.fastapi import FromDishka, inject
-
+from unitkeeper_backend.api.dependencies.injection import INJECTED
 from unitkeeper_backend.application.auth.service import AuthService
 from unitkeeper_backend.domain.errors import AuthenticationError
 
@@ -14,7 +14,7 @@ bearer_scheme = HTTPBearer(auto_error=False)
 @inject
 async def require_user_id(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
-    auth_service: FromDishka[AuthService] = None,
+    auth_service: FromDishka[AuthService] = INJECTED,
 ) -> int:
     if credentials is None:
         raise AuthenticationError("Authorization header is required")

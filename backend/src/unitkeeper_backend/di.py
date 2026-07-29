@@ -4,6 +4,7 @@ from collections.abc import AsyncIterable
 
 from dishka import Provider, Scope, make_async_container, provide
 from dishka.integrations.fastapi import setup_dishka
+from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from unitkeeper_backend.application.auth.service import AuthService
@@ -139,7 +140,7 @@ class AppProvider(Provider):
         )
 
 
-def setup_di(app) -> None:
+def setup_di(app: FastAPI) -> None:
     container = make_async_container(AppProvider())
     setup_dishka(container=container, app=app)
     app.state.dishka_container = container

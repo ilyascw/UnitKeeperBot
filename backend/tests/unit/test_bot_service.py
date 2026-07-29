@@ -3,15 +3,15 @@ from __future__ import annotations
 from decimal import Decimal
 
 import pytest
-
 from db.enums import TaskLogStatus, Weekday
+
+from tests.support.fakes import FakeClock, InMemoryUnitOfWork, utc_datetime
 from unitkeeper_backend.application.bot.service import BotService
 from unitkeeper_backend.application.context.service import CurrentContextService
 from unitkeeper_backend.application.groups.service import GroupService
 from unitkeeper_backend.application.models import TelegramIdentity, UserProfile
 from unitkeeper_backend.application.tasks.service import TaskService
 from unitkeeper_backend.domain.errors import AuthorizationError, NotFoundError
-from tests.support.fakes import FakeClock, InMemoryUnitOfWork, utc_datetime
 
 
 def _build(uow: InMemoryUnitOfWork) -> BotService:
@@ -59,7 +59,9 @@ async def test_approve_via_bot_promotes_pending_log_to_completed() -> None:
     for uid in (1, 2):
         uow.users.users[uid] = UserProfile(uid, f"u{uid}", f"U{uid}", None, "en", False)
     context_service = CurrentContextService(uow=uow)
-    group_service = GroupService(uow=uow, context_service=context_service, clock=FakeClock(utc_datetime(2026, 3, 16)))
+    group_service = GroupService(
+        uow=uow, context_service=context_service, clock=FakeClock(utc_datetime(2026, 3, 16))
+    )
     await group_service.create_group(
         user_id=1,
         name="team",
@@ -91,7 +93,9 @@ async def test_reject_via_bot_marks_log_rejected_with_reason() -> None:
     for uid in (1, 2):
         uow.users.users[uid] = UserProfile(uid, f"u{uid}", f"U{uid}", None, "en", False)
     context_service = CurrentContextService(uow=uow)
-    group_service = GroupService(uow=uow, context_service=context_service, clock=FakeClock(utc_datetime(2026, 3, 16)))
+    group_service = GroupService(
+        uow=uow, context_service=context_service, clock=FakeClock(utc_datetime(2026, 3, 16))
+    )
     await group_service.create_group(
         user_id=1,
         name="team",
@@ -133,7 +137,9 @@ async def test_performer_cannot_self_approve_via_bot_in_multi_member_group() -> 
     for uid in (1, 2):
         uow.users.users[uid] = UserProfile(uid, f"u{uid}", f"U{uid}", None, "en", False)
     context_service = CurrentContextService(uow=uow)
-    group_service = GroupService(uow=uow, context_service=context_service, clock=FakeClock(utc_datetime(2026, 3, 16)))
+    group_service = GroupService(
+        uow=uow, context_service=context_service, clock=FakeClock(utc_datetime(2026, 3, 16))
+    )
     await group_service.create_group(
         user_id=1,
         name="team",

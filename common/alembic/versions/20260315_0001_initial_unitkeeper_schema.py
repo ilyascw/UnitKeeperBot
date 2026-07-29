@@ -8,10 +8,10 @@ Create Date: 2026-03-15 23:59:00
 
 from typing import Sequence, Union
 
-from alembic import context, op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from alembic import context, op
 
 revision: str = "20260315_0001"
 down_revision: Union[str, Sequence[str], None] = "20260315_0000"
@@ -387,7 +387,9 @@ def upgrade() -> None:
         sa.Column("balance", sa.Numeric(precision=12, scale=2), server_default=sa.text("0"), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.CheckConstraint("mod(sprint_duration_days, 7) = 0", name=op.f("ck_groups_groups_sprint_duration_multiple_of_7")),
+        sa.CheckConstraint(
+            "mod(sprint_duration_days, 7) = 0", name=op.f("ck_groups_groups_sprint_duration_multiple_of_7")
+        ),
         sa.CheckConstraint("sprint_duration_days > 0", name=op.f("ck_groups_groups_sprint_duration_positive")),
         sa.ForeignKeyConstraint(["owner_user_id"], ["users.id"], name=op.f("fk_groups_owner_user_id_users")),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_groups")),
@@ -403,8 +405,12 @@ def upgrade() -> None:
         sa.Column("left_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.ForeignKeyConstraint(["group_id"], ["groups.id"], name=op.f("fk_group_memberships_group_id_groups"), ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["user_id"], ["users.id"], name=op.f("fk_group_memberships_user_id_users"), ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["group_id"], ["groups.id"], name=op.f("fk_group_memberships_group_id_groups"), ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["user_id"], ["users.id"], name=op.f("fk_group_memberships_user_id_users"), ondelete="CASCADE"
+        ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_group_memberships")),
     )
     op.create_index(op.f("ix_group_memberships_group_id"), "group_memberships", ["group_id"], unique=False)
@@ -444,7 +450,9 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id", name=op.f("pk_group_member_weights")),
         sa.UniqueConstraint("membership_id", name=op.f("uq_group_member_weights_membership_id")),
     )
-    op.create_index(op.f("ix_group_member_weights_membership_id"), "group_member_weights", ["membership_id"], unique=False)
+    op.create_index(
+        op.f("ix_group_member_weights_membership_id"), "group_member_weights", ["membership_id"], unique=False
+    )
 
     op.create_table(
         "tasks",
@@ -478,7 +486,9 @@ def upgrade() -> None:
         sa.Column("current_balance", sa.Numeric(precision=12, scale=2), server_default=sa.text("0"), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.ForeignKeyConstraint(["group_id"], ["groups.id"], name=op.f("fk_balances_group_id_groups"), ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["group_id"], ["groups.id"], name=op.f("fk_balances_group_id_groups"), ondelete="CASCADE"
+        ),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], name=op.f("fk_balances_user_id_users"), ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_balances")),
         sa.UniqueConstraint("group_id", "user_id", name=op.f("uq_balances_group_id_user_id")),
@@ -493,17 +503,25 @@ def upgrade() -> None:
         sa.Column("period_start", sa.Date(), nullable=False),
         sa.Column("period_end", sa.Date(), nullable=False),
         sa.Column("status", sprint_run_status_enum, server_default=sa.text("'open'"), nullable=False),
-        sa.Column("total_planned_units", sa.Numeric(precision=12, scale=2), server_default=sa.text("0"), nullable=False),
-        sa.Column("total_completed_units", sa.Numeric(precision=12, scale=2), server_default=sa.text("0"), nullable=False),
+        sa.Column(
+            "total_planned_units", sa.Numeric(precision=12, scale=2), server_default=sa.text("0"), nullable=False
+        ),
+        sa.Column(
+            "total_completed_units", sa.Numeric(precision=12, scale=2), server_default=sa.text("0"), nullable=False
+        ),
         sa.Column("bonus_units", sa.Numeric(precision=12, scale=2), server_default=sa.text("0"), nullable=False),
         sa.Column("balance_delta", sa.Numeric(precision=12, scale=2), server_default=sa.text("0"), nullable=False),
         sa.Column("closed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.CheckConstraint("period_end >= period_start", name=op.f("ck_sprint_runs_sprint_runs_period_bounds")),
-        sa.ForeignKeyConstraint(["group_id"], ["groups.id"], name=op.f("fk_sprint_runs_group_id_groups"), ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["group_id"], ["groups.id"], name=op.f("fk_sprint_runs_group_id_groups"), ondelete="CASCADE"
+        ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_sprint_runs")),
-        sa.UniqueConstraint("group_id", "period_start", "period_end", name=op.f("uq_sprint_runs_group_id_period_start_period_end")),
+        sa.UniqueConstraint(
+            "group_id", "period_start", "period_end", name=op.f("uq_sprint_runs_group_id_period_start_period_end")
+        ),
     )
     op.create_index(op.f("ix_sprint_runs_group_id"), "sprint_runs", ["group_id"], unique=False)
 
@@ -524,7 +542,9 @@ def upgrade() -> None:
             name=op.f("ck_task_logs_task_logs_rejection_reason_required"),
         ),
         sa.ForeignKeyConstraint(["approver_user_id"], ["users.id"], name=op.f("fk_task_logs_approver_user_id_users")),
-        sa.ForeignKeyConstraint(["group_id"], ["groups.id"], name=op.f("fk_task_logs_group_id_groups"), ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["group_id"], ["groups.id"], name=op.f("fk_task_logs_group_id_groups"), ondelete="CASCADE"
+        ),
         sa.ForeignKeyConstraint(["performer_user_id"], ["users.id"], name=op.f("fk_task_logs_performer_user_id_users")),
         sa.ForeignKeyConstraint(["task_id"], ["tasks.id"], name=op.f("fk_task_logs_task_id_tasks"), ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_task_logs")),
@@ -558,12 +578,21 @@ def upgrade() -> None:
         sa.Column("balance_after", sa.Numeric(precision=12, scale=2), server_default=sa.text("0"), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.ForeignKeyConstraint(["sprint_run_id"], ["sprint_runs.id"], name=op.f("fk_sprint_member_results_sprint_run_id_sprint_runs"), ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["user_id"], ["users.id"], name=op.f("fk_sprint_member_results_user_id_users"), ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["sprint_run_id"],
+            ["sprint_runs.id"],
+            name=op.f("fk_sprint_member_results_sprint_run_id_sprint_runs"),
+            ondelete="CASCADE",
+        ),
+        sa.ForeignKeyConstraint(
+            ["user_id"], ["users.id"], name=op.f("fk_sprint_member_results_user_id_users"), ondelete="CASCADE"
+        ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_sprint_member_results")),
         sa.UniqueConstraint("sprint_run_id", "user_id", name=op.f("uq_sprint_member_results_sprint_run_id_user_id")),
     )
-    op.create_index(op.f("ix_sprint_member_results_sprint_run_id"), "sprint_member_results", ["sprint_run_id"], unique=False)
+    op.create_index(
+        op.f("ix_sprint_member_results_sprint_run_id"), "sprint_member_results", ["sprint_run_id"], unique=False
+    )
     op.create_index(op.f("ix_sprint_member_results_user_id"), "sprint_member_results", ["user_id"], unique=False)
 
     op.create_table(
@@ -591,17 +620,34 @@ def upgrade() -> None:
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
-        sa.CheckConstraint("amount_delta <> 0", name=op.f("ck_balance_transactions_balance_transactions_amount_nonzero")),
         sa.CheckConstraint(
-            "(account_type = 'user' AND user_id IS NOT NULL) "
-            "OR (account_type = 'group_pool' AND user_id IS NULL)",
+            "amount_delta <> 0", name=op.f("ck_balance_transactions_balance_transactions_amount_nonzero")
+        ),
+        sa.CheckConstraint(
+            "(account_type = 'user' AND user_id IS NOT NULL) OR (account_type = 'group_pool' AND user_id IS NULL)",
             name=op.f("ck_balance_transactions_balance_transactions_account_type_user_id"),
         ),
-        sa.ForeignKeyConstraint(["counterparty_user_id"], ["users.id"], name=op.f("fk_balance_transactions_counterparty_user_id_users")),
-        sa.ForeignKeyConstraint(["group_id"], ["groups.id"], name=op.f("fk_balance_transactions_group_id_groups"), ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["sprint_run_id"], ["sprint_runs.id"], name=op.f("fk_balance_transactions_sprint_run_id_sprint_runs"), ondelete="SET NULL"),
-        sa.ForeignKeyConstraint(["task_log_id"], ["task_logs.id"], name=op.f("fk_balance_transactions_task_log_id_task_logs"), ondelete="SET NULL"),
-        sa.ForeignKeyConstraint(["user_id"], ["users.id"], name=op.f("fk_balance_transactions_user_id_users"), ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["counterparty_user_id"], ["users.id"], name=op.f("fk_balance_transactions_counterparty_user_id_users")
+        ),
+        sa.ForeignKeyConstraint(
+            ["group_id"], ["groups.id"], name=op.f("fk_balance_transactions_group_id_groups"), ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(
+            ["sprint_run_id"],
+            ["sprint_runs.id"],
+            name=op.f("fk_balance_transactions_sprint_run_id_sprint_runs"),
+            ondelete="SET NULL",
+        ),
+        sa.ForeignKeyConstraint(
+            ["task_log_id"],
+            ["task_logs.id"],
+            name=op.f("fk_balance_transactions_task_log_id_task_logs"),
+            ondelete="SET NULL",
+        ),
+        sa.ForeignKeyConstraint(
+            ["user_id"], ["users.id"], name=op.f("fk_balance_transactions_user_id_users"), ondelete="CASCADE"
+        ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_balance_transactions")),
     )
     op.create_index(op.f("ix_balance_transactions_group_id"), "balance_transactions", ["group_id"], unique=False)

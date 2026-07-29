@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from '@/routes/navigation';
 
 import { useCreateTransfer } from '@/api/mutations';
 import { useCurrentGroup, useTransferCandidates } from '@/api/queries';

@@ -1,8 +1,13 @@
 from __future__ import annotations
 
-from unitkeeper_backend.application.models import SessionInfo
-from unitkeeper_backend.application.ports import Clock, SessionTokenManager, TelegramInitDataVerifier, UnitOfWork
 from unitkeeper_backend.application.context.service import CurrentContextService
+from unitkeeper_backend.application.models import SessionInfo
+from unitkeeper_backend.application.ports import (
+    Clock,
+    SessionTokenManager,
+    TelegramInitDataVerifier,
+    UnitOfWork,
+)
 
 
 class AuthService:

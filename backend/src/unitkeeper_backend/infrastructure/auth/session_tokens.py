@@ -21,7 +21,9 @@ class HmacSessionTokenManager:
             "exp": int(expires_at.timestamp()),
         }
         payload_bytes = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
-        signature = hmac.new(self._secret, payload_bytes, hashlib.sha256).hexdigest().encode("ascii")
+        signature = (
+            hmac.new(self._secret, payload_bytes, hashlib.sha256).hexdigest().encode("ascii")
+        )
         token = base64.urlsafe_b64encode(payload_bytes + b"." + signature).decode("ascii")
         return token, expires_at
 
@@ -32,7 +34,9 @@ class HmacSessionTokenManager:
         except Exception as exc:
             raise AuthenticationError("Malformed session token") from exc
 
-        expected_signature = hmac.new(self._secret, payload_bytes, hashlib.sha256).hexdigest().encode("ascii")
+        expected_signature = (
+            hmac.new(self._secret, payload_bytes, hashlib.sha256).hexdigest().encode("ascii")
+        )
         if not hmac.compare_digest(signature, expected_signature):
             raise AuthenticationError("Invalid session token signature")
 

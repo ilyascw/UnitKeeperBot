@@ -1,4 +1,5 @@
-import { Outlet, Route, Routes } from 'react-router-dom';
+import type { ReactNode } from 'react';
+import { Route, Switch } from 'wouter';
 
 import { AppLayout } from '@/components/AppLayout';
 import { TabBar } from '@/components/TabBar';
@@ -19,47 +20,56 @@ import { TransferScreen } from '@/screens/TransferScreen';
 
 import { routes } from './paths';
 
-/**
- * Layout for the five in-group sections: the active section renders in the
- * outlet with the shared bottom tab bar fixed beneath it.
- */
-function TabbedLayout() {
+function TabbedLayout({ children }: { children: ReactNode }) {
   return (
     <div className="uk-tab-scope">
-      <Outlet />
+      {children}
       <TabBar />
     </div>
   );
 }
 
-/**
- * Application route table. Every screen renders inside the shared `AppLayout`
- * shell. The daily-work sections sit under `TabbedLayout` so they share the
- * bottom navigation; onboarding and group sub-screens stand alone.
- */
 export function AppRoutes() {
   return (
     <AppLayout>
-      <Routes>
-        <Route path={routes.home} element={<HomeScreen />} />
-        <Route path={routes.onboarding} element={<OnboardingScreen />} />
-        <Route path={routes.onboardingCreate} element={<CreateGroupScreen />} />
-        <Route path={routes.onboardingJoin} element={<JoinGroupScreen />} />
+      <Switch>
+        <Route path={routes.home} component={HomeScreen} />
+        <Route path={routes.onboarding} component={OnboardingScreen} />
+        <Route path={routes.onboardingCreate} component={CreateGroupScreen} />
+        <Route path={routes.onboardingJoin} component={JoinGroupScreen} />
 
-        <Route element={<TabbedLayout />}>
-          <Route path={routes.dashboard} element={<DashboardScreen />} />
-          <Route path={routes.tasks} element={<TasksScreen />} />
-          <Route path={routes.progress} element={<ProgressScreen />} />
-          <Route path={routes.balance} element={<BalanceScreen />} />
-          <Route path={routes.group} element={<GroupScreen />} />
+        <Route path={routes.dashboard}>
+          <TabbedLayout>
+            <DashboardScreen />
+          </TabbedLayout>
+        </Route>
+        <Route path={routes.tasks}>
+          <TabbedLayout>
+            <TasksScreen />
+          </TabbedLayout>
+        </Route>
+        <Route path={routes.progress}>
+          <TabbedLayout>
+            <ProgressScreen />
+          </TabbedLayout>
+        </Route>
+        <Route path={routes.balance}>
+          <TabbedLayout>
+            <BalanceScreen />
+          </TabbedLayout>
+        </Route>
+        <Route path={routes.group}>
+          <TabbedLayout>
+            <GroupScreen />
+          </TabbedLayout>
         </Route>
 
-        <Route path={routes.groupSettings} element={<GroupSettingsScreen />} />
-        <Route path={routes.groupWeights} element={<GroupWeightsScreen />} />
-        <Route path={routes.balanceTransfer} element={<TransferScreen />} />
-        <Route path={routes.taskLogs} element={<TaskLogsScreen />} />
-        <Route path="*" element={<NotFoundScreen />} />
-      </Routes>
+        <Route path={routes.groupSettings} component={GroupSettingsScreen} />
+        <Route path={routes.groupWeights} component={GroupWeightsScreen} />
+        <Route path={routes.balanceTransfer} component={TransferScreen} />
+        <Route path={routes.taskLogs} component={TaskLogsScreen} />
+        <Route component={NotFoundScreen} />
+      </Switch>
     </AppLayout>
   );
 }

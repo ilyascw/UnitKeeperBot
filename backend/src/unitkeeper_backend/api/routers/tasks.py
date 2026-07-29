@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+from db.enums import TaskLogStatus
+from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
 from fastapi import APIRouter, Depends, Query, status
 
-from dishka.integrations.fastapi import DishkaRoute, FromDishka, inject
-
 from unitkeeper_backend.api.dependencies.auth import require_user_id
-from db.enums import TaskLogStatus
+from unitkeeper_backend.api.dependencies.injection import INJECTED
 from unitkeeper_backend.api.schemas.common import (
     TaskLogPageResponse,
     TaskLogResponse,
@@ -30,7 +30,7 @@ router = APIRouter(tags=["tasks"], route_class=DishkaRoute)
 @inject
 async def require_group_id(
     user_id: int = Depends(require_user_id),
-    context_service: FromDishka[CurrentContextService] = None,
+    context_service: FromDishka[CurrentContextService] = INJECTED,
 ) -> int:
     context = await context_service.resolve(user_id)
     if context.group is None:
@@ -41,7 +41,7 @@ async def require_group_id(
 @router.get("/tasks", response_model=list[TaskResponse])
 async def list_tasks(
     group_id: int = Depends(require_group_id),
-    task_service: FromDishka[TaskService] = None,
+    task_service: FromDishka[TaskService] = INJECTED,
 ) -> list[TaskResponse]:
     tasks = await task_service.list_tasks(group_id=group_id)
     return [TaskResponse.model_validate(task, from_attributes=True) for task in tasks]
@@ -51,7 +51,7 @@ async def list_tasks(
 async def create_task(
     request: CreateTaskRequest,
     group_id: int = Depends(require_group_id),
-    task_service: FromDishka[TaskService] = None,
+    task_service: FromDishka[TaskService] = INJECTED,
 ) -> TaskResponse:
     task = await task_service.create_task(
         group_id=group_id,
@@ -62,11 +62,13 @@ async def create_task(
     return TaskResponse.model_validate(task, from_attributes=True)
 
 
-@router.post("/tasks/import", response_model=list[TaskResponse], status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/tasks/import", response_model=list[TaskResponse], status_code=status.HTTP_201_CREATED
+)
 async def import_tasks(
     request: BulkImportTasksRequest,
     group_id: int = Depends(require_group_id),
-    task_service: FromDishka[TaskService] = None,
+    task_service: FromDishka[TaskService] = INJECTED,
 ) -> list[TaskResponse]:
     items = [
         TaskImportItem(
@@ -84,7 +86,7 @@ async def import_tasks(
 async def get_task(
     task_id: int,
     group_id: int = Depends(require_group_id),
-    task_service: FromDishka[TaskService] = None,
+    task_service: FromDishka[TaskService] = INJECTED,
 ) -> TaskResponse:
     task = await task_service.get_task(group_id=group_id, task_id=task_id)
     return TaskResponse.model_validate(task, from_attributes=True)
@@ -95,7 +97,7 @@ async def update_task(
     task_id: int,
     request: UpdateTaskRequest,
     group_id: int = Depends(require_group_id),
-    task_service: FromDishka[TaskService] = None,
+    task_service: FromDishka[TaskService] = INJECTED,
 ) -> TaskResponse:
     task = await task_service.update_task(
         group_id=group_id,
@@ -112,7 +114,7 @@ async def increase_task_frequency(
     task_id: int,
     request: FrequencyAdjustmentRequest | None = None,
     group_id: int = Depends(require_group_id),
-    task_service: FromDishka[TaskService] = None,
+    task_service: FromDishka[TaskService] = INJECTED,
 ) -> TaskResponse:
     step = request.step if request is not None else 1
     task = await task_service.adjust_frequency(group_id=group_id, task_id=task_id, delta=step)
@@ -124,7 +126,7 @@ async def decrease_task_frequency(
     task_id: int,
     request: FrequencyAdjustmentRequest | None = None,
     group_id: int = Depends(require_group_id),
-    task_service: FromDishka[TaskService] = None,
+    task_service: FromDishka[TaskService] = INJECTED,
 ) -> TaskResponse:
     step = request.step if request is not None else 1
     task = await task_service.adjust_frequency(group_id=group_id, task_id=task_id, delta=-step)
@@ -135,7 +137,7 @@ async def decrease_task_frequency(
 async def delete_task(
     task_id: int,
     group_id: int = Depends(require_group_id),
-    task_service: FromDishka[TaskService] = None,
+    task_service: FromDishka[TaskService] = INJECTED,
 ) -> None:
     await task_service.delete_task(group_id=group_id, task_id=task_id)
 
@@ -145,9 +147,11 @@ async def mark_task_done(
     task_id: int,
     user_id: int = Depends(require_user_id),
     group_id: int = Depends(require_group_id),
-    task_service: FromDishka[TaskService] = None,
+    task_service: FromDishka[TaskService] = INJECTED,
 ) -> TaskLogResponse:
-    log = await task_service.mark_done(group_id=group_id, performer_user_id=user_id, task_id=task_id)
+    log = await task_service.mark_done(
+        group_id=group_id, performer_user_id=user_id, task_id=task_id
+    )
     return TaskLogResponse.model_validate(log, from_attributes=True)
 
 
@@ -157,7 +161,7 @@ async def list_pending_approvals(
     group_id: int = Depends(require_group_id),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
-    task_service: FromDishka[TaskService] = None,
+    task_service: FromDishka[TaskService] = INJECTED,
 ) -> TaskLogPageResponse:
     page = await task_service.list_pending_approvals(
         group_id=group_id, user_id=user_id, limit=limit, offset=offset
@@ -173,7 +177,7 @@ async def list_my_task_logs(
     statuses: list[TaskLogStatus] | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
-    task_service: FromDishka[TaskService] = None,
+    task_service: FromDishka[TaskService] = INJECTED,
 ) -> TaskLogPageResponse:
     page = await task_service.list_my_task_logs(
         group_id=group_id,
@@ -195,7 +199,7 @@ async def list_group_task_logs(
     statuses: list[TaskLogStatus] | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
-    task_service: FromDishka[TaskService] = None,
+    task_service: FromDishka[TaskService] = INJECTED,
 ) -> TaskLogPageResponse:
     page = await task_service.list_group_task_logs(
         group_id=group_id,
@@ -214,7 +218,7 @@ async def get_task_log(
     log_id: int,
     user_id: int = Depends(require_user_id),
     group_id: int = Depends(require_group_id),
-    task_service: FromDishka[TaskService] = None,
+    task_service: FromDishka[TaskService] = INJECTED,
 ) -> TaskLogViewResponse:
     view = await task_service.get_task_log_view(group_id=group_id, user_id=user_id, log_id=log_id)
     return TaskLogViewResponse.from_view(view)
@@ -225,7 +229,7 @@ async def approve_task_log(
     log_id: int,
     user_id: int = Depends(require_user_id),
     group_id: int = Depends(require_group_id),
-    task_service: FromDishka[TaskService] = None,
+    task_service: FromDishka[TaskService] = INJECTED,
 ) -> TaskLogResponse:
     log = await task_service.approve(group_id=group_id, approver_user_id=user_id, log_id=log_id)
     return TaskLogResponse.model_validate(log, from_attributes=True)
@@ -237,7 +241,7 @@ async def reject_task_log(
     request: RejectTaskLogRequest,
     user_id: int = Depends(require_user_id),
     group_id: int = Depends(require_group_id),
-    task_service: FromDishka[TaskService] = None,
+    task_service: FromDishka[TaskService] = INJECTED,
 ) -> TaskLogResponse:
     log = await task_service.reject(
         group_id=group_id,

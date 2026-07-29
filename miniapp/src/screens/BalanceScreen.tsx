@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from '@/routes/navigation';
 
 import { useBalanceTransactions, useCurrentGroup } from '@/api/queries';
 import { useAuth } from '@/auth/useAuth';

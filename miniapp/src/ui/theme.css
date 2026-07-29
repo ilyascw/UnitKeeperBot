@@ -76,6 +76,11 @@ body {
   background-attachment: fixed;
 }
 
+button {
+  color: inherit;
+  font: inherit;
+}
+
 #root {
   isolation: isolate;
 }

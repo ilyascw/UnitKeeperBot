@@ -3,11 +3,12 @@ from __future__ import annotations
 from datetime import UTC, date, datetime, time
 from decimal import Decimal
 
+from db.enums import Weekday
+from db.models import Balance, Group, GroupMembership, GroupMemberWeight
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from db.models import Balance, Group, GroupMemberWeight, GroupMembership
 from unitkeeper_backend.application.models import GroupInfo, MembershipInfo
 from unitkeeper_backend.domain.errors import BusinessRuleViolation, NotFoundError
 from unitkeeper_backend.infrastructure.repositories.mappers import map_group, map_membership
@@ -45,7 +46,9 @@ class SqlAlchemyGroupRepository:
         model = result.scalar_one_or_none()
         return map_membership(model) if model is not None else None
 
-    async def get_active_membership_in_group(self, *, group_id: int, user_id: int) -> MembershipInfo | None:
+    async def get_active_membership_in_group(
+        self, *, group_id: int, user_id: int
+    ) -> MembershipInfo | None:
         query = (
             select(GroupMembership)
             .options(selectinload(GroupMembership.weight))
@@ -74,7 +77,7 @@ class SqlAlchemyGroupRepository:
         name: str,
         join_secret: str,
         owner_user_id: int,
-        sprint_start_weekday,
+        sprint_start_weekday: Weekday,
         sprint_duration_days: int,
         timezone: str,
         created_at: date,
@@ -127,14 +130,16 @@ class SqlAlchemyGroupRepository:
         model.balance = balance
         await self._session.flush()
 
-    async def deactivate_membership(self, membership_id: int, *, left_at) -> None:
+    async def deactivate_membership(self, membership_id: int, *, left_at: datetime) -> None:
         model = await self._session.get(GroupMembership, membership_id)
         if model is None:
             raise NotFoundError("Membership was not found")
         model.left_at = left_at
         await self._session.flush()
 
-    async def replace_weights(self, *, group_id: int, weights_by_user_id: dict[int, Decimal]) -> None:
+    async def replace_weights(
+        self, *, group_id: int, weights_by_user_id: dict[int, Decimal]
+    ) -> None:
         query = (
             select(GroupMembership)
             .options(selectinload(GroupMembership.weight))
@@ -157,7 +162,7 @@ class SqlAlchemyGroupRepository:
         *,
         group_id: int,
         join_secret: str | None,
-        sprint_start_weekday=None,
+        sprint_start_weekday: Weekday | None,
         sprint_duration_days: int | None = None,
     ) -> GroupInfo:
         model = await self._require_group_model(group_id)
@@ -184,7 +189,9 @@ class SqlAlchemyGroupRepository:
             raise NotFoundError("Balance was not found")
         return model.current_balance
 
-    async def apply_balance_delta(self, *, group_id: int, user_id: int, amount_delta: Decimal) -> Decimal:
+    async def apply_balance_delta(
+        self, *, group_id: int, user_id: int, amount_delta: Decimal
+    ) -> Decimal:
         query = select(Balance).where(Balance.group_id == group_id, Balance.user_id == user_id)
         result = await self._session.execute(query)
         model = result.scalar_one_or_none()
@@ -206,7 +213,10 @@ class SqlAlchemyGroupRepository:
     ) -> tuple[Decimal, Decimal]:
         query = (
             select(Balance)
-            .where(Balance.group_id == group_id, Balance.user_id.in_((sender_user_id, recipient_user_id)))
+            .where(
+                Balance.group_id == group_id,
+                Balance.user_id.in_((sender_user_id, recipient_user_id)),
+            )
             .order_by(Balance.user_id)
             .with_for_update()
         )

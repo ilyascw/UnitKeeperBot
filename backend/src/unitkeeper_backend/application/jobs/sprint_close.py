@@ -18,8 +18,8 @@ from __future__ import annotations
 
 import logging
 
-from unitkeeper_backend.application.jobs.scheduler import ClosedSprint
 from unitkeeper_backend.application.jobs.notifications import SprintMemberReport
+from unitkeeper_backend.application.jobs.scheduler import ClosedSprint
 from unitkeeper_backend.application.ports import Clock, UnitOfWork
 from unitkeeper_backend.application.sprints.service import SprintService
 from unitkeeper_backend.domain.errors import BusinessRuleViolation, NotFoundError

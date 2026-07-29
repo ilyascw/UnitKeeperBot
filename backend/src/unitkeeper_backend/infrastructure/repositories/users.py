@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from db.models import User
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.models import User
 from unitkeeper_backend.application.models import TelegramIdentity, UserProfile
 from unitkeeper_backend.infrastructure.repositories.mappers import map_user
 

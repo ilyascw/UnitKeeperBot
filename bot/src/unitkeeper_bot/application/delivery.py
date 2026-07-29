@@ -52,7 +52,9 @@ class NotificationDeliveryWorker:
                     reply_markup=markup,
                     parse_mode="HTML",
                 )
-            except Exception as error:  # Telegram client exceptions are intentionally reported to backend.
+            except (
+                Exception
+            ) as error:  # Telegram client exceptions are intentionally reported to backend.
                 _logger.warning(
                     "Notification delivery failed",
                     extra={"event_id": event.id, "correlation_id": correlation_id},

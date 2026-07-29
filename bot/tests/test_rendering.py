@@ -1,5 +1,9 @@
+from unitkeeper_bot.recovery import (
+    miniapp_unavailable,
+    owner_handover_required,
+    unsupported_legacy_command,
+)
 from unitkeeper_bot.rendering import NotificationEvent, render_notification
-from unitkeeper_bot.recovery import miniapp_unavailable, owner_handover_required, unsupported_legacy_command
 
 
 def test_personal_sprint_report_is_rendered_from_backend_payload() -> None:
@@ -8,7 +12,12 @@ def test_personal_sprint_report_is_rendered_from_backend_payload() -> None:
             id="evt-1",
             event_type="sprint_personal_report",
             recipient_user_id=10,
-            payload={"period": "1-7 July", "planned_units": "12", "completed_units": "15", "balance_delta": "+3"},
+            payload={
+                "period": "1-7 July",
+                "planned_units": "12",
+                "completed_units": "15",
+                "balance_delta": "+3",
+            },
             deep_link_path="/progress",
         ),
         app_url="https://app.example/",

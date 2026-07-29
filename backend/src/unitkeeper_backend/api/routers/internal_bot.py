@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
 from uuid import UUID
 
 from dishka.integrations.fastapi import DishkaRoute, FromDishka
+from fastapi import APIRouter, Depends
 
+from unitkeeper_backend.api.dependencies.injection import INJECTED
 from unitkeeper_backend.api.dependencies.internal import require_internal_auth
 from unitkeeper_backend.api.schemas.bot import (
     BotApproveRequest,
@@ -14,10 +15,14 @@ from unitkeeper_backend.api.schemas.bot import (
     BotRejectRequest,
     EnsureUserRequest,
 )
-from unitkeeper_backend.api.schemas.common import CurrentContextResponse, TaskLogResponse, UserResponse
+from unitkeeper_backend.api.schemas.common import (
+    CurrentContextResponse,
+    TaskLogResponse,
+    UserResponse,
+)
 from unitkeeper_backend.application.bot.service import BotService
-from unitkeeper_backend.application.notifications.service import NotificationOutboxService
 from unitkeeper_backend.application.models import TelegramIdentity
+from unitkeeper_backend.application.notifications.service import NotificationOutboxService
 
 router = APIRouter(
     prefix="/internal/bot",
@@ -30,7 +35,7 @@ router = APIRouter(
 @router.post("/users/ensure", response_model=UserResponse)
 async def ensure_user(
     request: EnsureUserRequest,
-    bot_service: FromDishka[BotService] = None,
+    bot_service: FromDishka[BotService] = INJECTED,
 ) -> UserResponse:
     identity = TelegramIdentity(
         user_id=request.telegram_user_id,
@@ -47,7 +52,7 @@ async def ensure_user(
 @router.get("/users/{telegram_user_id}/context", response_model=CurrentContextResponse)
 async def get_user_context(
     telegram_user_id: int,
-    bot_service: FromDishka[BotService] = None,
+    bot_service: FromDishka[BotService] = INJECTED,
 ) -> CurrentContextResponse:
     context = await bot_service.get_context(telegram_user_id)
     return CurrentContextResponse.model_validate(context, from_attributes=True)
@@ -57,7 +62,7 @@ async def get_user_context(
 async def approve_task_log(
     log_id: int,
     request: BotApproveRequest,
-    bot_service: FromDishka[BotService] = None,
+    bot_service: FromDishka[BotService] = INJECTED,
 ) -> TaskLogResponse:
     log = await bot_service.approve(telegram_user_id=request.telegram_user_id, log_id=log_id)
     return TaskLogResponse.model_validate(log, from_attributes=True)
@@ -67,7 +72,7 @@ async def approve_task_log(
 async def reject_task_log(
     log_id: int,
     request: BotRejectRequest,
-    bot_service: FromDishka[BotService] = None,
+    bot_service: FromDishka[BotService] = INJECTED,
 ) -> TaskLogResponse:
     log = await bot_service.reject(
         telegram_user_id=request.telegram_user_id,
@@ -80,7 +85,7 @@ async def reject_task_log(
 @router.get("/notifications/outbox", response_model=BotNotificationOutboxResponse)
 async def list_notification_outbox(
     limit: int = 50,
-    outbox_service: FromDishka[NotificationOutboxService] = None,
+    outbox_service: FromDishka[NotificationOutboxService] = INJECTED,
 ) -> BotNotificationOutboxResponse:
     events = await outbox_service.list_ready(limit=min(max(limit, 1), 100))
     return BotNotificationOutboxResponse(
@@ -103,7 +108,7 @@ async def list_notification_outbox(
 @router.post("/notifications/{event_id}/ack", response_model=BotNotificationEventResponse)
 async def acknowledge_notification(
     event_id: UUID,
-    outbox_service: FromDishka[NotificationOutboxService] = None,
+    outbox_service: FromDishka[NotificationOutboxService] = INJECTED,
 ) -> BotNotificationEventResponse:
     event = await outbox_service.acknowledge(event_id=event_id)
     return BotNotificationEventResponse(
@@ -122,7 +127,7 @@ async def acknowledge_notification(
 async def fail_notification(
     event_id: UUID,
     request: BotNotificationFailRequest,
-    outbox_service: FromDishka[NotificationOutboxService] = None,
+    outbox_service: FromDishka[NotificationOutboxService] = INJECTED,
 ) -> BotNotificationEventResponse:
     event = await outbox_service.fail(
         event_id=event_id,

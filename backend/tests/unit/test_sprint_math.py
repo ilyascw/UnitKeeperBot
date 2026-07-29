@@ -4,8 +4,8 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
-
 from db.enums import Weekday
+
 from unitkeeper_backend.domain.services.sprint_math import current_sprint_window, distribute_equally
 
 
@@ -53,7 +53,9 @@ def test_current_sprint_window_is_due_on_its_last_day_for_any_multiple_of_seven(
 
 
 @pytest.mark.parametrize("cycles_elapsed", [0, 1, 2, 5])
-def test_current_sprint_window_stays_aligned_across_many_multi_week_cycles(cycles_elapsed: int) -> None:
+def test_current_sprint_window_stays_aligned_across_many_multi_week_cycles(
+    cycles_elapsed: int,
+) -> None:
     duration_days = 21
     anchor = date(2026, 1, 5)  # Monday
     expected_start = anchor + timedelta(days=cycles_elapsed * duration_days)

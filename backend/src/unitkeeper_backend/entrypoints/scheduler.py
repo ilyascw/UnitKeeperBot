@@ -21,16 +21,18 @@ from datetime import timezone
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from db.enums import NotificationEventType
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
-from db.enums import NotificationEventType
 from unitkeeper_backend.application.jobs.notifications import SprintReportPublisher
 from unitkeeper_backend.application.jobs.scheduler import SprintCloseJob
 from unitkeeper_backend.application.jobs.sprint_close import SprintCloseRunner, list_due_group_ids
 from unitkeeper_backend.application.sprints.service import SprintService
 from unitkeeper_backend.config import Settings, settings
 from unitkeeper_backend.infrastructure.db.session import build_engine, build_session_maker
-from unitkeeper_backend.infrastructure.repositories.notifications import SqlAlchemyNotificationRepository
+from unitkeeper_backend.infrastructure.repositories.notifications import (
+    SqlAlchemyNotificationRepository,
+)
 from unitkeeper_backend.infrastructure.time import UtcClock
 from unitkeeper_backend.infrastructure.uow.sqlalchemy import SqlAlchemyUnitOfWork
 
@@ -79,7 +81,9 @@ async def run_sprint_close_once(session_maker: async_sessionmaker[AsyncSession])
         uow = SqlAlchemyUnitOfWork(session)
         sprint_service = SprintService(uow=uow, clock=clock)
         closer = SprintCloseRunner(sprint_service=sprint_service, uow=uow)
-        reports = SprintReportPublisher(_OutboxEventPublisher(SqlAlchemyNotificationRepository(session)))
+        reports = SprintReportPublisher(
+            _OutboxEventPublisher(SqlAlchemyNotificationRepository(session))
+        )
         job = SprintCloseJob(closer=closer, reports=reports)
 
         due_group_ids = await list_due_group_ids(uow=uow, clock=clock)

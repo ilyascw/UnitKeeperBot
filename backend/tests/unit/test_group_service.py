@@ -3,13 +3,13 @@ from __future__ import annotations
 from decimal import Decimal
 
 import pytest
-
 from db.enums import Weekday
+
+from tests.support.fakes import FakeClock, InMemoryUnitOfWork, utc_datetime
 from unitkeeper_backend.application.context.service import CurrentContextService
 from unitkeeper_backend.application.groups.service import GroupService
 from unitkeeper_backend.application.models import UserProfile
 from unitkeeper_backend.domain.errors import AuthorizationError, ValidationError
-from tests.support.fakes import FakeClock, InMemoryUnitOfWork, utc_datetime
 
 
 def _build_service(uow: InMemoryUnitOfWork) -> GroupService:
@@ -24,7 +24,11 @@ def _build_service(uow: InMemoryUnitOfWork) -> GroupService:
 async def test_create_group_initializes_owner_context() -> None:
     uow = InMemoryUnitOfWork()
     uow.users.users[1] = UserProfile(1, "alice", "Alice", None, "en", False)
-    service = GroupService(uow=uow, context_service=CurrentContextService(uow=uow), clock=FakeClock(utc_datetime(2026, 3, 16)))
+    service = GroupService(
+        uow=uow,
+        context_service=CurrentContextService(uow=uow),
+        clock=FakeClock(utc_datetime(2026, 3, 16)),
+    )
 
     context = await service.create_group(
         user_id=1,
@@ -48,7 +52,11 @@ async def test_join_and_leave_rebalance_weights_and_handover_owner() -> None:
     uow.users.users[1] = UserProfile(1, "owner", "Owner", None, "en", False)
     uow.users.users[2] = UserProfile(2, "member", "Member", None, "en", False)
     uow.users.users[3] = UserProfile(3, "third", "Third", None, "en", False)
-    service = GroupService(uow=uow, context_service=CurrentContextService(uow=uow), clock=FakeClock(utc_datetime(2026, 3, 16)))
+    service = GroupService(
+        uow=uow,
+        context_service=CurrentContextService(uow=uow),
+        clock=FakeClock(utc_datetime(2026, 3, 16)),
+    )
 
     await service.create_group(
         user_id=1,

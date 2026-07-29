@@ -13,8 +13,9 @@ from __future__ import annotations
 from decimal import Decimal
 
 import pytest
-
 from db.enums import Weekday
+
+from tests.support.fakes import FakeClock, InMemoryUnitOfWork, utc_datetime
 from unitkeeper_backend.application.context.service import CurrentContextService
 from unitkeeper_backend.application.groups.service import GroupService
 from unitkeeper_backend.application.jobs.notifications import SprintReportPublisher
@@ -23,7 +24,6 @@ from unitkeeper_backend.application.jobs.sprint_close import SprintCloseRunner, 
 from unitkeeper_backend.application.models import UserProfile
 from unitkeeper_backend.application.sprints.service import SprintService
 from unitkeeper_backend.application.tasks.service import TaskService
-from tests.support.fakes import FakeClock, InMemoryUnitOfWork, utc_datetime
 
 
 class RecordingPublisher:
@@ -41,8 +41,12 @@ class RecordingPublisher:
 
 async def _seed_group(uow: InMemoryUnitOfWork, *, clock: FakeClock) -> None:
     for user_id in (1, 2):
-        uow.users.users[user_id] = UserProfile(user_id, f"user{user_id}", f"User {user_id}", None, "en", False)
-    group_service = GroupService(uow=uow, context_service=CurrentContextService(uow=uow), clock=clock)
+        uow.users.users[user_id] = UserProfile(
+            user_id, f"user{user_id}", f"User {user_id}", None, "en", False
+        )
+    group_service = GroupService(
+        uow=uow, context_service=CurrentContextService(uow=uow), clock=clock
+    )
     await group_service.create_group(
         user_id=1,
         name="team",
@@ -53,7 +57,9 @@ async def _seed_group(uow: InMemoryUnitOfWork, *, clock: FakeClock) -> None:
     )
     await group_service.join_group(user_id=2, group_name="team", join_secret="secret")
     task_service = TaskService(uow=uow, clock=clock)
-    task = await task_service.create_task(group_id=1, title="Laundry", frequency_per_sprint=2, unit_cost=Decimal("3.00"))
+    task = await task_service.create_task(
+        group_id=1, title="Laundry", frequency_per_sprint=2, unit_cost=Decimal("3.00")
+    )
     pending = await task_service.mark_done(group_id=1, performer_user_id=1, task_id=task.id)
     await task_service.approve(group_id=1, approver_user_id=2, log_id=pending.id)
 
@@ -72,7 +78,9 @@ async def test_rerunning_scheduler_pass_does_not_double_close_or_double_pay() ->
     due_group_ids = await list_due_group_ids(uow=uow, clock=clock)
     assert due_group_ids == [1]
 
-    first_closed_count = await job.run(due_group_ids=due_group_ids, correlation_id="scheduler-run-1")
+    first_closed_count = await job.run(
+        due_group_ids=due_group_ids, correlation_id="scheduler-run-1"
+    )
     assert first_closed_count == 1
     balances_after_first_run = dict(uow.groups.balances)
     commit_count_after_first_run = uow.commit_count
@@ -85,7 +93,9 @@ async def test_rerunning_scheduler_pass_does_not_double_close_or_double_pay() ->
     due_group_ids_again = await list_due_group_ids(uow=uow, clock=clock)
     assert due_group_ids_again == [1]
 
-    second_closed_count = await job.run(due_group_ids=due_group_ids_again, correlation_id="scheduler-run-2")
+    second_closed_count = await job.run(
+        due_group_ids=due_group_ids_again, correlation_id="scheduler-run-2"
+    )
 
     assert second_closed_count == 0
     assert uow.groups.balances == balances_after_first_run

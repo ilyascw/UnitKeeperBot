@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 
 from db.enums import Weekday
+
 from unitkeeper_backend.domain.errors import ValidationError
 
 HUNDRED = Decimal("100.00")

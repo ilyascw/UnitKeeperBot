@@ -5,6 +5,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 from db.enums import BalanceTransactionAccountType, BalanceTransactionType, SprintRunStatus
+
 from unitkeeper_backend.application.models import (
     CompletedTaskBreakdownItem,
     SprintMemberResultInfo,
@@ -13,7 +14,13 @@ from unitkeeper_backend.application.models import (
 )
 from unitkeeper_backend.application.ports import Clock, UnitOfWork
 from unitkeeper_backend.domain.errors import BusinessRuleViolation, NotFoundError
-from unitkeeper_backend.domain.services.sprint_math import ZERO, current_sprint_window, planned_units, progress_percent, quantize
+from unitkeeper_backend.domain.services.sprint_math import (
+    ZERO,
+    current_sprint_window,
+    planned_units,
+    progress_percent,
+    quantize,
+)
 
 
 class SprintService:
@@ -25,7 +32,9 @@ class SprintService:
         group = await self._uow.groups.get_by_id(group_id)
         if group is None:
             raise NotFoundError("Group was not found")
-        membership = await self._uow.groups.get_active_membership_in_group(group_id=group_id, user_id=user_id)
+        membership = await self._uow.groups.get_active_membership_in_group(
+            group_id=group_id, user_id=user_id
+        )
         if membership is None or membership.weight_percent is None:
             raise NotFoundError("Active membership was not found")
 
@@ -40,7 +49,9 @@ class SprintService:
             (task.unit_cost * task.frequency_per_sprint for task in tasks),
             start=ZERO,
         )
-        planned = planned_units(total_task_units=total_task_units, weight_percent=membership.weight_percent)
+        planned = planned_units(
+            total_task_units=total_task_units, weight_percent=membership.weight_percent
+        )
         logs = await self._uow.tasks.list_completed_logs_in_window(
             group_id=group_id,
             performer_user_id=user_id,
@@ -64,14 +75,18 @@ class SprintService:
                 completed_count=count,
                 completed_units=quantize(task_by_id[task_id].unit_cost * count),
             )
-            for task_id, count in sorted(counters.items(), key=lambda item: task_by_id[item[0]].title.lower())
+            for task_id, count in sorted(
+                counters.items(), key=lambda item: task_by_id[item[0]].title.lower()
+            )
         ]
         return TempResults(
             period_start=window.period_start,
             period_end=window.period_end,
             planned_units=quantize(planned),
             completed_units=quantize(completed),
-            progress_percent=progress_percent(completed_units=completed, planned_units_total=planned),
+            progress_percent=progress_percent(
+                completed_units=completed, planned_units_total=planned
+            ),
             breakdown=breakdown,
         )
 
@@ -112,17 +127,27 @@ class SprintService:
                 continue
             completed_by_user[log.performer_user_id] += task.unit_cost
 
-        total_task_units = sum((task.unit_cost * task.frequency_per_sprint for task in tasks), start=ZERO)
+        total_task_units = sum(
+            (task.unit_cost * task.frequency_per_sprint for task in tasks), start=ZERO
+        )
         total_completed = sum(completed_by_user.values(), start=ZERO)
         total_planned = ZERO
-        bonus_units = quantize(total_task_units * Decimal("0.25")) if total_completed >= total_task_units and total_task_units > ZERO else ZERO
+        bonus_units = (
+            quantize(total_task_units * Decimal("0.25"))
+            if total_completed >= total_task_units and total_task_units > ZERO
+            else ZERO
+        )
         member_results: list[SprintMemberResultInfo] = []
 
         for membership in sorted(memberships, key=lambda item: item.user_id):
             weight = membership.weight_percent or ZERO
-            planned_for_user = planned_units(total_task_units=total_task_units, weight_percent=weight)
+            planned_for_user = planned_units(
+                total_task_units=total_task_units, weight_percent=weight
+            )
             completed_for_user = quantize(completed_by_user.get(membership.user_id, ZERO))
-            efficiency = progress_percent(completed_units=completed_for_user, planned_units_total=planned_for_user)
+            efficiency = progress_percent(
+                completed_units=completed_for_user, planned_units_total=planned_for_user
+            )
             bonus_for_user = planned_units(total_task_units=bonus_units, weight_percent=weight)
             balance_delta = quantize(completed_for_user - planned_for_user + bonus_for_user)
             balance_after = await self._uow.groups.apply_balance_delta(

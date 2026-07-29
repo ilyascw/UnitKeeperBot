@@ -1,4 +1,4 @@
-.PHONY: up down migrate revision install lint typecheck test test-migrations check
+.PHONY: up down migrate revision install lint format-check typecheck test test-migrations check
 
 COMPOSE ?= docker compose -f docker-compose.dev.yml
 TEST_COMPOSE ?= docker compose -p unitkeeper-common-test -f docker-compose.test.yml
@@ -10,17 +10,20 @@ down:
 	$(COMPOSE) down
 
 migrate:
-	PYTHONPATH=src alembic upgrade head
+	uv run alembic upgrade head
 
 revision:
 	@if [ -z "$(m)" ]; then echo "Error: message is required. Use make revision m=\"message\""; exit 1; fi
 	PYTHONPATH=src alembic revision --autogenerate -m "$(m)"
 
 install:
-	uv sync --group dev
+	uv sync --frozen --group dev
 
 lint:
-	uv run ruff check src tests
+	uv run ruff check .
+
+format-check:
+	uv run ruff format --check .
 
 typecheck:
 	uv run mypy
@@ -36,4 +39,4 @@ test-migrations:
 	$(TEST_COMPOSE) up --wait --quiet-pull; \
 	TEST_DATABASE_URL=postgresql+asyncpg://unitkeeper:unitkeeper@127.0.0.1:5433/unitkeeper_common_test uv run pytest -m integration
 
-check: lint typecheck test
+check: lint format-check typecheck test

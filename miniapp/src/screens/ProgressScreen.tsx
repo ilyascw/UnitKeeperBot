@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate } from '@/routes/navigation';
 
 import { useCurrentGroup, useSprintResults } from '@/api/queries';
 import { ErrorState } from '@/components/ErrorState';

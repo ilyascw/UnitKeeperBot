@@ -4,6 +4,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 from db.enums import BalanceTransactionType
+
 from unitkeeper_backend.application.models import (
     BalanceInfo,
     BalanceTransactionPage,
@@ -30,7 +31,10 @@ class BalanceService:
         users = {item.id: item for item in await self._uow.users.list_by_ids(candidate_ids)}
         balances = await self._uow.groups.list_member_balances(group_id)
         return [
-            TransferCandidateInfo(user=users[candidate_id], current_balance=balances.get(candidate_id, Decimal("0.00")))
+            TransferCandidateInfo(
+                user=users[candidate_id],
+                current_balance=balances.get(candidate_id, Decimal("0.00")),
+            )
             for candidate_id in candidate_ids
             if candidate_id in users
         ]

@@ -98,8 +98,12 @@ class BackendClient:
                     event_type=str(item.get("event_type", "")),
                     recipient_user_id=int(item.get("recipient_user_id", 0)),
                     payload=event_payload,
-                    deep_link_path=item.get("deep_link_path") if isinstance(item.get("deep_link_path"), str) else None,
-                    correlation_id=item.get("correlation_id") if isinstance(item.get("correlation_id"), str) else None,
+                    deep_link_path=item.get("deep_link_path")
+                    if isinstance(item.get("deep_link_path"), str)
+                    else None,
+                    correlation_id=item.get("correlation_id")
+                    if isinstance(item.get("correlation_id"), str)
+                    else None,
                 )
             )
         return events
@@ -115,7 +119,11 @@ class BackendClient:
         )
 
     async def approve_task_log(self, *, log_id: int, telegram_user_id: int) -> None:
-        await self._request("POST", f"internal/bot/task-logs/{log_id}/approve", json={"telegram_user_id": telegram_user_id})
+        await self._request(
+            "POST",
+            f"internal/bot/task-logs/{log_id}/approve",
+            json={"telegram_user_id": telegram_user_id},
+        )
 
     async def reject_task_log(self, *, log_id: int, telegram_user_id: int, reason: str) -> None:
         await self._request(

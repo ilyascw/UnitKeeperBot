@@ -1,0 +1,16 @@
+.git
+.github
+**/.DS_Store
+**/.env
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/node_modules
+**/dist
+**/.coverage
+UnitKeeperBot
+data
+assets
+docs

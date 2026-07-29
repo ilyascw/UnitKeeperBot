@@ -58,16 +58,18 @@ async def test_client_lists_and_acknowledges_outbox_events() -> None:
         if request.url.path.endswith("/outbox"):
             return httpx.Response(
                 200,
-                json={"items": [
-                    {
-                        "id": "00000000-0000-0000-0000-000000000001",
-                        "event_type": "sprint_personal_report",
-                        "recipient_user_id": 12,
-                        "payload": {"completed_units": "4"},
-                        "deep_link_path": "/progress",
-                        "correlation_id": "worker-1",
-                    }
-                ]},
+                json={
+                    "items": [
+                        {
+                            "id": "00000000-0000-0000-0000-000000000001",
+                            "event_type": "sprint_personal_report",
+                            "recipient_user_id": 12,
+                            "payload": {"completed_units": "4"},
+                            "deep_link_path": "/progress",
+                            "correlation_id": "worker-1",
+                        }
+                    ]
+                },
             )
         return httpx.Response(200, json={})
 

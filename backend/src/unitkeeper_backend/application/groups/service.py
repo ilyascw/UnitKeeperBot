@@ -4,12 +4,14 @@ from datetime import datetime, time, timedelta, timezone
 from decimal import Decimal
 
 from db.enums import NotificationEventType, Weekday
+
 from unitkeeper_backend.application.context.service import CurrentContextService
 from unitkeeper_backend.application.models import (
     CurrentContext,
     GroupCardInfo,
     GroupInfo,
     MemberCardInfo,
+    MembershipInfo,
 )
 from unitkeeper_backend.application.ports import Clock, UnitOfWork
 from unitkeeper_backend.domain.errors import (
@@ -68,12 +70,16 @@ class GroupService:
             created_at=self._clock.today(),
         )
         await self._uow.groups.create_membership(group_id=group.id, user_id=user_id)
-        await self._uow.groups.replace_weights(group_id=group.id, weights_by_user_id={user_id: Decimal("100.00")})
+        await self._uow.groups.replace_weights(
+            group_id=group.id, weights_by_user_id={user_id: Decimal("100.00")}
+        )
         await self._uow.groups.ensure_balance(group_id=group.id, user_id=user_id)
         await self._uow.commit()
         return await self._context_service.resolve(user_id)
 
-    async def join_group(self, *, user_id: int, group_name: str, join_secret: str) -> CurrentContext:
+    async def join_group(
+        self, *, user_id: int, group_name: str, join_secret: str
+    ) -> CurrentContext:
         await self._ensure_user_has_no_group(user_id)
         self._validate_name(group_name)
         self._validate_join_secret(join_secret)
@@ -223,20 +229,25 @@ class GroupService:
         refreshed = await self._uow.groups.list_active_memberships(group.id)
         return await self._build_member_cards(group=group, memberships=refreshed)
 
-    async def _require_active_group(self, user_id: int):
+    async def _require_active_group(self, user_id: int) -> tuple[GroupInfo, list[MembershipInfo]]:
         context = await self._context_service.resolve(user_id)
         if context.group is None:
             raise NotFoundError("User has no active group")
         memberships = await self._uow.groups.list_active_memberships(context.group.id)
         return context.group, memberships
 
-    async def _require_owner_group(self, user_id: int):
+    async def _require_owner_group(self, user_id: int) -> tuple[GroupInfo, list[MembershipInfo]]:
         group, memberships = await self._require_active_group(user_id)
         if group.owner_user_id != user_id:
             raise AuthorizationError("Only the group owner can perform this action")
         return group, memberships
 
-    async def _build_member_cards(self, *, group: GroupInfo, memberships) -> list[MemberCardInfo]:
+    async def _build_member_cards(
+        self,
+        *,
+        group: GroupInfo,
+        memberships: list[MembershipInfo],
+    ) -> list[MemberCardInfo]:
         if not memberships:
             return []
         user_ids = [membership.user_id for membership in memberships]
@@ -262,7 +273,9 @@ class GroupService:
     async def _ensure_user_has_no_group(self, user_id: int) -> None:
         membership = await self._uow.groups.get_active_membership(user_id)
         if membership is not None:
-            raise BusinessRuleViolation("Leave the current group before creating or joining another one")
+            raise BusinessRuleViolation(
+                "Leave the current group before creating or joining another one"
+            )
 
     async def _rebalance_group(self, group_id: int) -> None:
         memberships = await self._uow.groups.list_active_memberships(group_id)

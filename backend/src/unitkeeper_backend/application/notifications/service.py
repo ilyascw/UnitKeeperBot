@@ -3,9 +3,10 @@ from __future__ import annotations
 from datetime import timedelta
 from uuid import UUID
 
+from db.enums import NotificationEventType
+
 from unitkeeper_backend.application.models import NotificationOutboxEventInfo
 from unitkeeper_backend.application.ports import Clock, UnitOfWork
-from db.enums import NotificationEventType
 
 
 class NotificationOutboxService:
@@ -41,7 +42,9 @@ class NotificationOutboxService:
         return event, created
 
     async def acknowledge(self, *, event_id: UUID) -> NotificationOutboxEventInfo:
-        event = await self._uow.notifications.acknowledge(event_id=event_id, acknowledged_at=self._clock.now())
+        event = await self._uow.notifications.acknowledge(
+            event_id=event_id, acknowledged_at=self._clock.now()
+        )
         await self._uow.commit()
         return event
 

@@ -1,14 +1,22 @@
+FROM ghcr.io/astral-sh/uv:0.10.6 AS uv
+
 FROM python:3.11-slim
+
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
 
 WORKDIR /app
 
-COPY pyproject.toml ./
-COPY README.md ./
+COPY --from=uv /uv /uvx /bin/
+COPY pyproject.toml uv.lock README.md ./
 COPY src/ ./src/
+COPY alembic.ini ./
+COPY alembic/ ./alembic/
 
-RUN pip install -e .
+RUN uv sync --frozen --no-dev --no-editable
 
-COPY alembic.ini .
-COPY alembic/ alembic/
-
+USER 65532:65532
 CMD ["alembic", "upgrade", "head"]

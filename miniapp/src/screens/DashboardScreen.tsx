@@ -1,4 +1,4 @@
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from '@/routes/navigation';
 
 import { useCurrentGroup, useSprintResults, useTasks } from '@/api/queries';
 import { useAuth } from '@/auth/useAuth';

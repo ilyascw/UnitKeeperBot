@@ -4,11 +4,12 @@ from collections.abc import Sequence
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from db.enums import TaskLogStatus
 from db.models import Task, TaskLog
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql.elements import ColumnElement
+
 from unitkeeper_backend.application.models import TaskInfo, TaskLogInfo
 from unitkeeper_backend.domain.errors import NotFoundError
 from unitkeeper_backend.infrastructure.repositories.mappers import map_task, map_task_log
@@ -119,11 +120,7 @@ class SqlAlchemyTaskRepository:
     async def lock_task(self, *, group_id: int, task_id: int) -> TaskInfo:
         # Row-level lock to serialise concurrent completions against the sprint
         # frequency cap. A no-op on backends without SELECT ... FOR UPDATE.
-        query = (
-            select(Task)
-            .where(Task.group_id == group_id, Task.id == task_id)
-            .with_for_update()
-        )
+        query = select(Task).where(Task.group_id == group_id, Task.id == task_id).with_for_update()
         result = await self._session.execute(query)
         model = result.scalar_one_or_none()
         if model is None:
@@ -136,7 +133,7 @@ class SqlAlchemyTaskRepository:
         group_id: int,
         task_id: int,
         performer_user_id: int,
-        status,
+        status: TaskLogStatus,
         created_at: datetime,
         approver_user_id: int | None = None,
         decided_at: datetime | None = None,
@@ -170,7 +167,7 @@ class SqlAlchemyTaskRepository:
         exclude_performer_user_id: int | None,
         task_id: int | None,
         statuses: Sequence[TaskLogStatus] | None,
-    ) -> list:
+    ) -> list[ColumnElement[bool]]:
         conditions = [TaskLog.group_id == group_id]
         if performer_user_id is not None:
             conditions.append(TaskLog.performer_user_id == performer_user_id)

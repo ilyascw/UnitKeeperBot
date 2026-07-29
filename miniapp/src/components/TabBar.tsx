@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from '@/routes/navigation';
 
 import { routes, type RoutePath } from '@/routes/paths';
 import { ChartIcon, CoinIcon, GroupIcon, HomeIcon, TasksIcon } from '@/ui/icons';

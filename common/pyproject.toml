@@ -38,6 +38,9 @@ line-length = 120
 [tool.ruff.lint]
 select = ["E", "F", "I"]
 
+[tool.ruff.lint.per-file-ignores]
+"alembic/versions/*.py" = ["E501"]
+
 [tool.mypy]
 python_version = "3.11"
 files = ["src"]
@@ -46,3 +49,6 @@ warn_unused_configs = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+db = ["py.typed"]

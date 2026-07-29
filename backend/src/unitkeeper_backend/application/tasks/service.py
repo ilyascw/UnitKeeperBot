@@ -5,9 +5,15 @@ from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 
 from db.enums import NotificationEventType, TaskLogStatus
+
 from unitkeeper_backend.application.models import TaskInfo, TaskLogInfo, TaskLogPage, TaskLogView
 from unitkeeper_backend.application.ports import Clock, UnitOfWork
-from unitkeeper_backend.domain.errors import AuthorizationError, BusinessRuleViolation, NotFoundError, ValidationError
+from unitkeeper_backend.domain.errors import (
+    AuthorizationError,
+    BusinessRuleViolation,
+    NotFoundError,
+    ValidationError,
+)
 from unitkeeper_backend.domain.services.sprint_math import SprintWindow, current_sprint_window
 
 
@@ -31,7 +37,9 @@ class TaskService:
         frequency_per_sprint: int,
         unit_cost: Decimal,
     ) -> TaskInfo:
-        self._validate_task_payload(title=title, frequency_per_sprint=frequency_per_sprint, unit_cost=unit_cost)
+        self._validate_task_payload(
+            title=title, frequency_per_sprint=frequency_per_sprint, unit_cost=unit_cost
+        )
         task = await self._uow.tasks.create_task(
             group_id=group_id,
             title=title.strip(),
@@ -137,8 +145,15 @@ class TaskService:
         )
         await self._uow.commit()
 
-    async def mark_done(self, *, group_id: int, performer_user_id: int, task_id: int) -> TaskLogInfo:
-        if await self._uow.groups.get_active_membership_in_group(group_id=group_id, user_id=performer_user_id) is None:
+    async def mark_done(
+        self, *, group_id: int, performer_user_id: int, task_id: int
+    ) -> TaskLogInfo:
+        if (
+            await self._uow.groups.get_active_membership_in_group(
+                group_id=group_id, user_id=performer_user_id
+            )
+            is None
+        ):
             raise AuthorizationError("Performer is not an active group member")
         task = await self.get_task(group_id=group_id, task_id=task_id)
         if not task.is_active:
@@ -184,7 +199,11 @@ class TaskService:
                     event_type=NotificationEventType.TASK_APPROVAL_REQUESTED,
                     recipient_user_id=membership.user_id,
                     group_id=group_id,
-                    payload={"task_log_id": log.id, "task_title": task.title, "performer_user_id": performer_user_id},
+                    payload={
+                        "task_log_id": log.id,
+                        "task_title": task.title,
+                        "performer_user_id": performer_user_id,
+                    },
                     deep_link_path=f"/tasks/history?task_log_id={log.id}",
                 )
         await self._uow.commit()
@@ -195,7 +214,12 @@ class TaskService:
         memberships = await self._uow.groups.list_active_memberships(group_id)
         if len(memberships) > 1 and approver_user_id == log.performer_user_id:
             raise AuthorizationError("Performer cannot self-approve in a multi-member group")
-        if await self._uow.groups.get_active_membership_in_group(group_id=group_id, user_id=approver_user_id) is None:
+        if (
+            await self._uow.groups.get_active_membership_in_group(
+                group_id=group_id, user_id=approver_user_id
+            )
+            is None
+        ):
             raise AuthorizationError("Approver is not an active group member")
 
         task = await self.get_task(group_id=group_id, task_id=log.task_id)
@@ -217,7 +241,11 @@ class TaskService:
             event_type=NotificationEventType.TASK_APPROVED,
             recipient_user_id=updated.performer_user_id,
             group_id=group_id,
-            payload={"task_log_id": updated.id, "task_title": task.title, "approver_user_id": approver_user_id},
+            payload={
+                "task_log_id": updated.id,
+                "task_title": task.title,
+                "approver_user_id": approver_user_id,
+            },
             deep_link_path=f"/tasks/history?task_log_id={updated.id}",
         )
         await self._uow.commit()
@@ -237,7 +265,12 @@ class TaskService:
         memberships = await self._uow.groups.list_active_memberships(group_id)
         if len(memberships) > 1 and approver_user_id == log.performer_user_id:
             raise AuthorizationError("Performer cannot self-reject in a multi-member group")
-        if await self._uow.groups.get_active_membership_in_group(group_id=group_id, user_id=approver_user_id) is None:
+        if (
+            await self._uow.groups.get_active_membership_in_group(
+                group_id=group_id, user_id=approver_user_id
+            )
+            is None
+        ):
             raise AuthorizationError("Rejector is not an active group member")
         updated = await self._uow.tasks.reject_task_log(
             log_id=log_id,
@@ -367,7 +400,9 @@ class TaskService:
             return []
         task_ids = {log.task_id for log in log_list}
         user_ids = {log.performer_user_id for log in log_list}
-        user_ids.update(log.approver_user_id for log in log_list if log.approver_user_id is not None)
+        user_ids.update(
+            log.approver_user_id for log in log_list if log.approver_user_id is not None
+        )
         group_id = log_list[0].group_id
         tasks = await self._uow.tasks.list_tasks_by_ids(group_id=group_id, task_ids=tuple(task_ids))
         users = await self._uow.users.list_by_ids(tuple(user_ids))
@@ -389,7 +424,9 @@ class TaskService:
                     task_is_active=task.is_active,
                     status=log.status,
                     performer=performer,
-                    approver=users_by_id.get(log.approver_user_id) if log.approver_user_id is not None else None,
+                    approver=users_by_id.get(log.approver_user_id)
+                    if log.approver_user_id is not None
+                    else None,
                     decided_at=log.decided_at,
                     rejection_reason=log.rejection_reason,
                     created_at=log.created_at,
@@ -398,10 +435,17 @@ class TaskService:
         return views
 
     async def _require_active_member(self, *, group_id: int, user_id: int) -> None:
-        if await self._uow.groups.get_active_membership_in_group(group_id=group_id, user_id=user_id) is None:
+        if (
+            await self._uow.groups.get_active_membership_in_group(
+                group_id=group_id, user_id=user_id
+            )
+            is None
+        ):
             raise AuthorizationError("User is not an active group member")
 
-    async def _attach_remaining_counts(self, *, group_id: int, tasks: list[TaskInfo]) -> list[TaskInfo]:
+    async def _attach_remaining_counts(
+        self, *, group_id: int, tasks: list[TaskInfo]
+    ) -> list[TaskInfo]:
         if not tasks:
             return tasks
         window = await self._current_window(group_id)
@@ -451,7 +495,9 @@ class TaskService:
         return log
 
     @staticmethod
-    def _validate_task_payload(*, title: str, frequency_per_sprint: int, unit_cost: Decimal) -> None:
+    def _validate_task_payload(
+        *, title: str, frequency_per_sprint: int, unit_cost: Decimal
+    ) -> None:
         if not title.strip():
             raise ValidationError("Task title is required")
         if frequency_per_sprint <= 0:
@@ -466,7 +512,9 @@ class TaskService:
             errors.append(("title", "Title is required"))
         elif len(item.title.strip()) > 255:
             errors.append(("title", "Title must be at most 255 characters"))
-        if not isinstance(item.frequency_per_sprint, int) or isinstance(item.frequency_per_sprint, bool):
+        if not isinstance(item.frequency_per_sprint, int) or isinstance(
+            item.frequency_per_sprint, bool
+        ):
             errors.append(("frequency_per_sprint", "Frequency must be an integer"))
         elif item.frequency_per_sprint <= 0:
             errors.append(("frequency_per_sprint", "Frequency must be a positive integer"))

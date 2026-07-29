@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from dataclasses import replace
 from datetime import date, datetime, timezone
 from decimal import Decimal
+from uuid import UUID, uuid4
 
 from db.enums import (
     BalanceTransactionAccountType,
@@ -14,19 +15,19 @@ from db.enums import (
     TaskLogStatus,
     Weekday,
 )
+
 from unitkeeper_backend.application.models import (
     BalanceTransactionInfo,
     GroupInfo,
     MembershipInfo,
+    NotificationOutboxEventInfo,
     SprintMemberResultInfo,
     SprintRunInfo,
     TaskInfo,
     TaskLogInfo,
     TelegramIdentity,
     UserProfile,
-    NotificationOutboxEventInfo,
 )
-from uuid import UUID, uuid4
 from unitkeeper_backend.domain.errors import BusinessRuleViolation, NotFoundError
 
 
@@ -93,9 +94,15 @@ class InMemoryGroupRepository:
                 return membership
         return None
 
-    async def get_active_membership_in_group(self, *, group_id: int, user_id: int) -> MembershipInfo | None:
+    async def get_active_membership_in_group(
+        self, *, group_id: int, user_id: int
+    ) -> MembershipInfo | None:
         for membership in self.memberships.values():
-            if membership.group_id == group_id and membership.user_id == user_id and membership.left_at is None:
+            if (
+                membership.group_id == group_id
+                and membership.user_id == user_id
+                and membership.left_at is None
+            ):
                 return membership
         return None
 
@@ -173,20 +180,24 @@ class InMemoryGroupRepository:
         updated = replace(
             group,
             join_secret=join_secret if join_secret is not None else group.join_secret,
-            sprint_start_weekday=sprint_start_weekday if sprint_start_weekday is not None else group.sprint_start_weekday,
-            sprint_duration_days=sprint_duration_days if sprint_duration_days is not None else group.sprint_duration_days,
+            sprint_start_weekday=sprint_start_weekday
+            if sprint_start_weekday is not None
+            else group.sprint_start_weekday,
+            sprint_duration_days=sprint_duration_days
+            if sprint_duration_days is not None
+            else group.sprint_duration_days,
         )
         self.groups[group_id] = updated
         return await self.get_by_id(group_id)  # type: ignore[return-value]
 
     async def list_member_balances(self, group_id: int) -> dict[int, Decimal]:
         return {
-            user_id: balance
-            for (gid, user_id), balance in self.balances.items()
-            if gid == group_id
+            user_id: balance for (gid, user_id), balance in self.balances.items() if gid == group_id
         }
 
-    async def replace_weights(self, *, group_id: int, weights_by_user_id: dict[int, Decimal]) -> None:
+    async def replace_weights(
+        self, *, group_id: int, weights_by_user_id: dict[int, Decimal]
+    ) -> None:
         for membership_id, membership in list(self.memberships.items()):
             if membership.group_id != group_id or membership.left_at is not None:
                 continue
@@ -196,7 +207,9 @@ class InMemoryGroupRepository:
     async def get_balance(self, *, group_id: int, user_id: int) -> Decimal:
         return self.balances[(group_id, user_id)]
 
-    async def apply_balance_delta(self, *, group_id: int, user_id: int, amount_delta: Decimal) -> Decimal:
+    async def apply_balance_delta(
+        self, *, group_id: int, user_id: int, amount_delta: Decimal
+    ) -> Decimal:
         current = self.balances.get((group_id, user_id), Decimal("0.00"))
         updated = current + amount_delta
         self.balances[(group_id, user_id)] = updated
@@ -257,7 +270,11 @@ class InMemoryTaskRepository:
 
     async def list_tasks_by_ids(self, *, group_id: int, task_ids: Sequence[int]) -> list[TaskInfo]:
         requested = set(task_ids)
-        return [task for task in self.tasks.values() if task.group_id == group_id and task.id in requested]
+        return [
+            task
+            for task in self.tasks.values()
+            if task.group_id == group_id and task.id in requested
+        ]
 
     async def get_task(self, *, group_id: int, task_id: int) -> TaskInfo | None:
         task = self.tasks.get(task_id)
@@ -278,7 +295,9 @@ class InMemoryTaskRepository:
         updated = replace(
             task,
             title=title if title is not None else task.title,
-            frequency_per_sprint=frequency_per_sprint if frequency_per_sprint is not None else task.frequency_per_sprint,
+            frequency_per_sprint=frequency_per_sprint
+            if frequency_per_sprint is not None
+            else task.frequency_per_sprint,
             unit_cost=unit_cost if unit_cost is not None else task.unit_cost,
         )
         self.tasks[task_id] = updated
@@ -412,7 +431,10 @@ class InMemoryTaskRepository:
                 for log in self.logs.values()
                 if log.group_id == group_id
                 and (performer_user_id is None or log.performer_user_id == performer_user_id)
-                and (exclude_performer_user_id is None or log.performer_user_id != exclude_performer_user_id)
+                and (
+                    exclude_performer_user_id is None
+                    or log.performer_user_id != exclude_performer_user_id
+                )
                 and (task_id is None or log.task_id == task_id)
                 and (not statuses or log.status in statuses)
             ),
@@ -629,7 +651,9 @@ class InMemoryNotificationRepository:
             and (event.next_attempt_at is None or event.next_attempt_at <= now)
         ][:limit]
 
-    async def acknowledge(self, *, event_id: UUID, acknowledged_at: datetime) -> NotificationOutboxEventInfo:
+    async def acknowledge(
+        self, *, event_id: UUID, acknowledged_at: datetime
+    ) -> NotificationOutboxEventInfo:
         event = self.events[event_id]
         updated = replace(
             event,
@@ -654,7 +678,9 @@ class InMemoryNotificationRepository:
         event = self.events[event_id]
         updated = replace(
             event,
-            status=NotificationOutboxStatus.DEAD_LETTER if terminal else NotificationOutboxStatus.PENDING,
+            status=NotificationOutboxStatus.DEAD_LETTER
+            if terminal
+            else NotificationOutboxStatus.PENDING,
             attempt_count=event.attempt_count + 1,
             next_attempt_at=None if terminal else retry_at,
             last_error=error_message,
