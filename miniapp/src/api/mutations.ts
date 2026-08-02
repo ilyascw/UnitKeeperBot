@@ -15,6 +15,7 @@ import {
   markTaskDone,
   approveTaskLog,
   rejectTaskLog,
+  cancelTaskLog,
   updateTask,
   updateCurrentGroupSettings,
   updateCurrentGroupWeights,
@@ -224,6 +225,16 @@ export function useRejectTaskLog(): UseMutationResult<
   const invalidate = useInvalidateTasks();
   return useMutation({
     mutationFn: ({ logId, reason }) => rejectTaskLog(token, logId, reason),
+    onSuccess: () => invalidate(),
+  });
+}
+
+/** Undo your own not-yet-reviewed mark, freeing the sprint slot it held. */
+export function useCancelTaskLog(): UseMutationResult<void, Error, number> {
+  const token = useAuthToken();
+  const invalidate = useInvalidateTasks();
+  return useMutation({
+    mutationFn: (logId) => cancelTaskLog(token, logId),
     onSuccess: () => invalidate(),
   });
 }

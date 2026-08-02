@@ -9,7 +9,7 @@ import { Loader } from '@/components/Loader';
 import { routes } from '@/routes/paths';
 import type { UserResponse } from '@/api/types';
 import { avatarColor } from '@/ui/avatar';
-import { balanceColor, formatBalance, memberName } from '@/ui/format';
+import { UNIT_SYMBOL, balanceColor, formatBalance, memberName } from '@/ui/format';
 import { Avatar, Button, Note, Screen, ScreenHeader, TextInput } from '@/ui/kit';
 
 type Step = 'recipient' | 'amount' | 'success';
@@ -106,12 +106,12 @@ export function TransferScreen() {
           </div>
           <div>
             <div style={{ font: "800 22px 'Manrope'", marginBottom: 8 }}>
-              Переведено {amountNum.toFixed(2)} ю
+              Переведено {amountNum.toFixed(2)} {UNIT_SYMBOL}
             </div>
             <div style={{ font: "400 15px/1.6 'Manrope'", color: 'var(--uk-ink-70)', maxWidth: 260 }}>
               {candidateName(recipient.user)} получил юниты. Ваш новый баланс —{' '}
               <span style={{ color: 'var(--uk-positive)', fontWeight: 600 }}>
-                {formatBalance(mutation.data?.sender_balance ?? String(remaining))} ю
+                {formatBalance(mutation.data?.sender_balance ?? String(remaining))} {UNIT_SYMBOL}
               </span>
               .
             </div>
@@ -165,9 +165,9 @@ export function TransferScreen() {
               }}
             />
             <div style={{ font: "400 12.5px 'Manrope'", color: 'var(--uk-ink-55)' }}>
-              Из {formatBalance(myBalance)} ю · остаток:{' '}
+              Из {formatBalance(myBalance)} {UNIT_SYMBOL} · остаток:{' '}
               <span style={{ color: balanceColor(String(remaining)) }}>
-                {formatBalance(String(remaining))} ю
+                {formatBalance(String(remaining))} {UNIT_SYMBOL}
               </span>
             </div>
           </div>
@@ -188,7 +188,7 @@ export function TransferScreen() {
             loading={mutation.isPending}
             onClick={handleConfirm}
           >
-            Перевести {Number.isFinite(amountNum) ? amountNum.toFixed(2) : '0.00'} ю
+            Перевести {Number.isFinite(amountNum) ? amountNum.toFixed(2) : '0.00'} {UNIT_SYMBOL}
           </Button>
         </div>
       </Screen>
@@ -214,7 +214,7 @@ export function TransferScreen() {
               Доступно к переводу
             </div>
             <div style={{ font: "800 32px/1 'Manrope'", marginTop: 6, color: 'var(--uk-positive)' }}>
-              {formatBalance(myBalance)} <span style={{ font: "600 15px 'Manrope'", color: 'var(--uk-ink-55)' }}>ю</span>
+              {formatBalance(myBalance)} <span style={{ font: "600 15px 'Manrope'", color: 'var(--uk-ink-55)' }}>{UNIT_SYMBOL}</span>
             </div>
           </div>
         )}
@@ -252,7 +252,7 @@ export function TransferScreen() {
               <div style={{ flex: 1 }}>
                 <div style={{ font: "600 15px 'Manrope'" }}>{candidateName(candidate.user)}</div>
                 <div style={{ font: "400 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>
-                  баланс {formatBalance(candidate.current_balance)} ю
+                  баланс {formatBalance(candidate.current_balance)} {UNIT_SYMBOL}
                 </div>
               </div>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--uk-ink-45)" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">

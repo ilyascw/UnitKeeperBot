@@ -6,7 +6,7 @@ import { useAuth } from '@/auth/useAuth';
 import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
 import { routes } from '@/routes/paths';
-import { balanceColor, formatBalance, memberName } from '@/ui/format';
+import { UNIT_SYMBOL, balanceColor, formatBalance, memberName } from '@/ui/format';
 import { Avatar, Button, Card, Note, Segmented } from '@/ui/kit';
 import { Screen } from '@/ui/kit';
 
@@ -79,7 +79,7 @@ export function BalanceScreen() {
         </div>
         <div style={{ font: "800 42px/1 'Manrope'", marginTop: 10, color: balanceColor(myBalance) }}>
           {formatBalance(myBalance)}{' '}
-          <span style={{ font: "600 18px 'Manrope'", color: 'var(--uk-ink-55)' }}>ю</span>
+          <span style={{ font: "600 18px 'Manrope'", color: 'var(--uk-ink-55)' }}>{UNIT_SYMBOL}</span>
         </div>
       </div>
 
@@ -102,7 +102,7 @@ export function BalanceScreen() {
           <Card style={{ padding: 16, borderRadius: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ font: "600 14px 'Manrope'", color: 'var(--uk-ink-70)' }}>Баланс группы</span>
             <span style={{ font: "800 20px 'Manrope'", color: balanceColor(group.group_balance) }}>
-              {formatBalance(group.group_balance)} ю
+              {formatBalance(group.group_balance)} {UNIT_SYMBOL}
             </span>
           </Card>
 

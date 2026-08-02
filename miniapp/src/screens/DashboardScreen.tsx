@@ -1,17 +1,20 @@
+import { useState } from 'react';
 import { Navigate, useNavigate } from '@/routes/navigation';
 
-import { useCurrentGroup, useSprintResults, useTasks } from '@/api/queries';
+import { useCurrentGroup, usePendingApprovals, useSprintResults, useTasks } from '@/api/queries';
+import type { TaskLogViewResponse } from '@/api/types';
 import { useAuth } from '@/auth/useAuth';
 import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
+import { LogRow, RejectSheet } from '@/components/TaskLogRow';
 import { routes } from '@/routes/paths';
 import {
+  UNIT_SYMBOL,
   balanceColor,
+  daysLeftLabel,
   daysUntil,
   formatBalance,
-  formatPeriod,
   formatUnits,
-  pluralDays,
   pluralMembers,
 } from '@/ui/format';
 import { Card, Screen } from '@/ui/kit';
@@ -21,7 +24,7 @@ import { ChevronIcon } from '@/ui/icons';
 function balanceCaption(value: string): string {
   const n = Number.parseFloat(value);
   if (!Number.isFinite(n) || n === 0) return 'Ровно по норме';
-  if (n > 0) return 'Вы сделали больше своей доли';
+  if (n > 0) return '';
   if (n > -5) return 'Небольшой долг — почти в норме';
   return 'Есть долг по нагрузке';
 }
@@ -37,6 +40,8 @@ export function DashboardScreen() {
   const { data: group, isPending, isError, error, refetch } = useCurrentGroup();
   const results = useSprintResults();
   const tasksQuery = useTasks();
+  const pendingApprovals = usePendingApprovals(true);
+  const [rejecting, setRejecting] = useState<TaskLogViewResponse | null>(null);
 
   if (isPending) return <Loader title="Загружаем…" label="Открываем вашу группу." />;
   if (isError) {
@@ -56,14 +61,14 @@ export function DashboardScreen() {
   const me = group.members.find((m) => m.user_id === myUserId);
   const myBalance = me?.balance ?? '0';
   const negative = Number.parseFloat(myBalance) < 0;
+  const caption = balanceCaption(myBalance);
 
   const remaining = daysUntil(group.sprint_ends_at);
   const progress = results.data ? Number.parseFloat(results.data.progress_percent) : null;
   const progressPct = progress === null ? 0 : Math.max(0, Math.min(100, Math.round(progress)));
 
-  const openTasks = (tasksQuery.data ?? [])
-    .filter((t) => t.remaining_in_sprint > 0)
-    .slice(0, 3);
+  const openTasks = (tasksQuery.data ?? []).filter((t) => t.remaining_in_sprint > 0);
+  const pendingItems = pendingApprovals.data?.items ?? [];
 
   return (
     <Screen>
@@ -76,98 +81,102 @@ export function DashboardScreen() {
         </div>
       </div>
 
-      {/* Balance hero */}
-      <button
-        type="button"
-        onClick={() => navigate(routes.balance)}
-        style={{
-          textAlign: 'left',
-          padding: 22,
-          borderRadius: 26,
-          cursor: 'pointer',
-          background: negative ? 'rgba(217,118,124,.14)' : 'var(--uk-accent-soft)',
-          border: `1px solid ${negative ? 'rgba(217,118,124,.28)' : 'rgba(124,166,217,.28)'}`,
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,.16),0 20px 40px -18px rgba(0,0,0,.5)',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div className="uk-eyebrow" style={{ letterSpacing: '0.08em' }}>
-            Ваш баланс
+      {/* Balance + sprint, side by side */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        {/* Balance hero */}
+        <button
+          type="button"
+          onClick={() => navigate(routes.balance)}
+          style={{
+            textAlign: 'left',
+            padding: 18,
+            borderRadius: 22,
+            cursor: 'pointer',
+            background: negative ? 'rgba(217,118,124,.14)' : 'var(--uk-accent-soft)',
+            border: `1px solid ${negative ? 'rgba(217,118,124,.28)' : 'rgba(124,166,217,.28)'}`,
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,.16),0 20px 40px -18px rgba(0,0,0,.5)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="uk-eyebrow" style={{ letterSpacing: '0.08em' }}>
+              Баланс
+            </div>
+            <ChevronIcon size={16} style={{ color: 'var(--uk-ink-45)' }} />
           </div>
-          <ChevronIcon size={18} style={{ color: 'var(--uk-ink-45)' }} />
-        </div>
-        <div
-          style={{
-            font: "800 42px/1 'Manrope'",
-            marginTop: 10,
-            color: balanceColor(myBalance),
-          }}
-        >
-          {formatBalance(myBalance)}{' '}
-          <span style={{ font: "600 18px 'Manrope'", color: 'var(--uk-ink-55)' }}>ю</span>
-        </div>
-        <div
-          style={{
-            font: "500 13px 'Manrope'",
-            marginTop: 6,
-            color: negative ? 'var(--uk-danger-soft)' : 'var(--uk-ink-70)',
-          }}
-        >
-          {balanceCaption(myBalance)}
-        </div>
-      </button>
-
-      {/* Sprint progress */}
-      <Card style={{ padding: 18, borderRadius: 22 }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: 12,
-          }}
-        >
-          <div style={{ font: "700 15px 'Manrope'" }}>Спринт</div>
-          <span
+          <div
             style={{
-              font: "600 12px 'Manrope'",
-              color: 'var(--uk-on-accent)',
-              padding: '5px 11px',
-              borderRadius: 999,
-              background: 'var(--uk-accent)',
+              font: "800 26px/1.2 'Manrope'",
+              marginTop: 10,
+              color: balanceColor(myBalance),
             }}
           >
-            осталось {pluralDays(remaining)}
-          </span>
-        </div>
-        <div style={{ font: "400 12.5px 'Manrope'", color: 'var(--uk-ink-70)', marginBottom: 10 }}>
-          {formatPeriod(group.sprint_period_start, group.sprint_period_end)}
-          {results.data
-            ? ` · выполнено ${formatUnits(results.data.completed_units)} из ${formatUnits(results.data.planned_units)} ю`
-            : ''}
-        </div>
-        <div className="uk-progress">
-          <div className="uk-progress__fill" style={{ width: `${progressPct}%` }} />
-        </div>
-        <div
+            {formatBalance(myBalance)}{' '}
+            <span style={{ font: "600 14px 'Manrope'", color: 'var(--uk-ink-55)' }}>{UNIT_SYMBOL}</span>
+          </div>
+          {caption ? (
+            <div
+              style={{
+                font: "500 12px 'Manrope'",
+                marginTop: 6,
+                color: negative ? 'var(--uk-danger-soft)' : 'var(--uk-ink-70)',
+              }}
+            >
+              {caption}
+            </div>
+          ) : null}
+        </button>
+
+        {/* Sprint progress */}
+        <button
+          type="button"
+          onClick={() => navigate(routes.progress)}
           style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            marginTop: 8,
-            font: "600 12px 'Manrope'",
-            color: 'var(--uk-ink-70)',
+            textAlign: 'left',
+            padding: 18,
+            borderRadius: 22,
+            cursor: 'pointer',
+            background: 'var(--uk-glass)',
+            border: '1px solid var(--uk-hairline)',
           }}
         >
-          <span>{progress === null ? 'Считаем…' : `${progressPct}% плана`}</span>
-          <button
-            type="button"
-            onClick={() => navigate(routes.progress)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--uk-blue)', font: "600 12px 'Manrope'" }}
-          >
-            Подробнее
-          </button>
-        </div>
-      </Card>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="uk-eyebrow" style={{ letterSpacing: '0.08em' }}>
+              Спринт
+            </div>
+            <ChevronIcon size={16} style={{ color: 'var(--uk-ink-45)' }} />
+          </div>
+          <div style={{ font: "800 26px/1.2 'Manrope'", marginTop: 10 }}>
+            {progress === null ? '…' : `${progressPct}%`}
+          </div>
+          <div className="uk-progress" style={{ marginTop: 10 }}>
+            <div className="uk-progress__fill" style={{ width: `${progressPct}%` }} />
+          </div>
+          <div style={{ font: "500 12px 'Manrope'", marginTop: 8, color: 'var(--uk-ink-70)' }}>
+            {daysLeftLabel(remaining)}
+          </div>
+        </button>
+      </div>
+
+      {/* Pending approvals */}
+      {pendingItems.length > 0 ? (
+        <>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+            <div className="uk-eyebrow">Ожидает подтверждения</div>
+            <button
+              type="button"
+              onClick={() => navigate(routes.taskLogs)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--uk-blue)', font: "600 12px 'Manrope'" }}
+            >
+              все отметки
+            </button>
+          </div>
+          <Card flush>
+            {pendingItems.map((log) => (
+              <LogRow key={log.id} log={log} actions onReject={() => setRejecting(log)} />
+            ))}
+          </Card>
+        </>
+      ) : null}
 
       {/* Today tasks */}
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
@@ -229,12 +238,13 @@ export function DashboardScreen() {
                 </div>
               </div>
               <span style={{ font: "700 14px 'Manrope'", color: 'var(--uk-teal)' }}>
-                {formatUnits(task.unit_cost)} ю
+                {formatUnits(task.unit_cost)} {UNIT_SYMBOL}
               </span>
             </button>
           ))}
         </div>
       )}
+      {rejecting ? <RejectSheet log={rejecting} onClose={() => setRejecting(null)} /> : null}
     </Screen>
   );
 }

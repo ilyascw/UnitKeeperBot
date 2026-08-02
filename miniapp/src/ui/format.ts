@@ -31,6 +31,9 @@ export const WEEKDAY_EVERY: Record<Weekday, string> = {
   sunday: 'по воскресеньям',
 };
 
+/** Currency-style glyph for "units" (юниты), shown after amounts. */
+export const UNIT_SYMBOL = 'Ⓤ';
+
 const DAY_FMT = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' });
 
 /** Formats an ISO date/datetime as `6 июля`, tolerating bad input. */
@@ -63,6 +66,12 @@ function plural(n: number, one: string, few: string, many: string): string {
 /** Russian pluralisation for "день / дня / дней". */
 export function pluralDays(n: number): string {
   return `${n} ${plural(n, 'день', 'дня', 'дней')}`;
+}
+
+/** "остался 1 день", "осталось 2 дня" — verb agrees in gender/number with "день". */
+export function daysLeftLabel(n: number): string {
+  const verb = n % 10 === 1 && n % 100 !== 11 ? 'остался' : 'осталось';
+  return `${verb} ${pluralDays(n)}`;
 }
 
 /** Russian pluralisation for "участник / участника / участников". */

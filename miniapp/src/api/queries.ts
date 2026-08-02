@@ -22,6 +22,13 @@ import type {
   TransferCandidatesResponse,
 } from './types';
 
+/**
+ * Long-polling interval for data other group members can change (tasks,
+ * approvals, balance). Pauses automatically while the tab is unfocused
+ * (react-query's default `refetchIntervalInBackground: false`).
+ */
+const LIVE_POLL_INTERVAL_MS = 10_000;
+
 export const queryKeys = {
   currentGroup: ['groups', 'current'] as const,
   tasks: ['tasks'] as const,
@@ -52,6 +59,7 @@ export function useCurrentGroup(): UseQueryResult<GroupCardResponse | null, Erro
         throw error;
       }
     },
+    refetchInterval: LIVE_POLL_INTERVAL_MS,
   });
 }
 
@@ -61,6 +69,7 @@ export function useTasks(): UseQueryResult<TaskResponse[], Error> {
   return useQuery({
     queryKey: queryKeys.tasks,
     queryFn: () => listTasks(token),
+    refetchInterval: LIVE_POLL_INTERVAL_MS,
   });
 }
 
@@ -70,6 +79,7 @@ export function useSprintResults(): UseQueryResult<SprintResultsResponse, Error>
   return useQuery({
     queryKey: queryKeys.sprintResults,
     queryFn: () => getSprintResults(token),
+    refetchInterval: LIVE_POLL_INTERVAL_MS,
   });
 }
 
@@ -79,12 +89,17 @@ export function usePendingApprovals(enabled: boolean): UseQueryResult<TaskLogPag
     queryKey: queryKeys.pendingApprovals,
     queryFn: () => listPendingApprovals(token),
     enabled,
+    refetchInterval: enabled ? LIVE_POLL_INTERVAL_MS : false,
   });
 }
 
 export function useMyTaskLogs(): UseQueryResult<TaskLogPageResponse, Error> {
   const token = useAuthToken();
-  return useQuery({ queryKey: queryKeys.myTaskLogs, queryFn: () => listMyTaskLogs(token) });
+  return useQuery({
+    queryKey: queryKeys.myTaskLogs,
+    queryFn: () => listMyTaskLogs(token),
+    refetchInterval: LIVE_POLL_INTERVAL_MS,
+  });
 }
 
 export function useGroupTaskLogs(enabled: boolean): UseQueryResult<TaskLogPageResponse, Error> {
@@ -93,6 +108,7 @@ export function useGroupTaskLogs(enabled: boolean): UseQueryResult<TaskLogPageRe
     queryKey: queryKeys.groupTaskLogs,
     queryFn: () => listGroupTaskLogs(token),
     enabled,
+    refetchInterval: enabled ? LIVE_POLL_INTERVAL_MS : false,
   });
 }
 

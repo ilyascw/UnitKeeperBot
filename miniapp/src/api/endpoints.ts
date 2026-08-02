@@ -149,6 +149,11 @@ export function rejectTaskLog(token: string, logId: number, reason: string): Pro
   });
 }
 
+/** Undo your own not-yet-reviewed mark. */
+export function cancelTaskLog(token: string, logId: number): Promise<void> {
+  return request<void>(`/task-logs/${logId}`, { method: 'DELETE', token });
+}
+
 /** Provisional results for the running sprint. */
 export function getSprintResults(token: string): Promise<SprintResultsResponse> {
   return request<SprintResultsResponse>('/sprints/current/results', { token });

@@ -10,6 +10,7 @@ import { routes } from '@/routes/paths';
 import {
   WEEKDAY_EVERY,
   balanceColor,
+  daysLeftLabel,
   daysUntil,
   formatBalance,
   formatPeriod,
@@ -144,8 +145,8 @@ export function GroupScreen() {
             </div>
             <div style={{ font: "400 12.5px 'Manrope'", color: 'var(--uk-ink-70)' }}>
               {pluralDays(group.sprint_duration_days)} · старт{' '}
-              {WEEKDAY_EVERY[group.sprint_start_weekday as Weekday] ?? group.sprint_start_weekday} ·
-              осталось {pluralDays(remaining)}
+              {WEEKDAY_EVERY[group.sprint_start_weekday as Weekday] ?? group.sprint_start_weekday} ·{' '}
+              {daysLeftLabel(remaining)}
             </div>
           </div>
         </div>

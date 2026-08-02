@@ -1,94 +1,19 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { Navigate, useNavigate } from '@/routes/navigation';
 
-import { useApproveTaskLog, useRejectTaskLog } from '@/api/mutations';
 import { useCurrentGroup, useGroupTaskLogs, usePendingApprovals } from '@/api/queries';
-import type { TaskLogStatus, TaskLogViewResponse, UserResponse } from '@/api/types';
+import { useAuth } from '@/auth/useAuth';
+import type { TaskLogViewResponse } from '@/api/types';
 import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
+import { LogRow, RejectSheet } from '@/components/TaskLogRow';
 import { routes } from '@/routes/paths';
-import { formatDay, formatUnits } from '@/ui/format';
-import { BottomSheet, Button, Card, Field, Note, Screen, ScreenHeader, TextInput } from '@/ui/kit';
-import { CheckIcon, ClockIcon } from '@/ui/icons';
-
-function displayName(user: UserResponse): string {
-  return user.first_name ?? user.username ?? `Участник ${user.id}`;
-}
-
-function statusLabel(status: TaskLogStatus): string {
-  if (status === 'completed') return 'Подтверждено';
-  if (status === 'rejected') return 'Отклонено';
-  return 'На подтверждении';
-}
-
-function statusColor(status: TaskLogStatus): string {
-  if (status === 'completed') return 'var(--uk-positive)';
-  if (status === 'rejected') return 'var(--uk-danger)';
-  return 'var(--uk-warn)';
-}
-
-function LogRow({ log, actions, onReject }: { log: TaskLogViewResponse; actions: boolean; onReject: () => void }) {
-  const approve = useApproveTaskLog();
-  const busy = approve.isPending;
-  return (
-    <div className="uk-row" style={{ alignItems: 'flex-start' }}>
-      <ClockIcon size={19} style={{ color: statusColor(log.status), marginTop: 2, flex: 'none' }} />
-      <div className="uk-row__grow" style={{ minWidth: 0 }}>
-        <div style={{ font: "700 15px 'Manrope'" }}>{log.task.title}</div>
-        <div style={{ font: "400 12px 'Manrope'", color: 'var(--uk-ink-55)', marginTop: 3 }}>
-          {displayName(log.performer)} · {formatDay(log.created_at)} · {formatUnits(log.task.unit_cost)} ю
-        </div>
-        <div style={{ font: "600 12px 'Manrope'", color: statusColor(log.status), marginTop: 5 }}>
-          {statusLabel(log.status)}
-        </div>
-        {log.rejection_reason ? (
-          <div style={{ font: "400 12px 'Manrope'", color: 'var(--uk-ink-55)', marginTop: 3 }}>
-            Причина: {log.rejection_reason}
-          </div>
-        ) : null}
-        {actions ? (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10 }}>
-            <Button variant="soft" loading={busy} onClick={() => approve.mutate(log.id)}>
-              <CheckIcon size={16} /> Подтвердить
-            </Button>
-            <Button variant="danger" disabled={busy} onClick={onReject}>
-              Отклонить
-            </Button>
-          </div>
-        ) : null}
-        {approve.isError ? <Note tone="error">{approve.error.message}</Note> : null}
-      </div>
-    </div>
-  );
-}
-
-function RejectSheet({ log, onClose }: { log: TaskLogViewResponse; onClose: () => void }) {
-  const reject = useRejectTaskLog();
-  const [reason, setReason] = useState('');
-  const submit = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault();
-    if (!reason.trim()) return;
-    reject.mutate({ logId: log.id, reason: reason.trim() }, { onSuccess: onClose });
-  };
-  return (
-    <BottomSheet onClose={() => (reject.isPending ? undefined : onClose())}>
-      <div style={{ font: "800 20px 'Manrope'", textAlign: 'center', marginBottom: 16 }}>Отклонить отметку</div>
-      <form className="uk-stack" onSubmit={submit}>
-        <Field label="Причина" hint="Её увидит исполнитель.">
-          <TextInput value={reason} onChange={(e) => setReason(e.currentTarget.value)} autoFocus disabled={reject.isPending} maxLength={500} />
-        </Field>
-        {reject.isError ? <Note tone="error">{reject.error.message}</Note> : null}
-        <Button variant="danger" type="submit" loading={reject.isPending} disabled={!reason.trim()}>
-          Отклонить
-        </Button>
-      </form>
-    </BottomSheet>
-  );
-}
+import { Card, Note, Screen, ScreenHeader } from '@/ui/kit';
 
 /** Approval queue and task-log history for every active group member. */
 export function TaskLogsScreen() {
   const navigate = useNavigate();
+  const { context } = useAuth();
   const group = useCurrentGroup();
   const pending = usePendingApprovals(true);
   const groupLogs = useGroupTaskLogs(true);
@@ -109,7 +34,14 @@ export function TaskLogsScreen() {
     );
   }
   const pendingItems = pending.data?.items ?? [];
-  const historyItems = groupLogs.data?.items ?? [];
+  const myUserId = context?.user?.id;
+  // Logs someone else is waiting on your decision for already live in the
+  // queue above — only hide those from history to avoid duplicating them.
+  // A log still pending on your own mark (nobody else has decided it yet)
+  // has no other home, so it stays visible here.
+  const historyItems = (groupLogs.data?.items ?? []).filter(
+    (log) => log.status !== 'pending' || log.performer.id === myUserId,
+  );
   return (
     <Screen>
       <ScreenHeader title="Отметки" onBack={() => navigate(routes.tasks)} />

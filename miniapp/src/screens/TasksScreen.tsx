@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Navigate, useNavigate } from '@/routes/navigation';
 
 import {
+  useCancelTaskLog,
   useCreateTask,
   useDecreaseTaskFrequency,
   useDeleteTask,
@@ -10,13 +11,13 @@ import {
   useMarkTaskDone,
   useUpdateTask,
 } from '@/api/mutations';
-import { useCurrentGroup, useTasks } from '@/api/queries';
+import { useCurrentGroup, useMyTaskLogs, useTasks } from '@/api/queries';
 import { ApiError } from '@/api/client';
 import { useAuth } from '@/auth/useAuth';
 import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
 import { routes } from '@/routes/paths';
-import { formatUnits } from '@/ui/format';
+import { UNIT_SYMBOL, formatUnits } from '@/ui/format';
 import { BottomSheet, Button, Card, Field, Note, Screen, Stepper, TextInput, Toast } from '@/ui/kit';
 import { CheckIcon, ClockIcon, PencilIcon, PlusIcon, TrashIcon } from '@/ui/icons';
 import type { BulkImportTaskItem, TaskImportRowError, TaskResponse } from '@/api/types';
@@ -255,6 +256,9 @@ function TaskDetailSheet({
   markBusy,
   onClose,
   onDone,
+  onCancel,
+  myPendingLogId,
+  cancelLoading,
   onEdit,
   onDelete,
 }: {
@@ -264,6 +268,11 @@ function TaskDetailSheet({
   markBusy: boolean;
   onClose: () => void;
   onDone: () => void;
+  /** Undo the caller's own not-yet-reviewed mark on this task. */
+  onCancel: () => void;
+  /** The id of the current user's own pending log for this task, if any. */
+  myPendingLogId: number | null;
+  cancelLoading: boolean;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -273,6 +282,7 @@ function TaskDetailSheet({
   const complete = taskIsComplete(task);
   const heldFull = taskIsHeldFull(task);
   const markable = taskIsMarkable(task);
+  const canCancel = heldFull && myPendingLogId !== null;
   const adjusting = increase.isPending || decrease.isPending;
 
   return (
@@ -281,7 +291,7 @@ function TaskDetailSheet({
         <div>
           <div style={{ font: "800 22px/1.2 'Manrope'" }}>{task.title}</div>
           <div style={{ font: "500 13px 'Manrope'", color: 'var(--uk-ink-55)', marginTop: 6 }}>
-            {formatUnits(task.unit_cost)} ю за выполнение
+            {formatUnits(task.unit_cost)} {UNIT_SYMBOL} за выполнение
           </div>
         </div>
 
@@ -301,17 +311,8 @@ function TaskDetailSheet({
             </div>
           </div>
           {task.pending_in_sprint > 0 ? (
-            <div
-              style={{
-                marginTop: 12,
-                font: "600 12.5px 'Manrope'",
-                color: 'var(--uk-warn)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              <ClockIcon size={14} /> {task.pending_in_sprint} на подтверждении
+            <div style={{ marginTop: 12, font: "600 12.5px 'Manrope'", color: 'var(--uk-warn)' }}>
+              {task.pending_in_sprint} на подтверждении
             </div>
           ) : null}
         </Card>
@@ -332,6 +333,11 @@ function TaskDetailSheet({
         >
           <CheckIcon size={18} /> Отметить выполнение
         </Button>
+        {canCancel ? (
+          <Button variant="soft" loading={cancelLoading} disabled={markBusy} onClick={onCancel}>
+            Отменить отметку
+          </Button>
+        ) : null}
 
         {isOwner ? (
           <>
@@ -380,15 +386,21 @@ function TaskRow({
   task,
   onDone,
   onOpen,
+  onCancel,
+  myPendingLogId,
   loading,
   busy,
 }: {
   task: TaskResponse;
   onDone: () => void;
   onOpen: () => void;
-  /** This task's own completion request is in flight. */
+  /** Undo the caller's own not-yet-reviewed mark on this task. */
+  onCancel: () => void;
+  /** The id of the current user's own pending log for this task, if any. */
+  myPendingLogId: number | null;
+  /** This task's own completion/cancel request is in flight. */
   loading: boolean;
-  /** Some completion request is in flight (blocks all rows). */
+  /** Some completion/cancel request is in flight (blocks all rows). */
   busy: boolean;
 }) {
   // Backend-derived states (source of truth, survives reload):
@@ -399,22 +411,25 @@ function TaskRow({
   const complete = taskIsComplete(task);
   const markable = taskIsMarkable(task);
   const heldFull = taskIsHeldFull(task);
-  const locked = !markable || busy;
+  const canCancel = heldFull && myPendingLogId !== null;
+  const locked = (!markable && !canCancel) || busy;
 
   return (
     <div className="uk-row">
       <button
         type="button"
-        onClick={onDone}
+        onClick={canCancel ? onCancel : onDone}
         disabled={locked}
         aria-label={
           paused
             ? 'Задача не запланирована на текущий спринт'
             : complete
             ? 'Задача выполнена'
-            : heldFull
-              ? 'Ждёт подтверждения'
-              : `Отметить «${task.title}»`
+            : canCancel
+              ? 'Отменить отметку'
+              : heldFull
+                ? 'Ждёт подтверждения'
+                : `Отметить «${task.title}»`
         }
         style={{
           width: 30,
@@ -469,16 +484,8 @@ function TaskRow({
             Не запланировано на этот спринт
           </div>
         ) : heldFull ? (
-          <div
-            style={{
-              font: "600 12px 'Manrope'",
-              color: 'var(--uk-warn)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 5,
-            }}
-          >
-            <ClockIcon size={13} /> Ждёт подтверждения
+          <div style={{ font: "600 12px 'Manrope'", color: 'var(--uk-warn)' }}>
+            Ждёт подтверждения{canCancel ? ' · нажмите, чтобы отменить' : ''}
           </div>
         ) : (
           <div style={{ font: "400 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>
@@ -498,7 +505,7 @@ function TaskRow({
           color: complete ? 'var(--uk-ink-45)' : 'var(--uk-teal)',
         }}
       >
-        {formatUnits(task.unit_cost)} ю
+        {formatUnits(task.unit_cost)} {UNIT_SYMBOL}
       </span>
     </div>
   );
@@ -513,9 +520,12 @@ export function TasksScreen() {
   const { context } = useAuth();
   const group = useCurrentGroup();
   const { data: tasks, isPending, isError, error, refetch } = useTasks();
+  const myTaskLogs = useMyTaskLogs();
   const markDone = useMarkTaskDone();
+  const cancelLog = useCancelTaskLog();
   const [adding, setAdding] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
@@ -553,6 +563,13 @@ export function TasksScreen() {
     });
   };
 
+  const handleCancel = (logId: number): void => {
+    cancelLog.mutate(logId, {
+      onSuccess: () => setToast({ tone: 'success', text: 'Отметка отменена' }),
+      onError: () => setToast({ tone: 'error', text: 'Не удалось отменить отметку' }),
+    });
+  };
+
   if (group.data === null) return <Navigate to={routes.onboarding} replace />;
   if (isPending) return <Loader title="Загружаем задачи…" />;
   if (isError) {
@@ -567,6 +584,18 @@ export function TasksScreen() {
   }
 
   const isOwner = context?.user?.id === group.data?.owner_user_id;
+  const todoTasks = tasks
+    .filter((task) => task.frequency_per_sprint > 0)
+    .sort((a, b) => b.frequency_per_sprint - a.frequency_per_sprint);
+  const backlogTasks = tasks
+    .filter((task) => task.frequency_per_sprint === 0)
+    .sort((a, b) => b.frequency_per_sprint - a.frequency_per_sprint);
+  const myPendingLogByTask = new Map<number, number>();
+  for (const log of myTaskLogs.data?.items ?? []) {
+    if (log.status === 'pending' && !myPendingLogByTask.has(log.task.id)) {
+      myPendingLogByTask.set(log.task.id, log.id);
+    }
+  }
   const selectedTask = selectedTaskId === null ? null : tasks.find((task) => task.id === selectedTaskId) ?? null;
   const editingTask = editingTaskId === null ? null : tasks.find((task) => task.id === editingTaskId) ?? null;
   const deletingTask = deletingTaskId === null ? null : tasks.find((task) => task.id === deletingTaskId) ?? null;
@@ -579,7 +608,7 @@ export function TasksScreen() {
           <button type="button" className="uk-back" aria-label="Открыть отметки" onClick={() => navigate(routes.taskLogs)}>
             <ClockIcon size={22} />
           </button>
-          {isOwner ? <button type="button" className="uk-back" aria-label="Добавить задачу" onClick={() => setAdding(true)}><PlusIcon size={24} /></button> : null}
+          {isOwner ? <button type="button" className="uk-back" aria-label="Добавить задачу" onClick={() => setAddMenuOpen(true)}><PlusIcon size={24} /></button> : null}
         </div>
       </div>
 
@@ -596,30 +625,87 @@ export function TasksScreen() {
               <Button variant="primary" onClick={() => setAdding(true)}>
                 <PlusIcon size={18} /> Добавить задачу
               </Button>
-              <Button variant="soft" onClick={() => setImporting(true)}>Импортировать таблицу</Button>
             </div>
           ) : null}
         </Card>
       ) : (
         <>
           <Note tone="info">Отметьте выполнение — оно уйдёт владельцу на подтверждение.</Note>
-          {isOwner ? <Button variant="soft" onClick={() => setImporting(true)}>Импортировать таблицу</Button> : null}
-          <Card flush>
-            {tasks.map((task) => (
-              <TaskRow
-                key={task.id}
-                task={task}
-                onDone={() => handleDone(task)}
-                onOpen={() => setSelectedTaskId(task.id)}
-                loading={markDone.isPending && markDone.variables === task.id}
-                busy={markDone.isPending}
-              />
-            ))}
-          </Card>
+          {todoTasks.length > 0 ? (
+            <>
+              <div className="uk-eyebrow">Нужно сделать</div>
+              <Card flush>
+                {todoTasks.map((task) => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    onDone={() => handleDone(task)}
+                    onOpen={() => setSelectedTaskId(task.id)}
+                    onCancel={() => {
+                      const logId = myPendingLogByTask.get(task.id);
+                      if (logId !== undefined) handleCancel(logId);
+                    }}
+                    myPendingLogId={myPendingLogByTask.get(task.id) ?? null}
+                    loading={
+                      (markDone.isPending && markDone.variables === task.id) ||
+                      (cancelLog.isPending && cancelLog.variables === myPendingLogByTask.get(task.id))
+                    }
+                    busy={markDone.isPending || cancelLog.isPending}
+                  />
+                ))}
+              </Card>
+            </>
+          ) : null}
+          {backlogTasks.length > 0 ? (
+            <>
+              <div className="uk-eyebrow">Бэклог</div>
+              <Card flush>
+                {backlogTasks.map((task) => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    onDone={() => handleDone(task)}
+                    onOpen={() => setSelectedTaskId(task.id)}
+                    onCancel={() => {
+                      const logId = myPendingLogByTask.get(task.id);
+                      if (logId !== undefined) handleCancel(logId);
+                    }}
+                    myPendingLogId={myPendingLogByTask.get(task.id) ?? null}
+                    loading={markDone.isPending && markDone.variables === task.id}
+                    busy={markDone.isPending || cancelLog.isPending}
+                  />
+                ))}
+              </Card>
+            </>
+          ) : null}
         </>
       )}
 
       {toast ? <Toast tone={toast.tone} message={toast.text} /> : null}
+      {addMenuOpen ? (
+        <BottomSheet onClose={() => setAddMenuOpen(false)}>
+          <div style={{ display: 'grid', gap: 8 }}>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setAddMenuOpen(false);
+                setAdding(true);
+              }}
+            >
+              <PlusIcon size={18} /> Добавить задачу
+            </Button>
+            <Button
+              variant="soft"
+              onClick={() => {
+                setAddMenuOpen(false);
+                setImporting(true);
+              }}
+            >
+              Импортировать таблицу
+            </Button>
+          </div>
+        </BottomSheet>
+      ) : null}
       {adding ? (
         <TaskFormSheet
           onClose={() => setAdding(false)}
@@ -635,6 +721,14 @@ export function TasksScreen() {
           markBusy={markDone.isPending}
           onClose={() => setSelectedTaskId(null)}
           onDone={() => handleDone(selectedTask)}
+          onCancel={() => {
+            const logId = myPendingLogByTask.get(selectedTask.id);
+            if (logId !== undefined) handleCancel(logId);
+          }}
+          myPendingLogId={myPendingLogByTask.get(selectedTask.id) ?? null}
+          cancelLoading={
+            cancelLog.isPending && cancelLog.variables === myPendingLogByTask.get(selectedTask.id)
+          }
           onEdit={() => {
             setEditingTaskId(selectedTask.id);
             setSelectedTaskId(null);

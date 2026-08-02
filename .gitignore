@@ -27,6 +27,8 @@ dist/
 
 postgres_data/
 
+scripts/dev/init-data.local.txt
+
 UnitKeeperBot/
 data/
 

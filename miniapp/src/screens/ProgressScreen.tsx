@@ -4,7 +4,7 @@ import { useCurrentGroup, useSprintResults } from '@/api/queries';
 import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
 import { routes } from '@/routes/paths';
-import { formatPeriod, formatUnits } from '@/ui/format';
+import { UNIT_SYMBOL, formatPeriod, formatUnits } from '@/ui/format';
 import { Card, Screen } from '@/ui/kit';
 
 /** Russian pluralisation for "раз / раза / раз". */
@@ -65,8 +65,8 @@ export function ProgressScreen() {
             color: 'var(--uk-ink-70)',
           }}
         >
-          <span>Выполнено {formatUnits(data.completed_units)} ю</span>
-          <span>План {formatUnits(data.planned_units)} ю</span>
+          <span>Выполнено {formatUnits(data.completed_units)} {UNIT_SYMBOL}</span>
+          <span>План {formatUnits(data.planned_units)} {UNIT_SYMBOL}</span>
         </div>
       </Card>
 
@@ -90,7 +90,7 @@ export function ProgressScreen() {
                 </div>
               </div>
               <span style={{ font: "700 15px 'Manrope'", color: 'var(--uk-teal)' }}>
-                {formatUnits(item.completed_units)} ю
+                {formatUnits(item.completed_units)} {UNIT_SYMBOL}
               </span>
             </div>
           ))}
