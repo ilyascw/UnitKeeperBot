@@ -140,7 +140,7 @@ def normalize_duration(value: str | None) -> int:
 
 def normalize_frequency(value: str | None) -> int:
     frequency = int(parse_decimal(value, default="1").to_integral_value())
-    return max(1, frequency)
+    return max(0, frequency)
 
 
 # Legacy CSVs carry no names, only Telegram ids - and only real Telegram auth

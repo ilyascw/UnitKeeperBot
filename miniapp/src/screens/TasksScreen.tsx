@@ -29,12 +29,16 @@ function taskIsMarkable(task: TaskResponse): boolean {
   return task.available_in_sprint > 0;
 }
 
+function taskIsPaused(task: TaskResponse): boolean {
+  return task.frequency_per_sprint === 0;
+}
+
 function taskIsComplete(task: TaskResponse): boolean {
-  return task.remaining_in_sprint <= 0;
+  return !taskIsPaused(task) && task.remaining_in_sprint <= 0;
 }
 
 function taskIsHeldFull(task: TaskResponse): boolean {
-  return !taskIsComplete(task) && !taskIsMarkable(task);
+  return !taskIsPaused(task) && !taskIsComplete(task) && !taskIsMarkable(task);
 }
 
 function parseImportRows(value: string): { items: BulkImportTaskItem[]; errors: TaskImportRowError[] } {
@@ -51,8 +55,8 @@ function parseImportRows(value: string): { items: BulkImportTaskItem[]; errors: 
     const parsedFrequency = Number(frequency);
     const parsedCost = Number(cost.replace(',', '.'));
     if (!title) errors.push({ index, field: 'title', message: 'Укажите название' });
-    if (!Number.isInteger(parsedFrequency) || parsedFrequency < 1) {
-      errors.push({ index, field: 'frequency_per_sprint', message: 'Частота должна быть целым числом больше нуля' });
+    if (!Number.isInteger(parsedFrequency) || parsedFrequency < 0) {
+      errors.push({ index, field: 'frequency_per_sprint', message: 'Частота должна быть целым неотрицательным числом' });
     }
     if (!Number.isFinite(parsedCost) || parsedCost < 0) {
       errors.push({ index, field: 'unit_cost', message: 'Стоимость должна быть числом не меньше нуля' });
@@ -180,7 +184,7 @@ function TaskFormSheet({
         <Stepper
           label="Сколько раз за спринт"
           value={frequency}
-          min={1}
+          min={0}
           max={99}
           suffix="раз"
           onChange={setFrequency}
@@ -265,6 +269,7 @@ function TaskDetailSheet({
 }) {
   const increase = useIncreaseTaskFrequency();
   const decrease = useDecreaseTaskFrequency();
+  const paused = taskIsPaused(task);
   const complete = taskIsComplete(task);
   const heldFull = taskIsHeldFull(task);
   const markable = taskIsMarkable(task);
@@ -311,7 +316,9 @@ function TaskDetailSheet({
           ) : null}
         </Card>
 
-        {heldFull ? (
+        {paused ? (
+          <Note tone="info">Задача не запланирована на текущий спринт.</Note>
+        ) : heldFull ? (
           <Note tone="warn">Все свободные слоты сейчас заняты отметками на подтверждении.</Note>
         ) : complete ? (
           <Note tone="info">Лимит на этот спринт уже выполнен.</Note>
@@ -336,7 +343,7 @@ function TaskDetailSheet({
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <Button
                   variant="soft"
-                  disabled={adjusting || task.frequency_per_sprint <= 1}
+                  disabled={adjusting || task.frequency_per_sprint <= 0}
                   loading={decrease.isPending}
                   onClick={() => decrease.mutate(task.id)}
                 >
@@ -388,6 +395,7 @@ function TaskRow({
   //  complete  — every slot confirmed (remaining 0)
   //  heldFull  — remaining slots all occupied by pending holds (available 0)
   //  markable  — at least one free slot (available > 0)
+  const paused = taskIsPaused(task);
   const complete = taskIsComplete(task);
   const markable = taskIsMarkable(task);
   const heldFull = taskIsHeldFull(task);
@@ -400,7 +408,9 @@ function TaskRow({
         onClick={onDone}
         disabled={locked}
         aria-label={
-          complete
+          paused
+            ? 'Задача не запланирована на текущий спринт'
+            : complete
             ? 'Задача выполнена'
             : heldFull
               ? 'Ждёт подтверждения'
@@ -454,7 +464,11 @@ function TaskRow({
         >
           {task.title}
         </div>
-        {heldFull ? (
+        {paused ? (
+          <div style={{ font: "600 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>
+            Не запланировано на этот спринт
+          </div>
+        ) : heldFull ? (
           <div
             style={{
               font: "600 12px 'Manrope'",

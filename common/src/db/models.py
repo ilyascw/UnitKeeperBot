@@ -242,8 +242,8 @@ class Task(TimestampMixin, Base):
     __tablename__ = "tasks"
     __table_args__ = (
         CheckConstraint(
-            "frequency_per_sprint > 0",
-            name="tasks_frequency_positive",
+            "frequency_per_sprint >= 0",
+            name="tasks_frequency_nonnegative",
         ),
         CheckConstraint("unit_cost >= 0", name="tasks_unit_cost_nonnegative"),
         Index(

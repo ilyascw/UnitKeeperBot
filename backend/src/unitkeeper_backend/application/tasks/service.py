@@ -70,8 +70,8 @@ class TaskService:
     ) -> TaskInfo:
         if title is not None and not title.strip():
             raise ValidationError("Task title is required")
-        if frequency_per_sprint is not None and frequency_per_sprint <= 0:
-            raise ValidationError("Task frequency must be a positive integer")
+        if frequency_per_sprint is not None and frequency_per_sprint < 0:
+            raise ValidationError("Task frequency must be a non-negative integer")
         if unit_cost is not None and unit_cost < Decimal("0"):
             raise ValidationError("Task unit cost must be non-negative")
         task = await self._uow.tasks.update_task(
@@ -126,8 +126,8 @@ class TaskService:
         if not task.is_active:
             raise BusinessRuleViolation("Soft-deleted tasks cannot change frequency")
         new_frequency = task.frequency_per_sprint + delta
-        if new_frequency <= 0:
-            raise ValidationError("Task frequency must remain a positive integer")
+        if new_frequency < 0:
+            raise ValidationError("Task frequency must remain a non-negative integer")
         return await self.update_task(
             group_id=group_id,
             task_id=task_id,
@@ -500,8 +500,8 @@ class TaskService:
     ) -> None:
         if not title.strip():
             raise ValidationError("Task title is required")
-        if frequency_per_sprint <= 0:
-            raise ValidationError("Task frequency must be a positive integer")
+        if frequency_per_sprint < 0:
+            raise ValidationError("Task frequency must be a non-negative integer")
         if unit_cost < Decimal("0"):
             raise ValidationError("Task unit cost must be non-negative")
 
@@ -516,8 +516,8 @@ class TaskService:
             item.frequency_per_sprint, bool
         ):
             errors.append(("frequency_per_sprint", "Frequency must be an integer"))
-        elif item.frequency_per_sprint <= 0:
-            errors.append(("frequency_per_sprint", "Frequency must be a positive integer"))
+        elif item.frequency_per_sprint < 0:
+            errors.append(("frequency_per_sprint", "Frequency must be a non-negative integer"))
         try:
             cost = Decimal(item.unit_cost)
         except (InvalidOperation, TypeError, ValueError):

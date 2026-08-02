@@ -182,13 +182,31 @@ async def test_import_tasks_creates_all_when_payload_is_valid() -> None:
         items=[
             TaskImportItem(title="Wash dishes ", frequency_per_sprint=2, unit_cost=Decimal("3.5")),
             TaskImportItem(title="Vacuum", frequency_per_sprint=1, unit_cost=Decimal("4")),
+            TaskImportItem(title="Windows", frequency_per_sprint=0, unit_cost=Decimal("5")),
         ],
     )
 
-    assert [t.title for t in created] == ["Wash dishes", "Vacuum"]
+    assert [t.title for t in created] == ["Wash dishes", "Vacuum", "Windows"]
+    assert created[-1].frequency_per_sprint == 0
     assert all(t.id > 0 for t in created)
-    assert len(uow.tasks.tasks) == 2
+    assert len(uow.tasks.tasks) == 3
     assert uow.commit_count >= 1
+
+
+@pytest.mark.asyncio
+async def test_zero_frequency_task_is_not_available_for_current_sprint() -> None:
+    _, task_service = await _bootstrap_solo_group()
+    task = await task_service.create_task(
+        group_id=1,
+        title="Paused task",
+        frequency_per_sprint=0,
+        unit_cost=Decimal("5"),
+    )
+
+    assert task.remaining_in_sprint == 0
+    assert task.available_in_sprint == 0
+    with pytest.raises(BusinessRuleViolation):
+        await task_service.mark_done(group_id=1, performer_user_id=1, task_id=task.id)
 
 
 @pytest.mark.asyncio
@@ -211,7 +229,7 @@ async def test_import_tasks_rejects_payload_with_invalid_rows_and_creates_nothin
     indexes = {entry["index"] for entry in errors}
     assert indexes == {1, 2}
     fields_at_index_1 = {entry["field"] for entry in errors if entry["index"] == 1}
-    assert fields_at_index_1 == {"title", "frequency_per_sprint", "unit_cost"}
+    assert fields_at_index_1 == {"title", "unit_cost"}
     assert uow.tasks.tasks == {}
 
 
@@ -233,8 +251,8 @@ async def test_adjust_frequency_increases_and_decreases_within_bounds() -> None:
     increased = await task_service.adjust_frequency(group_id=1, task_id=task.id, delta=3)
     assert increased.frequency_per_sprint == 5
 
-    decreased = await task_service.adjust_frequency(group_id=1, task_id=task.id, delta=-4)
-    assert decreased.frequency_per_sprint == 1
+    decreased = await task_service.adjust_frequency(group_id=1, task_id=task.id, delta=-5)
+    assert decreased.frequency_per_sprint == 0
 
     with pytest.raises(ValidationError):
         await task_service.adjust_frequency(group_id=1, task_id=task.id, delta=-1)

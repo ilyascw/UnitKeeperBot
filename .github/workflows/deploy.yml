@@ -12,6 +12,7 @@ on:
         default: all
         options:
           - all
+          - app
           - bot
 
 concurrency:
@@ -109,6 +110,28 @@ jobs:
               --profile telegram up -d --no-deps --force-recreate bot && \
             docker compose -f docker-compose.yml -f docker-compose.prod.yml \
               --profile telegram ps bot"
+
+      - name: Migrate and restart only the backend and Mini App
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_scope == 'app' }}
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          DEPLOY_PORT: ${{ vars.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+        run: |
+          ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd '${DEPLOY_PATH}' && \
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet && \
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+              build migrate backend miniapp && \
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+              run --rm --no-deps migrate && \
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+              up -d --no-deps --force-recreate backend && \
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+              up -d --no-deps --force-recreate miniapp && \
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+              ps backend miniapp"
 
       - name: Verify HTTPS
         env:
