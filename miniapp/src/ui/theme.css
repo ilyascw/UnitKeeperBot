@@ -15,15 +15,17 @@
   --uk-ink-45: rgba(233, 237, 246, 0.45);
   --uk-on-accent: #06121a;
 
-  /* Accents */
-  --uk-teal: #3dd7c4;
-  --uk-blue: #5ec7ff;
-  --uk-accent-grad: linear-gradient(150deg, #5ee0d0, #5aa0ff);
-  --uk-danger-grad: linear-gradient(150deg, #ff5670, #ff7a56);
-  --uk-danger: #ff8896;
-  --uk-danger-soft: #ffb3bd;
-  --uk-positive: #8ff0d8;
-  --uk-warn: #ffc861;
+  /* Accents — single muted flat hue, no gradients */
+  --uk-teal: #6fb69c;
+  --uk-blue: #7ca6d9;
+  --uk-accent: #7ca6d9;
+  --uk-accent-soft: rgba(124, 166, 217, 0.14);
+  --uk-primary-bg: #e9edf6;
+  --uk-primary-ink: #0a0e17;
+  --uk-danger: #d9767c;
+  --uk-danger-soft: #e3a7ac;
+  --uk-positive: #7fbfa8;
+  --uk-warn: #d9ad66;
 
   /* Glass surfaces */
   --uk-glass: rgba(255, 255, 255, 0.055);
@@ -72,7 +74,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background: #070b16;
   /* Actual mini-app screen backdrop (from the phone inner in the design). */
-  background-image: radial-gradient(130% 90% at 25% 0%, #16233f 0%, #0a1120 55%, #070b16 100%);
+  background-image: radial-gradient(120% 80% at 25% 0%, #131c30 0%, #0a1120 60%, #070b16 100%);
   background-attachment: fixed;
 }
 
@@ -279,9 +281,9 @@ button {
 }
 
 .uk-btn--primary {
-  color: var(--uk-on-accent);
-  background: var(--uk-accent-grad);
-  box-shadow: 0 14px 30px -8px rgba(90, 160, 255, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  color: var(--uk-primary-ink);
+  background: var(--uk-primary-bg);
+  box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .uk-btn--ghost {
@@ -295,8 +297,8 @@ button {
 
 .uk-btn--danger {
   color: #fff;
-  background: var(--uk-danger-grad);
-  box-shadow: 0 14px 30px -8px rgba(255, 86, 110, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  background: var(--uk-danger);
+  box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .uk-btn--soft {
@@ -329,8 +331,8 @@ button {
 }
 
 .uk-note--info {
-  background: rgba(94, 199, 255, 0.08);
-  border: 1px solid rgba(94, 199, 255, 0.18);
+  background: rgba(124, 166, 217, 0.08);
+  border: 1px solid rgba(124, 166, 217, 0.18);
   color: var(--uk-ink-70);
 }
 
@@ -367,7 +369,7 @@ button {
 .uk-segmented__item--active {
   font-weight: 700;
   color: var(--uk-on-accent);
-  background: var(--uk-accent-grad);
+  background: var(--uk-accent);
 }
 
 /* ---------- Stepper ---------- */
@@ -404,7 +406,7 @@ button {
 }
 
 .uk-stepper__btn--inc {
-  background: rgba(94, 199, 255, 0.18);
+  background: rgba(124, 166, 217, 0.18);
   color: var(--uk-blue);
 }
 
@@ -491,7 +493,7 @@ button {
 .uk-progress__fill {
   height: 100%;
   border-radius: var(--uk-r-pill);
-  background: linear-gradient(90deg, #5ee0d0, #5aa0ff);
+  background: var(--uk-accent);
 }
 
 /* ---------- Rows / list ---------- */
@@ -527,7 +529,7 @@ button {
   display: grid;
   place-items: center;
   font: 800 15px var(--uk-font);
-  color: var(--uk-on-accent);
+  color: #fff;
 }
 
 .uk-badge {
@@ -535,7 +537,7 @@ button {
   color: var(--uk-teal);
   padding: 2px 7px;
   border-radius: 6px;
-  background: rgba(61, 215, 196, 0.14);
+  background: rgba(111, 182, 156, 0.14);
 }
 
 .uk-icon-btn {
@@ -572,7 +574,7 @@ button {
   border-radius: 20px;
   display: grid;
   place-items: center;
-  background: var(--uk-accent-grad);
+  background: var(--uk-accent);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 

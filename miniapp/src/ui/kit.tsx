@@ -4,7 +4,7 @@ import type {
   ReactNode,
 } from 'react';
 
-import { avatarGradient } from './avatar';
+import { avatarColor } from './avatar';
 import { BackIcon, InfoIcon, AlertIcon, ErrorIcon, LogoIcon } from './icons';
 
 /* ---------------- Screen shell ---------------- */
@@ -248,7 +248,7 @@ export function BrandSpinner() {
 
 export function Avatar({ label, seed }: { label: string; seed: number }) {
   return (
-    <div className="uk-avatar" style={{ background: avatarGradient(seed) }}>
+    <div className="uk-avatar" style={{ background: avatarColor(seed) }}>
       {label.slice(0, 1).toUpperCase()}
     </div>
   );

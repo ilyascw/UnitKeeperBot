@@ -7,7 +7,7 @@ import { useAuth } from '@/auth/useAuth';
 import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
 import { routes } from '@/routes/paths';
-import { avatarGradient } from '@/ui/avatar';
+import { avatarColor } from '@/ui/avatar';
 import { Button, Note, Screen, ScreenHeader } from '@/ui/kit';
 
 function memberName(m: {
@@ -105,7 +105,7 @@ export function GroupWeightsScreen() {
       <ErrorState
         title="Не удалось загрузить"
         description={error.message}
-        accent="rgba(255,86,110"
+        accent="rgba(217,118,124"
         onRetry={() => void refetch()}
       />
     );
@@ -148,8 +148,8 @@ export function GroupWeightsScreen() {
           style={{
             padding: 16,
             borderRadius: 20,
-            background: sumIsValid ? 'rgba(61,215,196,.08)' : 'rgba(255,86,110,.08)',
-            border: `1px solid ${sumIsValid ? 'rgba(61,215,196,.24)' : 'rgba(255,86,110,.3)'}`,
+            background: sumIsValid ? 'rgba(111,182,156,.08)' : 'rgba(217,118,124,.08)',
+            border: `1px solid ${sumIsValid ? 'rgba(111,182,156,.24)' : 'rgba(217,118,124,.3)'}`,
           }}
         >
           <div
@@ -176,7 +176,7 @@ export function GroupWeightsScreen() {
                 key={m.user_id}
                 style={{
                   width: `${values[m.user_id] ?? 0}%`,
-                  background: avatarGradient(m.user_id),
+                  background: avatarColor(m.user_id),
                   transition: 'width 0.12s ease',
                 }}
               />
@@ -217,7 +217,7 @@ export function GroupWeightsScreen() {
                   <div className="uk-slider__track">
                     <div
                       className="uk-slider__fill"
-                      style={{ width: `${value}%`, background: avatarGradient(member.user_id) }}
+                      style={{ width: `${value}%`, background: avatarColor(member.user_id) }}
                     />
                   </div>
                   <div className="uk-slider__thumb" style={{ left: `${value}%` }} />
@@ -234,9 +234,9 @@ export function GroupWeightsScreen() {
             style={{
               flex: 1,
               padding: 12,
-              borderColor: 'rgba(94,199,255,.3)',
+              borderColor: 'rgba(124,166,217,.3)',
               color: 'var(--uk-blue)',
-              background: 'rgba(94,199,255,.08)',
+              background: 'rgba(124,166,217,.08)',
               fontSize: 13,
               borderRadius: 14,
             }}

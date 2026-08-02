@@ -44,7 +44,7 @@ export function DashboardScreen() {
       <ErrorState
         title="Не удалось загрузить"
         description={error.message}
-        accent="rgba(255,86,110"
+        accent="rgba(217,118,124"
         onRetry={() => void refetch()}
       />
     );
@@ -85,10 +85,8 @@ export function DashboardScreen() {
           padding: 22,
           borderRadius: 26,
           cursor: 'pointer',
-          background: negative
-            ? 'linear-gradient(150deg,rgba(255,120,140,.2),rgba(90,120,255,.14))'
-            : 'linear-gradient(150deg,rgba(61,215,196,.2),rgba(90,120,255,.14))',
-          border: `1px solid ${negative ? 'rgba(255,120,140,.28)' : 'rgba(61,215,196,.28)'}`,
+          background: negative ? 'rgba(217,118,124,.14)' : 'var(--uk-accent-soft)',
+          border: `1px solid ${negative ? 'rgba(217,118,124,.28)' : 'rgba(124,166,217,.28)'}`,
           boxShadow: 'inset 0 1px 0 rgba(255,255,255,.16),0 20px 40px -18px rgba(0,0,0,.5)',
         }}
       >
@@ -136,7 +134,7 @@ export function DashboardScreen() {
               color: 'var(--uk-on-accent)',
               padding: '5px 11px',
               borderRadius: 999,
-              background: 'var(--uk-accent-grad)',
+              background: 'var(--uk-accent)',
             }}
           >
             осталось {pluralDays(remaining)}
@@ -221,7 +219,7 @@ export function DashboardScreen() {
                   height: 26,
                   flex: 'none',
                   borderRadius: 9,
-                  border: '2px solid rgba(94,199,255,.5)',
+                  border: '2px solid rgba(124,166,217,.5)',
                 }}
               />
               <div style={{ flex: 1, minWidth: 0 }}>

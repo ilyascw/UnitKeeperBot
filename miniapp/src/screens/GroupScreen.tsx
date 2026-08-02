@@ -50,7 +50,7 @@ export function GroupScreen() {
       <ErrorState
         title="Не удалось загрузить"
         description={error.message}
-        accent="rgba(255,86,110"
+        accent="rgba(217,118,124"
         onRetry={() => void refetch()}
       />
     );
@@ -133,7 +133,7 @@ export function GroupScreen() {
               borderRadius: 13,
               display: 'grid',
               placeItems: 'center',
-              background: 'rgba(94,199,255,.14)',
+              background: 'rgba(124,166,217,.14)',
             }}
           >
             <CalendarIcon size={22} style={{ color: 'var(--uk-blue)' }} />
@@ -255,8 +255,8 @@ export function GroupScreen() {
               margin: '0 auto 18px',
               display: 'grid',
               placeItems: 'center',
-              background: 'rgba(255,86,110,.14)',
-              border: '1px solid rgba(255,86,110,.35)',
+              background: 'rgba(217,118,124,.14)',
+              border: '1px solid rgba(217,118,124,.35)',
             }}
           >
             <LeaveIcon size={30} style={{ color: 'var(--uk-danger)' }} />

@@ -22,7 +22,7 @@ export function HomeScreen() {
       <ErrorState
         title="Не удалось загрузить"
         description={error.message}
-        accent="rgba(255,86,110"
+        accent="rgba(217,118,124"
         onRetry={() => void refetch()}
       />
     );

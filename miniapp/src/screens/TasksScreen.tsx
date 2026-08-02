@@ -424,12 +424,12 @@ function TaskRow({
           display: 'grid',
           placeItems: 'center',
           cursor: locked ? 'default' : 'pointer',
-          background: complete ? 'var(--uk-accent-grad)' : 'transparent',
+          background: complete ? 'var(--uk-accent)' : 'transparent',
           border: complete
             ? 'none'
             : heldFull
-              ? '2px solid rgba(255,200,97,.6)'
-              : '2px solid rgba(94,199,255,.5)',
+              ? '2px solid rgba(217,173,102,.6)'
+              : '2px solid rgba(124,166,217,.5)',
           color: complete ? 'var(--uk-on-accent)' : 'var(--uk-warn)',
         }}
       >
@@ -560,7 +560,7 @@ export function TasksScreen() {
       <ErrorState
         title="Не удалось загрузить"
         description={error.message}
-        accent="rgba(255,86,110"
+        accent="rgba(217,118,124"
         onRetry={() => void refetch()}
       />
     );

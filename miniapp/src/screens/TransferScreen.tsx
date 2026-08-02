@@ -8,7 +8,7 @@ import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
 import { routes } from '@/routes/paths';
 import type { UserResponse } from '@/api/types';
-import { avatarGradient } from '@/ui/avatar';
+import { avatarColor } from '@/ui/avatar';
 import { balanceColor, formatBalance, memberName } from '@/ui/format';
 import { Avatar, Button, Note, Screen, ScreenHeader, TextInput } from '@/ui/kit';
 
@@ -52,7 +52,7 @@ export function TransferScreen() {
       <ErrorState
         title="Не удалось загрузить"
         description={groupError.message}
-        accent="rgba(255,86,110"
+        accent="rgba(217,118,124"
         onRetry={() => void refetchGroup()}
       />
     );
@@ -62,7 +62,7 @@ export function TransferScreen() {
       <ErrorState
         title="Не удалось загрузить"
         description={candidatesError.message}
-        accent="rgba(255,86,110"
+        accent="rgba(217,118,124"
         onRetry={() => void refetchCandidates()}
       />
     );
@@ -96,8 +96,8 @@ export function TransferScreen() {
               borderRadius: 26,
               display: 'grid',
               placeItems: 'center',
-              background: 'linear-gradient(150deg,rgba(61,215,196,.95),rgba(90,200,255,.9))',
-              boxShadow: '0 18px 44px -10px rgba(61,215,196,.6),inset 0 1px 0 rgba(255,255,255,.5)',
+              background: 'var(--uk-positive)',
+              boxShadow: '0 10px 24px -8px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.5)',
             }}
           >
             <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#06121a" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
@@ -245,7 +245,7 @@ export function TransferScreen() {
             >
               <div
                 className="uk-avatar"
-                style={{ background: avatarGradient(candidate.user.id) }}
+                style={{ background: avatarColor(candidate.user.id) }}
               >
                 {candidateName(candidate.user).slice(0, 1).toUpperCase()}
               </div>

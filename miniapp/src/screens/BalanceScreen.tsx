@@ -41,7 +41,7 @@ export function BalanceScreen() {
       <ErrorState
         title="Не удалось загрузить"
         description={error.message}
-        accent="rgba(255,86,110"
+        accent="rgba(217,118,124"
         onRetry={() => void refetch()}
       />
     );
@@ -69,10 +69,8 @@ export function BalanceScreen() {
         style={{
           padding: 22,
           borderRadius: 26,
-          background: negative
-            ? 'linear-gradient(150deg,rgba(255,120,140,.2),rgba(90,120,255,.14))'
-            : 'linear-gradient(150deg,rgba(61,215,196,.2),rgba(90,120,255,.14))',
-          border: `1px solid ${negative ? 'rgba(255,120,140,.28)' : 'rgba(61,215,196,.28)'}`,
+          background: negative ? 'rgba(217,118,124,.14)' : 'var(--uk-accent-soft)',
+          border: `1px solid ${negative ? 'rgba(217,118,124,.28)' : 'rgba(124,166,217,.28)'}`,
           boxShadow: 'inset 0 1px 0 rgba(255,255,255,.16),0 20px 40px -18px rgba(0,0,0,.5)',
         }}
       >

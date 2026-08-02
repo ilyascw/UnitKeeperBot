@@ -19,7 +19,7 @@ export function ErrorState({
   onRetry,
   retryLabel = 'Повторить',
   icon,
-  accent = 'rgba(94,199,255',
+  accent = 'rgba(124,166,217',
 }: ErrorStateProps) {
   return (
     <Screen centered>

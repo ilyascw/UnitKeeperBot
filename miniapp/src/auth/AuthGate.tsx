@@ -35,7 +35,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
       <ErrorState
         title="Не удалось войти"
         description={error?.message ?? 'Попробуйте ещё раз.'}
-        accent="rgba(255,86,110"
+        accent="rgba(217,118,124"
         onRetry={reauthenticate}
       />
     );

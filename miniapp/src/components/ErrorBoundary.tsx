@@ -35,7 +35,7 @@ export class ErrorBoundary extends Component<Props, State> {
         <ErrorState
           title="Что-то пошло не так"
           description={this.state.error.message}
-          accent="rgba(255,86,110"
+          accent="rgba(217,118,124"
           onRetry={this.handleReset}
           retryLabel="Перезагрузить"
         />

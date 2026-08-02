@@ -10,10 +10,7 @@ export function NotFoundScreen() {
       <div
         style={{
           font: "800 96px/1 'Manrope'",
-          background: 'linear-gradient(150deg,#5ee0d0,#7a86ff)',
-          WebkitBackgroundClip: 'text',
-          backgroundClip: 'text',
-          color: 'transparent',
+          color: 'var(--uk-accent)',
         }}
       >
         404

@@ -56,8 +56,8 @@ export function OnboardingScreen() {
             borderRadius: 22,
             textAlign: 'left',
             cursor: 'pointer',
-            background: 'linear-gradient(150deg,rgba(61,215,196,.22),rgba(90,120,255,.16))',
-            border: '1px solid rgba(94,199,255,.28)',
+            background: 'var(--uk-accent-soft)',
+            border: '1px solid rgba(124,166,217,.28)',
             boxShadow: 'inset 0 1px 0 rgba(255,255,255,.16)',
           }}
         >
