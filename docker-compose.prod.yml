@@ -1,0 +1,55 @@
+services:
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    restart: unless-stopped
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--certificatesresolvers.outereventresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.outereventresolver.acme.email=${TRAEFIK_ACME_EMAIL}"
+      - "--certificatesresolvers.outereventresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "127.0.0.1:8081:8080"
+    volumes:
+      - "./letsencrypt:/letsencrypt"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+      - web_network
+
+  miniapp:
+    networks:
+      - default
+      - web_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web_network"
+      - "traefik.http.routers.unitkeeper-miniapp.rule=Host(`${UNITKEEPER_MINIAPP_DOMAIN}`)"
+      - "traefik.http.routers.unitkeeper-miniapp.entrypoints=websecure"
+      - "traefik.http.routers.unitkeeper-miniapp.tls=true"
+      - "traefik.http.routers.unitkeeper-miniapp.tls.certresolver=outereventresolver"
+      - "traefik.http.services.unitkeeper-miniapp.loadbalancer.server.port=8080"
+
+  backend:
+    networks:
+      - default
+      - web_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web_network"
+      - "traefik.http.routers.unitkeeper-api.rule=Host(`${UNITKEEPER_API_DOMAIN}`)"
+      - "traefik.http.routers.unitkeeper-api.entrypoints=websecure"
+      - "traefik.http.routers.unitkeeper-api.tls=true"
+      - "traefik.http.routers.unitkeeper-api.tls.certresolver=outereventresolver"
+      - "traefik.http.services.unitkeeper-api.loadbalancer.server.port=8000"
+
+networks:
+  web_network:
+    external: true

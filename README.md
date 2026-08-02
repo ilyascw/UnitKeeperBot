@@ -192,6 +192,28 @@ docker compose --profile telegram up --build
 Для реального Mini App публичный URL должен использовать HTTPS и быть указан в
 BotFather и в `UNITKEEPER_MINIAPP_URL`.
 
+### Production HTTPS
+
+Production overlay запускает Traefik, перенаправляет HTTP на HTTPS и автоматически
+получает и обновляет сертификат через Let's Encrypt:
+
+```bash
+docker network create web_network
+mkdir -p letsencrypt
+touch letsencrypt/acme.json
+chmod 600 letsencrypt/acme.json
+
+docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+  --profile telegram up -d --build
+```
+
+Перед запуском задайте в `.env` публичные DNS-имена без схемы в
+`UNITKEEPER_MINIAPP_DOMAIN` и `UNITKEEPER_API_DOMAIN`, адрес Mini App со схемой
+`https://` в `UNITKEEPER_MINIAPP_URL` и email для Let's Encrypt в
+`TRAEFIK_ACME_EMAIL`.
+Порты backend и miniapp привязаны только к loopback; наружу публикуются 80 и 443.
+Dashboard Traefik доступен только с VM на `127.0.0.1:8081`.
+
 ### Конфигурация
 
 | Переменная | Назначение |

@@ -1,0 +1,83 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to production
+    if: ${{ vars.DEPLOY_HOST != '' }}
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Check out the deployed commit
+        uses: actions/checkout@v7
+
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+
+      - name: Upload application
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          DEPLOY_PORT: ${{ vars.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+        run: |
+          rsync --archive --compress --delete \
+            --exclude '.git/' \
+            --exclude '.env' \
+            --exclude '**/.env' \
+            --exclude '**/.env.*' \
+            --exclude 'letsencrypt/' \
+            --rsh "ssh -p ${DEPLOY_PORT}" \
+            ./ "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/"
+
+      - name: Configure and start containers
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          DEPLOY_PORT: ${{ vars.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+          PRODUCTION_ENV: ${{ secrets.PRODUCTION_ENV }}
+        run: |
+          test -n "$PRODUCTION_ENV"
+          printf '%s\n' "$PRODUCTION_ENV" | ssh -p "$DEPLOY_PORT" \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "umask 077; cat > '${DEPLOY_PATH}/.env'"
+          ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd '${DEPLOY_PATH}' && \
+            mkdir -p letsencrypt && \
+            touch letsencrypt/acme.json && \
+            chmod 600 letsencrypt/acme.json && \
+            (docker network inspect web_network >/dev/null 2>&1 || \
+              docker network create web_network) && \
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet && \
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+              --profile telegram up -d --build --remove-orphans && \
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+              --profile telegram ps"
+
+      - name: Verify HTTPS
+        env:
+          UNITKEEPER_API_DOMAIN: ${{ vars.UNITKEEPER_API_DOMAIN }}
+        run: |
+          curl --fail --show-error --silent \
+            --retry 12 --retry-all-errors --retry-delay 5 \
+            "https://${UNITKEEPER_API_DOMAIN}/api/v1/health"
