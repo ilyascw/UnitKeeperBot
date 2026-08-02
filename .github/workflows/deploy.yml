@@ -4,6 +4,15 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      deploy_scope:
+        description: Components to deploy
+        type: choice
+        required: true
+        default: all
+        options:
+          - all
+          - bot
 
 concurrency:
   group: production
@@ -49,7 +58,7 @@ jobs:
             --rsh "ssh -p ${DEPLOY_PORT}" \
             ./ "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/"
 
-      - name: Configure and start containers
+      - name: Write production environment
         env:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
@@ -61,6 +70,15 @@ jobs:
           printf '%s\n' "$PRODUCTION_ENV" | ssh -p "$DEPLOY_PORT" \
             "$DEPLOY_USER@$DEPLOY_HOST" \
             "umask 077; cat > '${DEPLOY_PATH}/.env'"
+
+      - name: Configure and start all containers
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.deploy_scope == 'all' }}
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          DEPLOY_PORT: ${{ vars.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+        run: |
           ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "cd '${DEPLOY_PATH}' && \
             mkdir -p letsencrypt && \
@@ -73,6 +91,24 @@ jobs:
               --profile telegram up -d --build --remove-orphans && \
             docker compose -f docker-compose.yml -f docker-compose.prod.yml \
               --profile telegram ps"
+
+      - name: Build and restart only the bot
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_scope == 'bot' }}
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          DEPLOY_PORT: ${{ vars.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+        run: |
+          ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd '${DEPLOY_PATH}' && \
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet && \
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+              --profile telegram build bot && \
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+              --profile telegram up -d --no-deps --force-recreate bot && \
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+              --profile telegram ps bot"
 
       - name: Verify HTTPS
         env:
