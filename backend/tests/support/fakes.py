@@ -478,6 +478,9 @@ class InMemoryTaskRepository:
         self.logs[log_id] = updated
         return updated
 
+    async def delete_task_log(self, *, log_id: int) -> None:
+        del self.logs[log_id]
+
     async def list_completed_logs_in_window(
         self,
         *,

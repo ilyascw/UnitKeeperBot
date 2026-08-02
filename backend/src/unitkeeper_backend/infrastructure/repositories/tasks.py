@@ -257,6 +257,11 @@ class SqlAlchemyTaskRepository:
         await self._session.flush()
         return map_task_log(model)
 
+    async def delete_task_log(self, *, log_id: int) -> None:
+        model = await self._require_log(log_id)
+        await self._session.delete(model)
+        await self._session.flush()
+
     async def list_completed_logs_in_window(
         self,
         *,

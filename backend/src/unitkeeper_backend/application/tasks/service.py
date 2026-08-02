@@ -294,6 +294,14 @@ class TaskService:
         await self._uow.commit()
         return updated
 
+    async def cancel(self, *, group_id: int, performer_user_id: int, log_id: int) -> None:
+        """Let a performer undo their own pending mark before anyone reviews it."""
+        log = await self._require_pending_log(group_id=group_id, log_id=log_id)
+        if log.performer_user_id != performer_user_id:
+            raise AuthorizationError("Only the performer can cancel their own pending log")
+        await self._uow.tasks.delete_task_log(log_id=log_id)
+        await self._uow.commit()
+
     async def list_pending_approvals(
         self,
         *,

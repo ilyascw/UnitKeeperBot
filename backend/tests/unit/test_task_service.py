@@ -99,6 +99,54 @@ async def test_multi_member_group_rejects_self_approval_and_frequency_overflow()
     assert result_event.recipient_user_id == 1
     assert result_event.deep_link_path == f"/tasks/history?task_log_id={pending.id}"
 
+
+@pytest.mark.asyncio
+async def test_performer_can_cancel_own_pending_log_and_reclaim_the_sprint_slot() -> None:
+    uow = InMemoryUnitOfWork()
+    for user_id in (1, 2):
+        uow.users.users[user_id] = UserProfile(
+            user_id, f"user{user_id}", f"User {user_id}", None, "en", False
+        )
+    group_service = GroupService(
+        uow=uow,
+        context_service=CurrentContextService(uow=uow),
+        clock=FakeClock(utc_datetime(2026, 3, 16)),
+    )
+    await group_service.create_group(
+        user_id=1,
+        name="team",
+        join_secret="secret",
+        sprint_start_weekday=Weekday.MONDAY,
+        sprint_duration_days=7,
+        timezone="UTC",
+    )
+    await group_service.join_group(user_id=2, group_name="team", join_secret="secret")
+    task_service = TaskService(uow=uow, clock=FakeClock(utc_datetime(2026, 3, 16)))
+    task = await task_service.create_task(
+        group_id=1,
+        title="Vacuum",
+        frequency_per_sprint=1,
+        unit_cost=Decimal("4.00"),
+    )
+
+    pending = await task_service.mark_done(group_id=1, performer_user_id=1, task_id=task.id)
+    assert pending.status is TaskLogStatus.PENDING
+
+    with pytest.raises(AuthorizationError):
+        await task_service.cancel(group_id=1, performer_user_id=2, log_id=pending.id)
+
+    await task_service.cancel(group_id=1, performer_user_id=1, log_id=pending.id)
+
+    with pytest.raises(NotFoundError):
+        await task_service.get_task_log_view(group_id=1, user_id=1, log_id=pending.id)
+
+    refreshed = await task_service.get_task(group_id=1, task_id=task.id)
+    assert refreshed.pending_in_sprint == 0
+
+    # The slot is free again — marking done should succeed instead of raising.
+    remarked = await task_service.mark_done(group_id=1, performer_user_id=1, task_id=task.id)
+    assert remarked.status is TaskLogStatus.PENDING
+
     with pytest.raises(BusinessRuleViolation):
         await task_service.mark_done(group_id=1, performer_user_id=1, task_id=task.id)
 

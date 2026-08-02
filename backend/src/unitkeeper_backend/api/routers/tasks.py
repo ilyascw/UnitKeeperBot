@@ -252,6 +252,16 @@ async def reject_task_log(
     return TaskLogResponse.model_validate(log, from_attributes=True)
 
 
+@router.delete("/task-logs/{log_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def cancel_task_log(
+    log_id: int,
+    user_id: int = Depends(require_user_id),
+    group_id: int = Depends(require_group_id),
+    task_service: FromDishka[TaskService] = INJECTED,
+) -> None:
+    await task_service.cancel(group_id=group_id, performer_user_id=user_id, log_id=log_id)
+
+
 def _task_log_page_response(page: TaskLogPage) -> TaskLogPageResponse:
     return TaskLogPageResponse(
         items=[TaskLogViewResponse.from_view(item) for item in page.items],

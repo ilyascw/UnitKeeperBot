@@ -224,6 +224,8 @@ class TaskRepository(Protocol):
         rejection_reason: str,
     ) -> TaskLogInfo: ...
 
+    async def delete_task_log(self, *, log_id: int) -> None: ...
+
     async def list_completed_logs_in_window(
         self,
         *,
