@@ -9,7 +9,7 @@ description = "Thin Telegram bot for UnitKeeper"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "aiogram>=3.22.0",
+    "aiogram[proxy]>=3.22.0",
     "httpx>=0.28.0",
     "pydantic-settings>=2.8.0",
 ]

@@ -32,6 +32,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/75/bd/27556763072b5b4df006e20afc14f4f750c06b796edbef95df7e489e6e6f/aiogram-3.29.1-py3-none-any.whl", hash = "sha256:63cd0123e8ab065f78974ad58ff57c1a5c8c35aac1055761859c4a5ad27eaf04", size = 804448, upload-time = "2026-07-01T23:43:30.19Z" },
 ]
 
+[package.optional-dependencies]
+proxy = [
+    { name = "aiohttp-socks" },
+]
+
 [[package]]
 name = "aiohappyeyeballs"
 version = "2.7.1"
@@ -157,6 +162,19 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/7b/3c/bb4a7cba26956cb3da4553cc2056cf67be5b5ff6e6d8fa4fbdff73bfb7ae/aiohttp-3.14.1-cp314-cp314t-win32.whl", hash = "sha256:47ddf841cdecc810749921d25606dee45857d12d2ad5ddb7b5bd7eab12e4b365", size = 494166, upload-time = "2026-06-07T21:09:28.505Z" },
     { url = "https://files.pythonhosted.org/packages/8a/84/ec80c2c1f66a952555a9f86df6b33af65108a6febfa0471b69013a12f807/aiohttp-3.14.1-cp314-cp314t-win_amd64.whl", hash = "sha256:5e78b522b7a6e27e0b25d19b247b75039ac4c94f99823e3c9e53ae1603a9f7e9", size = 530255, upload-time = "2026-06-07T21:09:30.843Z" },
     { url = "https://files.pythonhosted.org/packages/2a/71/6e22be134a4061ada85a92951b842f2657f17d926b727f3f94c56ae963d6/aiohttp-3.14.1-cp314-cp314t-win_arm64.whl", hash = "sha256:90d53f1609c29ccc2193945ef732428382a28f78d0456ae4d3daf0d48b74f0f6", size = 469640, upload-time = "2026-06-07T21:09:33.028Z" },
+]
+
+[[package]]
+name = "aiohttp-socks"
+version = "0.11.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "python-socks" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/1f/cc/e5bbd54f76bd56291522251e47267b645dac76327b2657ade9545e30522c/aiohttp_socks-0.11.0.tar.gz", hash = "sha256:0afe51638527c79077e4bd6e57052c87c4824233d6e20bb061c53766421b10f0", size = 11196, upload-time = "2025-12-09T13:35:52.564Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bf/7d/4b633d709b8901d59444d2e512b93e72fe62d2b492a040097c3f7ba017bb/aiohttp_socks-0.11.0-py3-none-any.whl", hash = "sha256:9aacce57c931b8fbf8f6d333cf3cafe4c35b971b35430309e167a35a8aab9ec1", size = 10556, upload-time = "2025-12-09T13:35:50.18Z" },
 ]
 
 [[package]]
@@ -1001,6 +1019,15 @@ wheels = [
 ]
 
 [[package]]
+name = "python-socks"
+version = "2.8.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/db/ad/5bbfab3d3a266963cca0c09e23a725bbf5f0535d21c8bd1d5272e4430771/python_socks-2.8.2.tar.gz", hash = "sha256:ffc493951854fa3fc0551e0434a09a7b9f9047f9ad666dce42cb94a52e8a34b6", size = 39656, upload-time = "2026-06-23T05:22:01.994Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3d/18/23b981b1cf58c1e7b7e36fa1392daf12878b6a3c26c5e4248601647a6d09/python_socks-2.8.2-py3-none-any.whl", hash = "sha256:7cf785d0631e0659384a773b3c402bc22cccdc23894ba1d65f8524748ace1193", size = 55501, upload-time = "2026-06-23T05:22:00.658Z" },
+]
+
+[[package]]
 name = "ruff"
 version = "0.15.21"
 source = { registry = "https://pypi.org/simple" }
@@ -1051,7 +1078,7 @@ name = "unitkeeper-bot"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "aiogram" },
+    { name = "aiogram", extra = ["proxy"] },
     { name = "httpx" },
     { name = "pydantic-settings" },
 ]
@@ -1066,7 +1093,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiogram", specifier = ">=3.22.0" },
+    { name = "aiogram", extras = ["proxy"], specifier = ">=3.22.0" },
     { name = "httpx", specifier = ">=0.28.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.15.0" },
     { name = "pydantic-settings", specifier = ">=2.8.0" },

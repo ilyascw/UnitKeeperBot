@@ -5,6 +5,7 @@ import logging
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ParseMode
 
 from unitkeeper_bot.application.notifications import NotificationWorker
@@ -21,9 +22,14 @@ async def run(settings: Settings) -> None:
         internal_secret=settings.internal_bot_secret.get_secret_value(),
         timeout_seconds=settings.request_timeout_seconds,
     )
+    telegram_session = None
+    if settings.tgproxy is not None:
+        telegram_session = AiohttpSession(proxy=settings.tgproxy.get_secret_value())
+
     bot = Bot(
         token=settings.bot_token.get_secret_value(),
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+        session=telegram_session,
     )
     dispatcher = Dispatcher()
     dispatcher.include_router(

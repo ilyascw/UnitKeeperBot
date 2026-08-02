@@ -10,6 +10,7 @@ Copy `.env.example` to `.env` and configure:
 - `UNITKEEPER_BACKEND_BASE_URL`: backend API base URL, including `/api/v1`.
 - `UNITKEEPER_INTERNAL_BOT_SECRET`: shared secret sent as `X-Internal-Auth` to `/internal/bot/*`.
 - `UNITKEEPER_MINIAPP_URL`: HTTPS URL opened by Telegram's Web App button.
+- `UNITKEEPER_TGPROXY`: optional HTTP or SOCKS proxy URL used for Telegram API requests.
 
 The backend must configure the same secret as `INTERNAL_BOT_SECRET`.
 
