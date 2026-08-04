@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 
 from aiogram import Bot
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 
 from unitkeeper_bot.backend.client import BackendGateway, BackendTransportError
 from unitkeeper_bot.rendering import NotificationEvent as RenderedEvent
@@ -52,7 +52,12 @@ class NotificationWorker:
                 )
             if rendered.miniapp_url and rendered.button_label:
                 rows.append(
-                    [InlineKeyboardButton(text=rendered.button_label, url=rendered.miniapp_url)]
+                    [
+                        InlineKeyboardButton(
+                            text=rendered.button_label,
+                            web_app=WebAppInfo(url=rendered.miniapp_url),
+                        )
+                    ]
                 )
             try:
                 await self._bot.send_message(
