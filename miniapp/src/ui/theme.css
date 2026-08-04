@@ -87,6 +87,21 @@ button {
   isolation: isolate;
 }
 
+.uk-refresh-icon--spinning {
+  animation: uk-spin 0.7s linear infinite;
+}
+
+.uk-back:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .uk-refresh-icon--spinning {
+    animation: none;
+  }
+}
+
 @keyframes uk-spin {
   to {
     transform: rotate(360deg);
@@ -283,7 +298,9 @@ button {
 .uk-btn--primary {
   color: var(--uk-primary-ink);
   background: var(--uk-primary-bg);
-  box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  box-shadow:
+    0 10px 24px -8px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .uk-btn--ghost {
@@ -298,7 +315,9 @@ button {
 .uk-btn--danger {
   color: #fff;
   background: var(--uk-danger);
-  box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 10px 24px -8px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .uk-btn--soft {
@@ -613,7 +632,9 @@ button {
   backdrop-filter: blur(28px) saturate(160%);
   -webkit-backdrop-filter: blur(28px) saturate(160%);
   border: 1px solid var(--uk-hairline-strong);
-  box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 -20px 60px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
   animation: uk-rise 0.22s ease;
 }
 
@@ -653,7 +674,9 @@ button {
   backdrop-filter: blur(24px) saturate(160%);
   -webkit-backdrop-filter: blur(24px) saturate(160%);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
   z-index: 30;
 }
 
@@ -669,7 +692,9 @@ button {
   background: none;
   color: var(--uk-ink-55);
   cursor: pointer;
-  transition: color 0.2s ease, transform 0.15s ease;
+  transition:
+    color 0.2s ease,
+    transform 0.15s ease;
 }
 
 .uk-tabbar__item:active {
@@ -689,7 +714,9 @@ button {
   );
   opacity: 0;
   transform: scale(0.7);
-  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   z-index: -1;
 }
 
@@ -776,7 +803,9 @@ button {
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
   border: 1px solid var(--uk-hairline-strong);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
   display: flex;
   align-items: center;
   gap: 8px;
