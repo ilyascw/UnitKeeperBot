@@ -7,6 +7,9 @@ import { useAuth } from '@/auth/useAuth';
 import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
 import { LogRow, RejectSheet } from '@/components/TaskLogRow';
+import { Card, Screen } from '@/components/ui/app-kit';
+import { Button as UiButton } from '@/components/ui/button';
+import { ScreenHeader as UiScreenHeader } from '@/components/ui/screen';
 import { routes } from '@/routes/paths';
 import {
   UNIT_SYMBOL,
@@ -17,7 +20,6 @@ import {
   formatUnits,
   pluralMembers,
 } from '@/ui/format';
-import { Card, Screen } from '@/ui/kit';
 import { ChevronIcon } from '@/ui/icons';
 
 /** A short, plain-language read on where a member's balance stands. */
@@ -72,20 +74,24 @@ export function DashboardScreen() {
 
   return (
     <Screen>
-      <div className="uk-header" style={{ justifyContent: 'space-between' }}>
-        <div>
-          <div style={{ font: "700 20px 'Manrope'" }}>{group.name}</div>
-          <div style={{ font: "400 12.5px 'Manrope'", color: 'var(--uk-ink-55)' }}>
-            {pluralMembers(group.members.length)} · вы {isOwner ? 'владелец' : 'участник'}
-          </div>
-        </div>
-      </div>
+      <UiScreenHeader
+        title={group.name}
+        description={`${pluralMembers(group.members.length)} · вы ${isOwner ? 'владелец' : 'участник'}`}
+      />
 
       {/* Balance + sprint, side by side */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+          gap: 12,
+        }}
+      >
         {/* Balance hero */}
-        <button
+        <UiButton
           type="button"
+          variant="ghost"
+          className="h-auto min-w-0 w-full flex-col items-stretch justify-start gap-0 overflow-hidden whitespace-normal"
           onClick={() => navigate(routes.balance)}
           style={{
             textAlign: 'left',
@@ -111,7 +117,9 @@ export function DashboardScreen() {
             }}
           >
             {formatBalance(myBalance)}{' '}
-            <span style={{ font: "600 14px 'Manrope'", color: 'var(--uk-ink-55)' }}>{UNIT_SYMBOL}</span>
+            <span style={{ font: "600 14px 'Manrope'", color: 'var(--uk-ink-55)' }}>
+              {UNIT_SYMBOL}
+            </span>
           </div>
           {caption ? (
             <div
@@ -124,11 +132,13 @@ export function DashboardScreen() {
               {caption}
             </div>
           ) : null}
-        </button>
+        </UiButton>
 
         {/* Sprint progress */}
-        <button
+        <UiButton
           type="button"
+          variant="ghost"
+          className="h-auto min-w-0 w-full flex-col items-stretch justify-start gap-0 overflow-hidden whitespace-normal"
           onClick={() => navigate(routes.progress)}
           style={{
             textAlign: 'left',
@@ -154,7 +164,7 @@ export function DashboardScreen() {
           <div style={{ font: "500 12px 'Manrope'", marginTop: 8, color: 'var(--uk-ink-70)' }}>
             {daysLeftLabel(remaining)}
           </div>
-        </button>
+        </UiButton>
       </div>
 
       {/* Pending approvals */}
@@ -162,13 +172,22 @@ export function DashboardScreen() {
         <>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
             <div className="uk-eyebrow">Ожидает подтверждения</div>
-            <button
+            <UiButton
               type="button"
+              variant="link"
+              size="sm"
+              className="h-auto p-0"
               onClick={() => navigate(routes.taskLogs)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--uk-blue)', font: "600 12px 'Manrope'" }}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--uk-blue)',
+                font: "600 12px 'Manrope'",
+              }}
             >
               все отметки
-            </button>
+            </UiButton>
           </div>
           <Card flush>
             {pendingItems.map((log) => (
@@ -181,13 +200,22 @@ export function DashboardScreen() {
       {/* Today tasks */}
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
         <div className="uk-eyebrow">Сделать в спринте</div>
-        <button
+        <UiButton
           type="button"
+          variant="link"
+          size="sm"
+          className="h-auto p-0"
           onClick={() => navigate(routes.tasks)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--uk-blue)', font: "600 12px 'Manrope'" }}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: 'var(--uk-blue)',
+            font: "600 12px 'Manrope'",
+          }}
         >
           все задачи
-        </button>
+        </UiButton>
       </div>
 
       {tasksQuery.isError ? (
@@ -206,9 +234,11 @@ export function DashboardScreen() {
       ) : (
         <div className="uk-stack" style={{ gap: 10 }}>
           {openTasks.map((task) => (
-            <button
+            <UiButton
               key={task.id}
               type="button"
+              variant="ghost"
+              className="h-auto w-full justify-start"
               onClick={() => navigate(routes.tasks)}
               style={{
                 display: 'flex',
@@ -240,7 +270,7 @@ export function DashboardScreen() {
               <span style={{ font: "700 14px 'Manrope'", color: 'var(--uk-teal)' }}>
                 {formatUnits(task.unit_cost)} {UNIT_SYMBOL}
               </span>
-            </button>
+            </UiButton>
           ))}
         </div>
       )}

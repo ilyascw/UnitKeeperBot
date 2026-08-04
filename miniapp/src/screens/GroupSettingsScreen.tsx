@@ -7,8 +7,6 @@ import { WEEKDAYS, type Weekday } from '@/api/types';
 import { useAuth } from '@/auth/useAuth';
 import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
-import { routes } from '@/routes/paths';
-import { formatDay, WEEKDAY_SHORT } from '@/ui/format';
 import {
   Button,
   Field,
@@ -18,7 +16,10 @@ import {
   Segmented,
   Stepper,
   TextInput,
-} from '@/ui/kit';
+} from '@/components/ui/app-kit';
+import { Button as UiButton } from '@/components/ui/button';
+import { routes } from '@/routes/paths';
+import { formatDay, WEEKDAY_SHORT } from '@/ui/format';
 import { RefreshIcon } from '@/ui/icons';
 
 const WEEKDAY_OPTIONS = WEEKDAYS.map((day) => ({ value: day, label: WEEKDAY_SHORT[day] }));
@@ -78,10 +79,8 @@ export function GroupSettingsScreen() {
     mutation.mutate(
       {
         join_secret: secret !== group.join_secret ? secret : undefined,
-        sprint_start_weekday:
-          weekday !== group.sprint_start_weekday ? weekday : undefined,
-        sprint_duration_days:
-          duration !== group.sprint_duration_days ? duration : undefined,
+        sprint_start_weekday: weekday !== group.sprint_start_weekday ? weekday : undefined,
+        sprint_duration_days: duration !== group.sprint_duration_days ? duration : undefined,
       },
       { onSuccess: () => navigate(routes.group) },
     );
@@ -103,15 +102,17 @@ export function GroupSettingsScreen() {
               onChange={(e) => setSecret(e.currentTarget.value)}
               disabled={mutation.isPending}
             />
-            <button
+            <UiButton
               type="button"
-              className="uk-icon-btn"
+              variant="outline"
+              size="icon"
+              className="shrink-0"
               aria-label="Сгенерировать новый код"
               onClick={() => setSecret(generateCode())}
               disabled={mutation.isPending}
             >
               <RefreshIcon size={20} />
-            </button>
+            </UiButton>
           </div>
         </Field>
 

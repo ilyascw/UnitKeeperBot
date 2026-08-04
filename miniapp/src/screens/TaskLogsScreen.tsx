@@ -7,8 +7,8 @@ import type { TaskLogViewResponse } from '@/api/types';
 import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
 import { LogRow, RejectSheet } from '@/components/TaskLogRow';
+import { Card, Note, Screen, ScreenHeader } from '@/components/ui/app-kit';
 import { routes } from '@/routes/paths';
-import { Card, Note, Screen, ScreenHeader } from '@/ui/kit';
 
 /** Approval queue and task-log history for every active group member. */
 export function TaskLogsScreen() {
@@ -49,15 +49,25 @@ export function TaskLogsScreen() {
         <div className="uk-eyebrow">На подтверждении</div>
         {pendingItems.length ? (
           <Card flush>
-            {pendingItems.map((log) => <LogRow key={log.id} log={log} actions onReject={() => setRejecting(log)} />)}
+            {pendingItems.map((log) => (
+              <LogRow key={log.id} log={log} actions onReject={() => setRejecting(log)} />
+            ))}
           </Card>
-        ) : <Note tone="info">Нет отметок, ожидающих вашего решения.</Note>}
+        ) : (
+          <Note tone="info">Нет отметок, ожидающих вашего решения.</Note>
+        )}
       </section>
       <section className="uk-stack">
         <div className="uk-eyebrow">История группы</div>
         {historyItems.length ? (
-          <Card flush>{historyItems.map((log) => <LogRow key={log.id} log={log} actions={false} onReject={() => undefined} />)}</Card>
-        ) : <Note tone="info">История появится после первой отметки выполнения.</Note>}
+          <Card flush>
+            {historyItems.map((log) => (
+              <LogRow key={log.id} log={log} actions={false} onReject={() => undefined} />
+            ))}
+          </Card>
+        ) : (
+          <Note tone="info">История появится после первой отметки выполнения.</Note>
+        )}
       </section>
       {rejecting ? <RejectSheet log={rejecting} onClose={() => setRejecting(null)} /> : null}
     </Screen>

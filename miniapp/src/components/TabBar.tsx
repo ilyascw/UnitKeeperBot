@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import { useLocation, useNavigate } from '@/routes/navigation';
 
+import { Button } from '@/components/ui/button';
 import { routes, type RoutePath } from '@/routes/paths';
 import { ChartIcon, CoinIcon, GroupIcon, HomeIcon, TasksIcon } from '@/ui/icons';
 
@@ -32,18 +33,19 @@ export function TabBar() {
       {TABS.map(({ to, label, Icon }) => {
         const active = pathname === to || pathname.startsWith(`${to}/`);
         return (
-          <button
+          <Button
             key={to}
             type="button"
+            variant="ghost"
             className={`uk-tabbar__item${active ? ' uk-tabbar__item--active' : ''}`}
             aria-current={active ? 'page' : undefined}
             onClick={() => (active ? undefined : navigate(to))}
           >
             <span className="uk-tabbar__icon">
-              <Icon size={23} />
+              <Icon size={26} />
             </span>
-            <span>{label}</span>
-          </button>
+            <span className="uk-tabbar__label">{label}</span>
+          </Button>
         );
       })}
     </nav>
