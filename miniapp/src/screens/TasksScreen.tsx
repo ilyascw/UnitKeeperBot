@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Navigate, useNavigate } from '@/routes/navigation';
 
 import {
@@ -12,14 +13,25 @@ import {
   useUpdateTask,
 } from '@/api/mutations';
 import { useCurrentGroup, useMyTaskLogs, useTasks } from '@/api/queries';
+import { refreshTaskData } from '@/api/query-refresh';
 import { ApiError } from '@/api/client';
 import { useAuth } from '@/auth/useAuth';
 import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
 import { routes } from '@/routes/paths';
 import { UNIT_SYMBOL, formatUnits } from '@/ui/format';
-import { BottomSheet, Button, Card, Field, Note, Screen, Stepper, TextInput, Toast } from '@/ui/kit';
-import { CheckIcon, ClockIcon, PencilIcon, PlusIcon, TrashIcon } from '@/ui/icons';
+import {
+  BottomSheet,
+  Button,
+  Card,
+  Field,
+  Note,
+  Screen,
+  Stepper,
+  TextInput,
+  Toast,
+} from '@/ui/kit';
+import { CheckIcon, ClockIcon, PencilIcon, PlusIcon, RefreshIcon, TrashIcon } from '@/ui/icons';
 import type { BulkImportTaskItem, TaskImportRowError, TaskResponse } from '@/api/types';
 
 function parseCost(value: string): number {
@@ -42,14 +54,21 @@ function taskIsHeldFull(task: TaskResponse): boolean {
   return !taskIsPaused(task) && !taskIsComplete(task) && !taskIsMarkable(task);
 }
 
-function parseImportRows(value: string): { items: BulkImportTaskItem[]; errors: TaskImportRowError[] } {
+function parseImportRows(value: string): {
+  items: BulkImportTaskItem[];
+  errors: TaskImportRowError[];
+} {
   const errors: TaskImportRowError[] = [];
   const items: BulkImportTaskItem[] = [];
   value.split(/\r?\n/).forEach((raw, index) => {
     if (!raw.trim()) return;
     const cells = raw.split(raw.includes('\t') ? '\t' : ';').map((cell) => cell.trim());
     if (cells.length !== 3) {
-      errors.push({ index, field: 'row', message: 'Нужны три колонки: название, частота, стоимость' });
+      errors.push({
+        index,
+        field: 'row',
+        message: 'Нужны три колонки: название, частота, стоимость',
+      });
       return;
     }
     const [title, frequency, cost] = cells;
@@ -57,31 +76,49 @@ function parseImportRows(value: string): { items: BulkImportTaskItem[]; errors: 
     const parsedCost = Number(cost.replace(',', '.'));
     if (!title) errors.push({ index, field: 'title', message: 'Укажите название' });
     if (!Number.isInteger(parsedFrequency) || parsedFrequency < 0) {
-      errors.push({ index, field: 'frequency_per_sprint', message: 'Частота должна быть целым неотрицательным числом' });
+      errors.push({
+        index,
+        field: 'frequency_per_sprint',
+        message: 'Частота должна быть целым неотрицательным числом',
+      });
     }
     if (!Number.isFinite(parsedCost) || parsedCost < 0) {
-      errors.push({ index, field: 'unit_cost', message: 'Стоимость должна быть числом не меньше нуля' });
+      errors.push({
+        index,
+        field: 'unit_cost',
+        message: 'Стоимость должна быть числом не меньше нуля',
+      });
     }
     items.push({ title, frequency_per_sprint: parsedFrequency, unit_cost: String(parsedCost) });
   });
-  if (!items.length && !errors.length) errors.push({ index: 0, field: 'row', message: 'Добавьте хотя бы одну строку' });
+  if (!items.length && !errors.length)
+    errors.push({ index: 0, field: 'row', message: 'Добавьте хотя бы одну строку' });
   return { items, errors };
 }
 
 function backendImportErrors(error: Error): TaskImportRowError[] {
-  if (!(error instanceof ApiError) || !error.details || typeof error.details !== 'object') return [];
+  if (!(error instanceof ApiError) || !error.details || typeof error.details !== 'object')
+    return [];
   const candidates = (error.details as { errors?: unknown }).errors;
   if (!Array.isArray(candidates)) return [];
   return candidates.flatMap((item) => {
     if (!item || typeof item !== 'object') return [];
     const row = item as Partial<TaskImportRowError>;
-    return typeof row.index === 'number' && typeof row.field === 'string' && typeof row.message === 'string'
+    return typeof row.index === 'number' &&
+      typeof row.field === 'string' &&
+      typeof row.message === 'string'
       ? [{ index: row.index, field: row.field, message: row.message }]
       : [];
   });
 }
 
-function ImportTasksSheet({ onClose, onImported }: { onClose: () => void; onImported: (count: number) => void }) {
+function ImportTasksSheet({
+  onClose,
+  onImported,
+}: {
+  onClose: () => void;
+  onImported: (count: number) => void;
+}) {
   const importTasks = useImportTasks();
   const [source, setSource] = useState('');
   const [localErrors, setLocalErrors] = useState<TaskImportRowError[]>([]);
@@ -92,18 +129,51 @@ function ImportTasksSheet({ onClose, onImported }: { onClose: () => void; onImpo
     const result = parseImportRows(source);
     setLocalErrors(result.errors);
     if (result.errors.length) return;
-    importTasks.mutate(result.items, { onSuccess: (tasks) => { onImported(tasks.length); onClose(); } });
+    importTasks.mutate(result.items, {
+      onSuccess: (tasks) => {
+        onImported(tasks.length);
+        onClose();
+      },
+    });
   };
   return (
     <BottomSheet onClose={() => (importTasks.isPending ? undefined : onClose())}>
-      <div style={{ font: "800 20px 'Manrope'", textAlign: 'center', marginBottom: 12 }}>Импорт задач</div>
+      <div style={{ font: "800 20px 'Manrope'", textAlign: 'center', marginBottom: 12 }}>
+        Импорт задач
+      </div>
       <form className="uk-stack" onSubmit={submit}>
-        <Field label="Таблица задач" hint="Вставьте строки из таблицы: название, частота, стоимость. Колонки разделяйте табуляцией или точкой с запятой.">
-          <textarea className="uk-input" value={source} onChange={(e) => { setSource(e.currentTarget.value); setLocalErrors([]); }} disabled={importTasks.isPending} rows={7} placeholder={'Мыть посуду\t3\t5\nПылесосить\t1\t10'} style={{ resize: 'vertical', paddingTop: 11 }} />
+        <Field
+          label="Таблица задач"
+          hint="Вставьте строки из таблицы: название, частота, стоимость. Колонки разделяйте табуляцией или точкой с запятой."
+        >
+          <textarea
+            className="uk-input"
+            value={source}
+            onChange={(e) => {
+              setSource(e.currentTarget.value);
+              setLocalErrors([]);
+            }}
+            disabled={importTasks.isPending}
+            rows={7}
+            placeholder={'Мыть посуду\t3\t5\nПылесосить\t1\t10'}
+            style={{ resize: 'vertical', paddingTop: 11 }}
+          />
         </Field>
-        {errors.length ? <Note tone="error">{errors.map((error) => <div key={`${error.index}-${error.field}`}>Строка {error.index + 1}: {error.message}</div>)}</Note> : null}
-        {importTasks.isError && !errors.length ? <Note tone="error">{importTasks.error.message}</Note> : null}
-        <Button type="submit" variant="primary" loading={importTasks.isPending}>Импортировать</Button>
+        {errors.length ? (
+          <Note tone="error">
+            {errors.map((error) => (
+              <div key={`${error.index}-${error.field}`}>
+                Строка {error.index + 1}: {error.message}
+              </div>
+            ))}
+          </Note>
+        ) : null}
+        {importTasks.isError && !errors.length ? (
+          <Note tone="error">{importTasks.error.message}</Note>
+        ) : null}
+        <Button type="submit" variant="primary" loading={importTasks.isPending}>
+          Импортировать
+        </Button>
       </form>
     </BottomSheet>
   );
@@ -424,12 +494,12 @@ function TaskRow({
           paused
             ? 'Задача не запланирована на текущий спринт'
             : complete
-            ? 'Задача выполнена'
-            : canCancel
-              ? 'Отменить отметку'
-              : heldFull
-                ? 'Ждёт подтверждения'
-                : `Отметить «${task.title}»`
+              ? 'Задача выполнена'
+              : canCancel
+                ? 'Отменить отметку'
+                : heldFull
+                  ? 'Ждёт подтверждения'
+                  : `Отметить «${task.title}»`
         }
         style={{
           width: 30,
@@ -517,6 +587,7 @@ function TaskRow({
  */
 export function TasksScreen() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { context } = useAuth();
   const group = useCurrentGroup();
   const { data: tasks, isPending, isError, error, refetch } = useTasks();
@@ -530,6 +601,7 @@ export function TasksScreen() {
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
   const [toast, setToast] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     if (!toast) return;
@@ -596,19 +668,67 @@ export function TasksScreen() {
       myPendingLogByTask.set(log.task.id, log.id);
     }
   }
-  const selectedTask = selectedTaskId === null ? null : tasks.find((task) => task.id === selectedTaskId) ?? null;
-  const editingTask = editingTaskId === null ? null : tasks.find((task) => task.id === editingTaskId) ?? null;
-  const deletingTask = deletingTaskId === null ? null : tasks.find((task) => task.id === deletingTaskId) ?? null;
+  const selectedTask =
+    selectedTaskId === null ? null : (tasks.find((task) => task.id === selectedTaskId) ?? null);
+  const editingTask =
+    editingTaskId === null ? null : (tasks.find((task) => task.id === editingTaskId) ?? null);
+  const deletingTask =
+    deletingTaskId === null ? null : (tasks.find((task) => task.id === deletingTaskId) ?? null);
+
+  const handleRefresh = async (): Promise<void> => {
+    if (isRefreshing) return;
+
+    setIsRefreshing(true);
+
+    try {
+      await refreshTaskData(queryClient, {
+        refetchType: 'all',
+        throwOnError: true,
+      });
+      setToast({ tone: 'success', text: 'Данные обновлены' });
+    } catch {
+      setToast({ tone: 'error', text: 'Не удалось обновить данные' });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   return (
     <Screen>
       <div className="uk-header" style={{ justifyContent: 'space-between' }}>
         <div className="uk-header__title">Задачи</div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button type="button" className="uk-back" aria-label="Открыть отметки" onClick={() => navigate(routes.taskLogs)}>
+          <button
+            type="button"
+            className="uk-back"
+            aria-label="Открыть отметки"
+            onClick={() => navigate(routes.taskLogs)}
+          >
             <ClockIcon size={22} />
           </button>
-          {isOwner ? <button type="button" className="uk-back" aria-label="Добавить задачу" onClick={() => setAddMenuOpen(true)}><PlusIcon size={24} /></button> : null}
+          <button
+            type="button"
+            className="uk-back"
+            aria-label="Обновить задачи"
+            aria-busy={isRefreshing}
+            disabled={isRefreshing}
+            onClick={() => void handleRefresh()}
+          >
+            <RefreshIcon
+              size={22}
+              className={isRefreshing ? 'uk-refresh-icon--spinning' : undefined}
+            />
+          </button>
+          {isOwner ? (
+            <button
+              type="button"
+              className="uk-back"
+              aria-label="Добавить задачу"
+              onClick={() => setAddMenuOpen(true)}
+            >
+              <PlusIcon size={24} />
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -648,7 +768,8 @@ export function TasksScreen() {
                     myPendingLogId={myPendingLogByTask.get(task.id) ?? null}
                     loading={
                       (markDone.isPending && markDone.variables === task.id) ||
-                      (cancelLog.isPending && cancelLog.variables === myPendingLogByTask.get(task.id))
+                      (cancelLog.isPending &&
+                        cancelLog.variables === myPendingLogByTask.get(task.id))
                     }
                     busy={markDone.isPending || cancelLog.isPending}
                   />
@@ -712,7 +833,14 @@ export function TasksScreen() {
           onSaved={(text) => setToast({ tone: 'success', text })}
         />
       ) : null}
-      {importing ? <ImportTasksSheet onClose={() => setImporting(false)} onImported={(count) => setToast({ tone: 'success', text: `Импортировано задач: ${count}` })} /> : null}
+      {importing ? (
+        <ImportTasksSheet
+          onClose={() => setImporting(false)}
+          onImported={(count) =>
+            setToast({ tone: 'success', text: `Импортировано задач: ${count}` })
+          }
+        />
+      ) : null}
       {selectedTask ? (
         <TaskDetailSheet
           task={selectedTask}

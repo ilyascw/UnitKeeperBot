@@ -21,6 +21,7 @@ import {
   updateCurrentGroupWeights,
 } from './endpoints';
 import { currentGroupQueryOptions, queryKeys } from './queries';
+import { refreshTaskData } from './query-refresh';
 import type {
   BalanceTransferResponse,
   CreateGroupRequest,
@@ -54,17 +55,9 @@ function useInvalidateGroup(): () => Promise<void> {
  * list, the sprint results, and the balances shown on the group card.
  */
 function useInvalidateTasks(): () => Promise<void> {
-  const qc = useQueryClient();
-  return async () => {
-    await Promise.all([
-      qc.invalidateQueries({ queryKey: queryKeys.tasks }),
-      qc.invalidateQueries({ queryKey: queryKeys.sprintResults }),
-      qc.invalidateQueries({ queryKey: queryKeys.currentGroup }),
-      qc.invalidateQueries({ queryKey: queryKeys.pendingApprovals }),
-      qc.invalidateQueries({ queryKey: queryKeys.myTaskLogs }),
-      qc.invalidateQueries({ queryKey: queryKeys.groupTaskLogs }),
-    ]);
-  };
+  const queryClient = useQueryClient();
+
+  return () => refreshTaskData(queryClient);
 }
 
 export function useImportTasks(): UseMutationResult<TaskResponse[], Error, BulkImportTaskItem[]> {
