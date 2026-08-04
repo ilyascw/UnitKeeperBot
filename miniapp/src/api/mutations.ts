@@ -20,7 +20,7 @@ import {
   updateCurrentGroupSettings,
   updateCurrentGroupWeights,
 } from './endpoints';
-import { queryKeys } from './queries';
+import { currentGroupQueryOptions, queryKeys } from './queries';
 import type {
   BalanceTransferResponse,
   CreateGroupRequest,
@@ -70,7 +70,24 @@ function useInvalidateTasks(): () => Promise<void> {
 export function useImportTasks(): UseMutationResult<TaskResponse[], Error, BulkImportTaskItem[]> {
   const token = useAuthToken();
   const invalidate = useInvalidateTasks();
-  return useMutation({ mutationFn: (items) => importTasks(token, items), onSuccess: () => invalidate() });
+  return useMutation({
+    mutationFn: (items) => importTasks(token, items),
+    onSuccess: () => invalidate(),
+  });
+}
+
+function useRefreshCurrentGroup(): () => Promise<void> {
+  const token = useAuthToken();
+  const queryClient = useQueryClient();
+
+  return async () => {
+    queryClient.removeQueries({
+      queryKey: queryKeys.currentGroup,
+      exact: true,
+    });
+
+    await queryClient.prefetchQuery(currentGroupQueryOptions(token));
+  };
 }
 
 export function useCreateGroup(): UseMutationResult<
@@ -79,23 +96,21 @@ export function useCreateGroup(): UseMutationResult<
   CreateGroupRequest
 > {
   const token = useAuthToken();
-  const invalidate = useInvalidateGroup();
+  const refreshCurrentGroup = useRefreshCurrentGroup();
+
   return useMutation({
     mutationFn: (body: CreateGroupRequest) => createGroup(token, body),
-    onSuccess: () => invalidate(),
+    onSuccess: () => refreshCurrentGroup(),
   });
 }
 
-export function useJoinGroup(): UseMutationResult<
-  CurrentContextResponse,
-  Error,
-  JoinGroupRequest
-> {
+export function useJoinGroup(): UseMutationResult<CurrentContextResponse, Error, JoinGroupRequest> {
   const token = useAuthToken();
-  const invalidate = useInvalidateGroup();
+  const refreshCurrentGroup = useRefreshCurrentGroup();
+
   return useMutation({
     mutationFn: (body: JoinGroupRequest) => joinGroup(token, body),
-    onSuccess: () => invalidate(),
+    onSuccess: () => refreshCurrentGroup(),
   });
 }
 
@@ -213,7 +228,10 @@ export function useMarkTaskDone(): UseMutationResult<TaskLogResponse, Error, num
 export function useApproveTaskLog(): UseMutationResult<TaskLogResponse, Error, number> {
   const token = useAuthToken();
   const invalidate = useInvalidateTasks();
-  return useMutation({ mutationFn: (logId) => approveTaskLog(token, logId), onSuccess: () => invalidate() });
+  return useMutation({
+    mutationFn: (logId) => approveTaskLog(token, logId),
+    onSuccess: () => invalidate(),
+  });
 }
 
 export function useRejectTaskLog(): UseMutationResult<

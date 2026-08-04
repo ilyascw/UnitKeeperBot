@@ -1,4 +1,4 @@
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useQuery, queryOptions, type UseQueryResult } from '@tanstack/react-query';
 
 import { useAuthToken } from '@/auth/useAuth';
 
@@ -15,7 +15,6 @@ import {
 } from './endpoints';
 import type {
   BalanceTransactionPageResponse,
-  GroupCardResponse,
   SprintResultsResponse,
   TaskLogPageResponse,
   TaskResponse,
@@ -45,9 +44,8 @@ export const queryKeys = {
  * Loads the current group card. Returns `null` (not an error) when the user is
  * not in a group, so screens can branch into the onboarding flow.
  */
-export function useCurrentGroup(): UseQueryResult<GroupCardResponse | null, Error> {
-  const token = useAuthToken();
-  return useQuery({
+export function currentGroupQueryOptions(token: string) {
+  return queryOptions({
     queryKey: queryKeys.currentGroup,
     queryFn: async () => {
       try {
@@ -59,6 +57,14 @@ export function useCurrentGroup(): UseQueryResult<GroupCardResponse | null, Erro
         throw error;
       }
     },
+  });
+}
+
+export function useCurrentGroup() {
+  const token = useAuthToken();
+
+  return useQuery({
+    ...currentGroupQueryOptions(token),
     refetchInterval: LIVE_POLL_INTERVAL_MS,
   });
 }
