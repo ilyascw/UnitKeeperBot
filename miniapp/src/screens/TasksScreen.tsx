@@ -18,8 +18,6 @@ import { ApiError } from '@/api/client';
 import { useAuth } from '@/auth/useAuth';
 import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
-import { routes } from '@/routes/paths';
-import { UNIT_SYMBOL, formatUnits } from '@/ui/format';
 import {
   BottomSheet,
   Button,
@@ -30,7 +28,13 @@ import {
   Stepper,
   TextInput,
   Toast,
-} from '@/ui/kit';
+} from '@/components/ui/app-kit';
+import { Button as UiButton } from '@/components/ui/button';
+import { ScreenHeader as UiScreenHeader } from '@/components/ui/screen';
+import { Spinner } from '@/components/ui/spinner';
+import { Textarea } from '@/components/ui/textarea';
+import { routes } from '@/routes/paths';
+import { UNIT_SYMBOL, formatUnits } from '@/ui/format';
 import { CheckIcon, ClockIcon, PencilIcon, PlusIcon, RefreshIcon, TrashIcon } from '@/ui/icons';
 import type { BulkImportTaskItem, TaskImportRowError, TaskResponse } from '@/api/types';
 
@@ -146,8 +150,7 @@ function ImportTasksSheet({
           label="Таблица задач"
           hint="Вставьте строки из таблицы: название, частота, стоимость. Колонки разделяйте табуляцией или точкой с запятой."
         >
-          <textarea
-            className="uk-input"
+          <Textarea
             value={source}
             onChange={(e) => {
               setSource(e.currentTarget.value);
@@ -486,8 +489,11 @@ function TaskRow({
 
   return (
     <div className="uk-row">
-      <button
+      <UiButton
         type="button"
+        variant="ghost"
+        size="icon"
+        className="shrink-0"
         onClick={canCancel ? onCancel : onDone}
         disabled={locked}
         aria-label={
@@ -502,8 +508,8 @@ function TaskRow({
                   : `Отметить «${task.title}»`
         }
         style={{
-          width: 30,
-          height: 30,
+          width: 44,
+          height: 44,
           flex: 'none',
           borderRadius: 10,
           display: 'grid',
@@ -519,16 +525,17 @@ function TaskRow({
         }}
       >
         {loading ? (
-          <span className="uk-btn-spinner" style={{ color: 'var(--uk-blue)' }} aria-hidden />
+          <Spinner className="text-primary" aria-hidden="true" />
         ) : complete ? (
           <CheckIcon size={16} strokeWidth={3} />
         ) : heldFull ? (
           <ClockIcon size={16} />
         ) : null}
-      </button>
-      <button
+      </UiButton>
+      <UiButton
         type="button"
-        className="uk-row__grow"
+        variant="ghost"
+        className="uk-row__grow h-auto min-w-0 flex-col items-start justify-start gap-1 whitespace-normal rounded-none"
         onClick={onOpen}
         style={{
           minWidth: 0,
@@ -537,6 +544,7 @@ function TaskRow({
           background: 'none',
           color: 'inherit',
           textAlign: 'left',
+          whiteSpace: 'normal',
           cursor: 'pointer',
         }}
         aria-label={`Открыть задачу «${task.title}»`}
@@ -545,6 +553,8 @@ function TaskRow({
           style={{
             font: "600 15px 'Manrope'",
             color: complete ? 'var(--uk-ink-55)' : 'var(--uk-ink)',
+            maxWidth: '100%',
+            overflowWrap: 'anywhere',
           }}
         >
           {task.title}
@@ -554,7 +564,14 @@ function TaskRow({
             Не запланировано на этот спринт
           </div>
         ) : heldFull ? (
-          <div style={{ font: "600 12px 'Manrope'", color: 'var(--uk-warn)' }}>
+          <div
+            style={{
+              font: "600 12px/1.35 'Manrope'",
+              color: 'var(--uk-warn)',
+              maxWidth: '100%',
+              overflowWrap: 'anywhere',
+            }}
+          >
             Ждёт подтверждения{canCancel ? ' · нажмите, чтобы отменить' : ''}
           </div>
         ) : (
@@ -568,11 +585,13 @@ function TaskRow({
             ) : null}
           </div>
         )}
-      </button>
+      </UiButton>
       <span
         style={{
           font: "700 15px 'Manrope'",
           color: complete ? 'var(--uk-ink-45)' : 'var(--uk-teal)',
+          flex: 'none',
+          whiteSpace: 'nowrap',
         }}
       >
         {formatUnits(task.unit_cost)} {UNIT_SYMBOL}
@@ -695,42 +714,47 @@ export function TasksScreen() {
 
   return (
     <Screen>
-      <div className="uk-header" style={{ justifyContent: 'space-between' }}>
-        <div className="uk-header__title">Задачи</div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            type="button"
-            className="uk-back"
-            aria-label="Открыть отметки"
-            onClick={() => navigate(routes.taskLogs)}
-          >
-            <ClockIcon size={22} />
-          </button>
-          <button
-            type="button"
-            className="uk-back"
-            aria-label="Обновить задачи"
-            aria-busy={isRefreshing}
-            disabled={isRefreshing}
-            onClick={() => void handleRefresh()}
-          >
-            <RefreshIcon
-              size={22}
-              className={isRefreshing ? 'uk-refresh-icon--spinning' : undefined}
-            />
-          </button>
-          {isOwner ? (
-            <button
+      <UiScreenHeader
+        title="Задачи"
+        actions={
+          <>
+            <UiButton
               type="button"
-              className="uk-back"
-              aria-label="Добавить задачу"
-              onClick={() => setAddMenuOpen(true)}
+              variant="ghost"
+              size="icon"
+              aria-label="Открыть отметки"
+              onClick={() => navigate(routes.taskLogs)}
             >
-              <PlusIcon size={24} />
-            </button>
-          ) : null}
-        </div>
-      </div>
+              <ClockIcon size={22} />
+            </UiButton>
+            <UiButton
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Обновить задачи"
+              aria-busy={isRefreshing}
+              disabled={isRefreshing}
+              onClick={() => void handleRefresh()}
+            >
+              <RefreshIcon
+                size={22}
+                className={isRefreshing ? 'uk-refresh-icon--spinning' : undefined}
+              />
+            </UiButton>
+            {isOwner ? (
+              <UiButton
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Добавить задачу"
+                onClick={() => setAddMenuOpen(true)}
+              >
+                <PlusIcon size={24} />
+              </UiButton>
+            ) : null}
+          </>
+        }
+      />
 
       {tasks.length === 0 ? (
         <Card style={{ padding: 22, borderRadius: 20, textAlign: 'center' }}>

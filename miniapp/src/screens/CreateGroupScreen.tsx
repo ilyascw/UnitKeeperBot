@@ -5,7 +5,16 @@ import { useCreateGroup } from '@/api/mutations';
 import { WEEKDAYS, type Weekday } from '@/api/types';
 import { routes } from '@/routes/paths';
 import { WEEKDAY_SHORT } from '@/ui/format';
-import { Button, Field, Note, Screen, ScreenHeader, Segmented, Stepper, TextInput } from '@/ui/kit';
+import {
+  Button,
+  Field,
+  Note,
+  Screen,
+  ScreenHeader,
+  Segmented,
+  Stepper,
+  TextInput,
+} from '@/components/ui/app-kit';
 
 const WEEKDAY_OPTIONS = WEEKDAYS.map((day) => ({ value: day, label: WEEKDAY_SHORT[day] }));
 

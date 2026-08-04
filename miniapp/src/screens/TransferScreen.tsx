@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { ChevronRight } from 'lucide-react';
 import { Navigate, useNavigate } from '@/routes/navigation';
 
 import { useCreateTransfer } from '@/api/mutations';
@@ -6,11 +7,11 @@ import { useCurrentGroup, useTransferCandidates } from '@/api/queries';
 import { useAuth } from '@/auth/useAuth';
 import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
+import { Avatar, Button, Note, Screen, ScreenHeader, TextInput } from '@/components/ui/app-kit';
+import { Button as UiButton } from '@/components/ui/button';
 import { routes } from '@/routes/paths';
 import type { UserResponse } from '@/api/types';
-import { avatarColor } from '@/ui/avatar';
 import { UNIT_SYMBOL, balanceColor, formatBalance, memberName } from '@/ui/format';
-import { Avatar, Button, Note, Screen, ScreenHeader, TextInput } from '@/ui/kit';
 
 type Step = 'recipient' | 'amount' | 'success';
 
@@ -23,8 +24,13 @@ function candidateName(user: UserResponse): string {
 export function TransferScreen() {
   const navigate = useNavigate();
   const { context } = useAuth();
-  const { data: group, isPending: groupPending, isError: groupIsError, error: groupError, refetch: refetchGroup } =
-    useCurrentGroup();
+  const {
+    data: group,
+    isPending: groupPending,
+    isError: groupIsError,
+    error: groupError,
+    refetch: refetchGroup,
+  } = useCurrentGroup();
   const {
     data: candidates,
     isPending: candidatesPending,
@@ -100,7 +106,16 @@ export function TransferScreen() {
               boxShadow: '0 10px 24px -8px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.5)',
             }}
           >
-            <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#06121a" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="42"
+              height="42"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#06121a"
+              strokeWidth={2.6}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <path d="M20 6L9 17l-5-5" />
             </svg>
           </div>
@@ -108,7 +123,9 @@ export function TransferScreen() {
             <div style={{ font: "800 22px 'Manrope'", marginBottom: 8 }}>
               Переведено {amountNum.toFixed(2)} {UNIT_SYMBOL}
             </div>
-            <div style={{ font: "400 15px/1.6 'Manrope'", color: 'var(--uk-ink-70)', maxWidth: 260 }}>
+            <div
+              style={{ font: "400 15px/1.6 'Manrope'", color: 'var(--uk-ink-70)', maxWidth: 260 }}
+            >
               {candidateName(recipient.user)} получил юниты. Ваш новый баланс —{' '}
               <span style={{ color: 'var(--uk-positive)', fontWeight: 600 }}>
                 {formatBalance(mutation.data?.sender_balance ?? String(remaining))} {UNIT_SYMBOL}
@@ -140,14 +157,31 @@ export function TransferScreen() {
               border: '1px solid var(--uk-hairline)',
             }}
           >
-            <span style={{ font: "400 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>Получатель</span>
+            <span style={{ font: "400 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>
+              Получатель
+            </span>
             <div style={{ flex: 1 }} />
             <Avatar label={candidateName(recipient.user)} seed={recipient.user.id} />
             <span style={{ font: "700 15px 'Manrope'" }}>{candidateName(recipient.user)}</span>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '20px 0 4px' }}>
-            <div style={{ font: "600 11px 'Manrope'", letterSpacing: '.12em', textTransform: 'uppercase', color: 'var(--uk-ink-45)' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 6,
+              padding: '20px 0 4px',
+            }}
+          >
+            <div
+              style={{
+                font: "600 11px 'Manrope'",
+                letterSpacing: '.12em',
+                textTransform: 'uppercase',
+                color: 'var(--uk-ink-45)',
+              }}
+            >
               Сумма
             </div>
             <TextInput
@@ -200,7 +234,9 @@ export function TransferScreen() {
       <ScreenHeader title="Перевести юниты" onBack={handleClose} />
       <div className="uk-stack">
         {!canTransfer ? (
-          <Note tone="error">Перевод недоступен при долге. Переводить можно только с положительного баланса.</Note>
+          <Note tone="error">
+            Перевод недоступен при долге. Переводить можно только с положительного баланса.
+          </Note>
         ) : (
           <div
             style={{
@@ -210,11 +246,23 @@ export function TransferScreen() {
               border: '1px solid var(--uk-hairline)',
             }}
           >
-            <div style={{ font: "600 11px 'Manrope'", letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--uk-ink-55)' }}>
+            <div
+              style={{
+                font: "600 11px 'Manrope'",
+                letterSpacing: '.08em',
+                textTransform: 'uppercase',
+                color: 'var(--uk-ink-55)',
+              }}
+            >
               Доступно к переводу
             </div>
-            <div style={{ font: "800 32px/1 'Manrope'", marginTop: 6, color: 'var(--uk-positive)' }}>
-              {formatBalance(myBalance)} <span style={{ font: "600 15px 'Manrope'", color: 'var(--uk-ink-55)' }}>{UNIT_SYMBOL}</span>
+            <div
+              style={{ font: "800 32px/1 'Manrope'", marginTop: 6, color: 'var(--uk-positive)' }}
+            >
+              {formatBalance(myBalance)}{' '}
+              <span style={{ font: "600 15px 'Manrope'", color: 'var(--uk-ink-55)' }}>
+                {UNIT_SYMBOL}
+              </span>
             </div>
           </div>
         )}
@@ -222,9 +270,11 @@ export function TransferScreen() {
         <div className="uk-eyebrow">Кому перевести</div>
         <div className="uk-stack" style={{ gap: 10 }}>
           {(candidates?.candidates ?? []).map((candidate) => (
-            <button
+            <UiButton
               key={candidate.user.id}
               type="button"
+              variant="ghost"
+              className="h-auto w-full justify-start"
               disabled={!canTransfer}
               onClick={() => {
                 setRecipientId(candidate.user.id);
@@ -243,22 +293,15 @@ export function TransferScreen() {
                 textAlign: 'left',
               }}
             >
-              <div
-                className="uk-avatar"
-                style={{ background: avatarColor(candidate.user.id) }}
-              >
-                {candidateName(candidate.user).slice(0, 1).toUpperCase()}
-              </div>
+              <Avatar label={candidateName(candidate.user)} seed={candidate.user.id} />
               <div style={{ flex: 1 }}>
                 <div style={{ font: "600 15px 'Manrope'" }}>{candidateName(candidate.user)}</div>
                 <div style={{ font: "400 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>
                   баланс {formatBalance(candidate.current_balance)} {UNIT_SYMBOL}
                 </div>
               </div>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--uk-ink-45)" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 6l6 6-6 6" />
-              </svg>
-            </button>
+              <ChevronRight className="size-5 text-muted-foreground" aria-hidden="true" />
+            </UiButton>
           ))}
           {candidates?.candidates.length === 0 ? (
             <Note tone="info">В группе больше никого нет.</Note>
@@ -266,7 +309,8 @@ export function TransferScreen() {
         </div>
 
         <Note tone="info">
-          Перевести можно не больше, чем есть на балансе. Показаны только активные участники, кроме вас.
+          Перевести можно не больше, чем есть на балансе. Показаны только активные участники, кроме
+          вас.
         </Note>
       </div>
     </Screen>

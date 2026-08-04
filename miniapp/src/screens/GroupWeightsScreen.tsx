@@ -6,9 +6,9 @@ import { useCurrentGroup } from '@/api/queries';
 import { useAuth } from '@/auth/useAuth';
 import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
+import { Button, Note, Screen, ScreenHeader } from '@/components/ui/app-kit';
 import { routes } from '@/routes/paths';
 import { avatarColor } from '@/ui/avatar';
-import { Button, Note, Screen, ScreenHeader } from '@/ui/kit';
 
 function memberName(m: {
   first_name: string | null;
@@ -84,7 +84,10 @@ export function GroupWeightsScreen() {
     () =>
       group
         ? Object.fromEntries(
-            group.members.map((m) => [m.user_id, Math.round(Number.parseFloat(m.weight_percent) || 0)]),
+            group.members.map((m) => [
+              m.user_id,
+              Math.round(Number.parseFloat(m.weight_percent) || 0),
+            ]),
           )
         : {},
     [group?.id], // eslint-disable-line react-hooks/exhaustive-deps
@@ -94,10 +97,7 @@ export function GroupWeightsScreen() {
     setValues(initial);
   }, [initial]);
 
-  const total = useMemo(
-    () => Object.values(values).reduce((acc, v) => acc + v, 0),
-    [values],
-  );
+  const total = useMemo(() => Object.values(values).reduce((acc, v) => acc + v, 0), [values]);
 
   if (isPending) return <Loader title="Загружаем участников…" />;
   if (isError) {
@@ -189,8 +189,13 @@ export function GroupWeightsScreen() {
           {group.members.map((member) => {
             const value = values[member.user_id] ?? 0;
             return (
-              <div key={member.user_id} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div
+                key={member.user_id}
+                style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+              >
+                <div
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
                   <span style={{ font: "600 15px 'Manrope'" }}>
                     {memberName(member)}
                     {member.user_id === context?.user?.id ? (
@@ -200,7 +205,9 @@ export function GroupWeightsScreen() {
                       </span>
                     ) : null}
                   </span>
-                  <span style={{ font: "800 16px 'Manrope'", color: 'var(--uk-blue)' }}>{value}%</span>
+                  <span style={{ font: "800 16px 'Manrope'", color: 'var(--uk-blue)' }}>
+                    {value}%
+                  </span>
                 </div>
                 <div className="uk-slider">
                   <input
@@ -228,9 +235,9 @@ export function GroupWeightsScreen() {
         </div>
 
         <div style={{ display: 'flex', gap: 10, marginTop: 2 }}>
-          <button
+          <Button
             type="button"
-            className="uk-btn uk-btn--ghost"
+            variant="ghost"
             style={{
               flex: 1,
               padding: 12,
@@ -244,16 +251,16 @@ export function GroupWeightsScreen() {
             onClick={() => setValues(evenSplit(group.members.map((m) => m.user_id)))}
           >
             Поровну
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="uk-btn uk-btn--ghost"
+            variant="ghost"
             style={{ flex: 1, padding: 12, fontSize: 13, borderRadius: 14 }}
             disabled={mutation.isPending}
             onClick={() => setValues(initial)}
           >
             Сбросить
-          </button>
+          </Button>
         </div>
 
         {!sumIsValid ? (
@@ -262,12 +269,7 @@ export function GroupWeightsScreen() {
         {mutation.isError ? <Note tone="error">{mutation.error.message}</Note> : null}
 
         <div className="uk-spacer" />
-        <Button
-          type="submit"
-          variant="primary"
-          loading={mutation.isPending}
-          disabled={!sumIsValid}
-        >
+        <Button type="submit" variant="primary" loading={mutation.isPending} disabled={!sumIsValid}>
           Сохранить нагрузку
         </Button>
       </form>

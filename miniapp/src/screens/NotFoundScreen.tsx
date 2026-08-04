@@ -1,7 +1,7 @@
 import { useNavigate } from '@/routes/navigation';
 
+import { Button, Screen } from '@/components/ui/app-kit';
 import { routes } from '@/routes/paths';
-import { Button, Screen } from '@/ui/kit';
 
 export function NotFoundScreen() {
   const navigate = useNavigate();

@@ -6,6 +6,9 @@ import { useCurrentGroup } from '@/api/queries';
 import { useAuth } from '@/auth/useAuth';
 import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
+import { Avatar, BottomSheet, Button, Card, Note, Screen } from '@/components/ui/app-kit';
+import { Button as UiButton } from '@/components/ui/button';
+import { ScreenHeader as UiScreenHeader } from '@/components/ui/screen';
 import { routes } from '@/routes/paths';
 import {
   WEEKDAY_EVERY,
@@ -18,7 +21,6 @@ import {
   pluralDays,
   pluralMembers,
 } from '@/ui/format';
-import { Avatar, BottomSheet, Button, Card, Note, Screen } from '@/ui/kit';
 import {
   CalendarIcon,
   CheckIcon,
@@ -88,14 +90,10 @@ export function GroupScreen() {
 
   return (
     <Screen>
-      <div className="uk-header" style={{ justifyContent: 'space-between' }}>
-        <div>
-          <div style={{ font: "700 20px 'Manrope'" }}>{group.name}</div>
-          <div style={{ font: "400 12.5px 'Manrope'", color: 'var(--uk-ink-55)' }}>
-            {pluralMembers(group.members.length)} · вы {isOwner ? 'владелец' : 'участник'}
-          </div>
-        </div>
-      </div>
+      <UiScreenHeader
+        title={group.name}
+        description={`${pluralMembers(group.members.length)} · вы ${isOwner ? 'владелец' : 'участник'}`}
+      />
 
       {/* Balances */}
       <div style={{ display: 'flex', gap: 12 }}>
@@ -164,15 +162,10 @@ export function GroupScreen() {
                 {group.join_secret}
               </div>
             </div>
-            <Button
-              type="button"
-              variant="primary"
-              className="uk-btn--sm"
-              onClick={() => void copyCode()}
-            >
+            <UiButton type="button" size="sm" onClick={() => void copyCode()}>
               {copied ? <CheckIcon size={16} strokeWidth={2.6} /> : <CopyIcon size={16} />}
               {copied ? 'Скопировано' : 'Копировать'}
-            </Button>
+            </UiButton>
           </div>
         </Card>
       ) : null}
@@ -186,7 +179,14 @@ export function GroupScreen() {
             <div className="uk-row" key={member.user_id}>
               <Avatar label={memberName(member)} seed={member.user_id} />
               <div className="uk-row__grow">
-                <div style={{ font: "600 15px 'Manrope'", display: 'flex', gap: 6, alignItems: 'center' }}>
+                <div
+                  style={{
+                    font: "600 15px 'Manrope'",
+                    display: 'flex',
+                    gap: 6,
+                    alignItems: 'center',
+                  }}
+                >
                   {memberName(member)}
                   {you ? (
                     <span style={{ font: "500 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>
@@ -212,38 +212,51 @@ export function GroupScreen() {
         <>
           <div className="uk-eyebrow">Управление группой</div>
           <Card flush>
-            <button
+            <UiButton
               type="button"
+              variant="ghost"
               className="uk-row uk-row--tap"
               style={{ width: '100%', background: 'transparent', border: 'none', color: 'inherit' }}
               onClick={() => navigate(routes.groupSettings)}
             >
               <SettingsIcon size={20} style={{ color: 'var(--uk-blue)' }} />
-              <span className="uk-row__grow" style={{ font: "600 15px 'Manrope'", textAlign: 'left' }}>
+              <span
+                className="uk-row__grow"
+                style={{ font: "600 15px 'Manrope'", textAlign: 'left' }}
+              >
                 Настройки группы
               </span>
               <ChevronIcon size={18} style={{ color: 'var(--uk-ink-45)' }} />
-            </button>
-            <button
+            </UiButton>
+            <UiButton
               type="button"
+              variant="ghost"
               className="uk-row uk-row--tap"
               style={{ width: '100%', background: 'transparent', border: 'none', color: 'inherit' }}
               onClick={() => navigate(routes.groupWeights)}
             >
               <SlidersIcon size={20} style={{ color: 'var(--uk-blue)' }} />
-              <span className="uk-row__grow" style={{ font: "600 15px 'Manrope'", textAlign: 'left' }}>
+              <span
+                className="uk-row__grow"
+                style={{ font: "600 15px 'Manrope'", textAlign: 'left' }}
+              >
                 Нагрузка участников
               </span>
               <ChevronIcon size={18} style={{ color: 'var(--uk-ink-45)' }} />
-            </button>
+            </UiButton>
           </Card>
         </>
       ) : null}
 
       <div style={{ textAlign: 'center', marginTop: 6 }}>
-        <button type="button" className="uk-link-muted" onClick={() => setConfirmingLeave(true)}>
+        <UiButton
+          type="button"
+          variant="link"
+          className="uk-link-muted h-auto"
+          onClick={() => setConfirmingLeave(true)}
+        >
           Выйти из группы
-        </button>
+        </UiButton>
       </div>
 
       {confirmingLeave ? (
@@ -296,7 +309,10 @@ export function GroupScreen() {
                 background: 'rgba(255,255,255,.05)',
               }}
             >
-              <CheckIcon size={17} style={{ color: 'var(--uk-blue)', flex: 'none', marginTop: 1 }} />
+              <CheckIcon
+                size={17}
+                style={{ color: 'var(--uk-blue)', flex: 'none', marginTop: 1 }}
+              />
               <span style={{ font: "400 13px/1.5 'Manrope'", color: 'var(--uk-ink-70)' }}>
                 Ваши прошлые балансы и история сохранятся в группе
               </span>
@@ -311,7 +327,10 @@ export function GroupScreen() {
                 background: 'rgba(255,255,255,.05)',
               }}
             >
-              <ErrorIcon size={17} style={{ color: 'var(--uk-warn)', flex: 'none', marginTop: 1 }} />
+              <ErrorIcon
+                size={17}
+                style={{ color: 'var(--uk-warn)', flex: 'none', marginTop: 1 }}
+              />
               <span style={{ font: "400 13px/1.5 'Manrope'", color: 'var(--uk-ink-70)' }}>
                 Вернуться получится только по коду вступления
               </span>
@@ -332,7 +351,11 @@ export function GroupScreen() {
           >
             {handoverTo ? 'Выйти и передать владение' : 'Выйти из группы'}
           </Button>
-          <Button variant="soft" disabled={leave.isPending} onClick={() => setConfirmingLeave(false)}>
+          <Button
+            variant="soft"
+            disabled={leave.isPending}
+            onClick={() => setConfirmingLeave(false)}
+          >
             Остаться
           </Button>
         </BottomSheet>

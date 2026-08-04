@@ -2,8 +2,8 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from '@/routes/navigation';
 
 import { useJoinGroup } from '@/api/mutations';
+import { Button, Field, Note, Screen, ScreenHeader, TextInput } from '@/components/ui/app-kit';
 import { routes } from '@/routes/paths';
-import { Button, Field, Note, Screen, ScreenHeader, TextInput } from '@/ui/kit';
 
 /**
  * Joins an existing group by name and code. Mirrors legacy `/join_group`.
@@ -31,9 +31,7 @@ export function JoinGroupScreen() {
     <Screen>
       <ScreenHeader title="Вступить в группу" onBack={() => navigate(routes.onboarding)} />
       <form onSubmit={handleSubmit} className="uk-stack" style={{ flex: 1 }}>
-        <Note tone="info">
-          Название группы и код вступления узнайте у того, кто вас пригласил.
-        </Note>
+        <Note tone="info">Название группы и код вступления узнайте у того, кто вас пригласил.</Note>
 
         <Field label="Название группы">
           <TextInput

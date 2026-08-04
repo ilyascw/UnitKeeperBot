@@ -1,13 +1,7 @@
-import { BrandSpinner, Screen } from '@/ui/kit';
+import { BrandSpinner, Screen } from '@/components/ui/app-kit';
 
 /** Centred full-height loading state with the brand spinner. */
-export function Loader({
-  title = 'Загружаем…',
-  label,
-}: {
-  title?: string;
-  label?: string;
-}) {
+export function Loader({ title = 'Загружаем…', label }: { title?: string; label?: string }) {
   return (
     <Screen centered>
       <BrandSpinner />

@@ -3,9 +3,9 @@ import { Navigate } from '@/routes/navigation';
 import { useCurrentGroup, useSprintResults } from '@/api/queries';
 import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
+import { Card, Screen, ScreenHeader } from '@/components/ui/app-kit';
 import { routes } from '@/routes/paths';
 import { UNIT_SYMBOL, formatPeriod, formatUnits } from '@/ui/format';
-import { Card, Screen } from '@/ui/kit';
 
 /** Russian pluralisation for "раз / раза / раз". */
 function pluralTimes(n: number): string {
@@ -40,9 +40,7 @@ export function ProgressScreen() {
 
   return (
     <Screen>
-      <div className="uk-header">
-        <div className="uk-header__title">Прогресс</div>
-      </div>
+      <ScreenHeader title="Прогресс" />
 
       {/* Headline progress */}
       <Card style={{ padding: 20, borderRadius: 24 }}>
@@ -51,7 +49,9 @@ export function ProgressScreen() {
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, margin: '10px 0 14px' }}>
           <span style={{ font: "800 40px/1 'Manrope'", color: 'var(--uk-teal)' }}>{pct}%</span>
-          <span style={{ font: "500 13px 'Manrope'", color: 'var(--uk-ink-55)' }}>плана выполнено</span>
+          <span style={{ font: "500 13px 'Manrope'", color: 'var(--uk-ink-55)' }}>
+            плана выполнено
+          </span>
         </div>
         <div className="uk-progress">
           <div className="uk-progress__fill" style={{ width: `${pct}%` }} />
@@ -65,8 +65,12 @@ export function ProgressScreen() {
             color: 'var(--uk-ink-70)',
           }}
         >
-          <span>Выполнено {formatUnits(data.completed_units)} {UNIT_SYMBOL}</span>
-          <span>План {formatUnits(data.planned_units)} {UNIT_SYMBOL}</span>
+          <span>
+            Выполнено {formatUnits(data.completed_units)} {UNIT_SYMBOL}
+          </span>
+          <span>
+            План {formatUnits(data.planned_units)} {UNIT_SYMBOL}
+          </span>
         </div>
       </Card>
 

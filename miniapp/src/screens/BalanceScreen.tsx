@@ -7,8 +7,15 @@ import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
 import { routes } from '@/routes/paths';
 import { UNIT_SYMBOL, balanceColor, formatBalance, memberName } from '@/ui/format';
-import { Avatar, Button, Card, Note, Segmented } from '@/ui/kit';
-import { Screen } from '@/ui/kit';
+import {
+  Avatar,
+  Button,
+  Card,
+  Note,
+  Screen,
+  ScreenHeader,
+  Segmented,
+} from '@/components/ui/app-kit';
 
 const TRANSACTION_LABELS: Record<string, string> = {
   transfer: 'Перевод',
@@ -60,9 +67,7 @@ export function BalanceScreen() {
 
   return (
     <Screen>
-      <div className="uk-header">
-        <div className="uk-header__title">Баланс</div>
-      </div>
+      <ScreenHeader title="Баланс" />
 
       {/* My balance hero */}
       <div
@@ -77,9 +82,13 @@ export function BalanceScreen() {
         <div className="uk-eyebrow" style={{ letterSpacing: '0.08em' }}>
           Ваш баланс
         </div>
-        <div style={{ font: "800 42px/1 'Manrope'", marginTop: 10, color: balanceColor(myBalance) }}>
+        <div
+          style={{ font: "800 42px/1 'Manrope'", marginTop: 10, color: balanceColor(myBalance) }}
+        >
           {formatBalance(myBalance)}{' '}
-          <span style={{ font: "600 18px 'Manrope'", color: 'var(--uk-ink-55)' }}>{UNIT_SYMBOL}</span>
+          <span style={{ font: "600 18px 'Manrope'", color: 'var(--uk-ink-55)' }}>
+            {UNIT_SYMBOL}
+          </span>
         </div>
       </div>
 
@@ -99,8 +108,18 @@ export function BalanceScreen() {
       {tab === 'overview' ? (
         <>
           {/* Group total */}
-          <Card style={{ padding: 16, borderRadius: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ font: "600 14px 'Manrope'", color: 'var(--uk-ink-70)' }}>Баланс группы</span>
+          <Card
+            style={{
+              padding: 16,
+              borderRadius: 20,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <span style={{ font: "600 14px 'Manrope'", color: 'var(--uk-ink-70)' }}>
+              Баланс группы
+            </span>
             <span style={{ font: "800 20px 'Manrope'", color: balanceColor(group.group_balance) }}>
               {formatBalance(group.group_balance)} {UNIT_SYMBOL}
             </span>
@@ -125,7 +144,9 @@ export function BalanceScreen() {
                     >
                       {memberName(member)}
                       {you ? (
-                        <span style={{ font: "500 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>(вы)</span>
+                        <span style={{ font: "500 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>
+                          (вы)
+                        </span>
                       ) : null}
                       {member.is_owner ? <span className="uk-badge">владелец</span> : null}
                     </div>
@@ -142,8 +163,8 @@ export function BalanceScreen() {
           </Card>
 
           <Note tone="info">
-            Баланс — это вклад относительно вашей доли нагрузки. Плюс — вы сделали больше нормы, минус —
-            меньше.
+            Баланс — это вклад относительно вашей доли нагрузки. Плюс — вы сделали больше нормы,
+            минус — меньше.
           </Note>
         </>
       ) : (
@@ -159,10 +180,14 @@ export function BalanceScreen() {
                   {history.items.map((tx) => {
                     const positive = Number.parseFloat(tx.amount_delta) >= 0;
                     const counterparty =
-                      tx.counterparty_user_id != null ? membersById.get(tx.counterparty_user_id) : undefined;
+                      tx.counterparty_user_id != null
+                        ? membersById.get(tx.counterparty_user_id)
+                        : undefined;
                     let label = TRANSACTION_LABELS[tx.transaction_type] ?? tx.transaction_type;
                     if (tx.transaction_type === 'transfer') {
-                      const who = counterparty ? memberName(counterparty) : `Участник ${tx.counterparty_user_id}`;
+                      const who = counterparty
+                        ? memberName(counterparty)
+                        : `Участник ${tx.counterparty_user_id}`;
                       label = positive ? `Перевод · от ${who}` : `Перевод · ${who}`;
                     } else if (tx.transaction_type === 'manual_adjustment' && tx.description) {
                       label = `${label} · ${tx.description}`;
@@ -194,7 +219,10 @@ export function BalanceScreen() {
                 </Card>
               )}
               {history.has_more ? (
-                <Button variant="ghost" onClick={() => setHistoryLimit((limit) => limit + HISTORY_PAGE_SIZE)}>
+                <Button
+                  variant="ghost"
+                  onClick={() => setHistoryLimit((limit) => limit + HISTORY_PAGE_SIZE)}
+                >
                   Показать ещё
                 </Button>
               ) : null}

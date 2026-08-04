@@ -3,7 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { useApproveTaskLog, useRejectTaskLog } from '@/api/mutations';
 import type { TaskLogStatus, TaskLogViewResponse, UserResponse } from '@/api/types';
 import { UNIT_SYMBOL, formatDay, formatUnits } from '@/ui/format';
-import { BottomSheet, Button, Field, Note, TextInput } from '@/ui/kit';
+import { BottomSheet, Button, Field, Note, TextInput } from '@/components/ui/app-kit';
 import { CheckIcon } from '@/ui/icons';
 
 function displayName(user: UserResponse): string {
@@ -39,7 +39,8 @@ export function LogRow({
       <div className="uk-row__grow" style={{ minWidth: 0 }}>
         <div style={{ font: "700 15px 'Manrope'" }}>{log.task.title}</div>
         <div style={{ font: "400 12px 'Manrope'", color: 'var(--uk-ink-55)', marginTop: 3 }}>
-          {displayName(log.performer)} · {formatDay(log.created_at)} · {formatUnits(log.task.unit_cost)} {UNIT_SYMBOL}
+          {displayName(log.performer)} · {formatDay(log.created_at)} ·{' '}
+          {formatUnits(log.task.unit_cost)} {UNIT_SYMBOL}
         </div>
         <div style={{ font: "600 12px 'Manrope'", color: statusColor(log.status), marginTop: 5 }}>
           {statusLabel(log.status)}
@@ -75,10 +76,18 @@ export function RejectSheet({ log, onClose }: { log: TaskLogViewResponse; onClos
   };
   return (
     <BottomSheet onClose={() => (reject.isPending ? undefined : onClose())}>
-      <div style={{ font: "800 20px 'Manrope'", textAlign: 'center', marginBottom: 16 }}>Отклонить отметку</div>
+      <div style={{ font: "800 20px 'Manrope'", textAlign: 'center', marginBottom: 16 }}>
+        Отклонить отметку
+      </div>
       <form className="uk-stack" onSubmit={submit}>
         <Field label="Причина" hint="Её увидит исполнитель.">
-          <TextInput value={reason} onChange={(e) => setReason(e.currentTarget.value)} autoFocus disabled={reject.isPending} maxLength={500} />
+          <TextInput
+            value={reason}
+            onChange={(e) => setReason(e.currentTarget.value)}
+            autoFocus
+            disabled={reject.isPending}
+            maxLength={500}
+          />
         </Field>
         {reject.isError ? <Note tone="error">{reject.error.message}</Note> : null}
         <Button variant="danger" type="submit" loading={reject.isPending} disabled={!reason.trim()}>

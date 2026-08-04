@@ -1,8 +1,9 @@
 import { useNavigate } from '@/routes/navigation';
 
 import { useAuth } from '@/auth/useAuth';
+import { Note, Screen } from '@/components/ui/app-kit';
+import { Button } from '@/components/ui/button';
 import { routes } from '@/routes/paths';
-import { Note, Screen } from '@/ui/kit';
 import { EnterIcon, LogoIcon, PlusIcon } from '@/ui/icons';
 
 /**
@@ -48,8 +49,10 @@ export function OnboardingScreen() {
       </div>
 
       <div className="uk-stack" style={{ marginTop: 6 }}>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          className="h-auto w-full justify-start"
           onClick={() => navigate(routes.onboardingCreate)}
           style={{
             padding: 20,
@@ -82,12 +85,13 @@ export function OnboardingScreen() {
               </div>
             </div>
           </div>
-        </button>
+        </Button>
 
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={() => navigate(routes.onboardingJoin)}
-          className="uk-card"
+          className="h-auto w-full justify-start border border-border bg-card text-card-foreground shadow-sm backdrop-blur-xl"
           style={{ padding: 20, textAlign: 'left', cursor: 'pointer', borderRadius: 22 }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -111,7 +115,7 @@ export function OnboardingScreen() {
               </div>
             </div>
           </div>
-        </button>
+        </Button>
       </div>
 
       <div className="uk-spacer" />

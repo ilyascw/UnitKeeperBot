@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { Button, Screen } from '@/ui/kit';
+import { Button, Screen } from '@/components/ui/app-kit';
 import { AlertIcon } from '@/ui/icons';
 
 interface ErrorStateProps {
