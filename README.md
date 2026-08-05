@@ -146,7 +146,7 @@ flowchart LR
 
 | Слой | Технологии |
 | --- | --- |
-| Mini App | React 18, TypeScript, Vite, Telegram UI Kit, `@tma.js/sdk-react`, TanStack Query |
+| Mini App | React 18, TypeScript, Vite, Base UI + Telegram CSS parsed from user settings, Tailwind, `@tma.js/sdk-react`, TanStack Query |
 | Backend | Python 3.11, FastAPI, Pydantic, Dishka, APScheduler |
 | Bot | aiogram 3, httpx |
 | Data | PostgreSQL 16, SQLAlchemy 2, Alembic, asyncpg |
