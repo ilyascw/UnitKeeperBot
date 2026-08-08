@@ -382,9 +382,9 @@ async def import_legacy_csv(data_dir: Path, database_url: str) -> list[int]:
                 await upsert_group(session, row, owner_user_id)
 
             for row in users:
-                user_id = parse_int(row.get("id"))
+                membership_user_id = parse_int(row.get("id"))
                 group_id = parse_int(row.get("group_id"))
-                if user_id is None or group_id is None:
+                if membership_user_id is None or group_id is None:
                     continue
                 matching_group = next(
                     item for item in groups if parse_int(item.get("id")) == group_id
@@ -393,8 +393,10 @@ async def import_legacy_csv(data_dir: Path, database_url: str) -> list[int]:
                 await upsert_membership(
                     session,
                     group_id=group_id,
-                    user_id=user_id,
-                    weight_percent=weights.get(user_id, Decimal("0")).quantize(Decimal("0.01")),
+                    user_id=membership_user_id,
+                    weight_percent=weights.get(membership_user_id, Decimal("0")).quantize(
+                        Decimal("0.01")
+                    ),
                 )
 
             for row in tasks:
@@ -405,10 +407,12 @@ async def import_legacy_csv(data_dir: Path, database_url: str) -> list[int]:
 
             for row in balances:
                 await upsert_balance(session, row)
-                user_id = parse_int(row.get("user_id"))
+                balance_user_id = parse_int(row.get("user_id"))
                 group_id = parse_int(row.get("group_id"))
-                if user_id is not None and group_id is not None:
-                    await clear_opening_transaction(session, group_id=group_id, user_id=user_id)
+                if balance_user_id is not None and group_id is not None:
+                    await clear_opening_transaction(
+                        session, group_id=group_id, user_id=balance_user_id
+                    )
 
             await reset_sequences(session)
 
