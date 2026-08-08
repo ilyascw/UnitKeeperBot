@@ -105,7 +105,9 @@ export function DashboardScreen() {
   const progress = results.data ? Number.parseFloat(results.data.progress_percent) : null;
   const progressPct = progress === null ? 0 : Math.max(0, Math.min(100, Math.round(progress)));
 
-  const openTasks = (tasksQuery.data ?? []).filter((t) => t.remaining_in_sprint > 0);
+  const openTasks = (tasksQuery.data ?? [])
+    .filter((t) => t.remaining_in_sprint > 0)
+    .sort((a, b) => Number.parseFloat(b.unit_cost) - Number.parseFloat(a.unit_cost));
   const pendingItems = pendingApprovals.data?.items ?? [];
 
   return (
