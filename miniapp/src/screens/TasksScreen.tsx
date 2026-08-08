@@ -357,6 +357,10 @@ function TaskDetailSheet({
   const markable = taskIsMarkable(task);
   const canCancel = myPendingLogId !== null;
   const adjusting = increase.isPending || decrease.isPending;
+  // The quick "one more" bump below is a single-use convenience for this
+  // visit to the sheet — repeated adjustments belong in the frequency
+  // stepper further down, not this shortcut.
+  const [usedQuickIncrease, setUsedQuickIncrease] = useState(false);
 
   return (
     <BottomSheet onClose={onClose}>
@@ -394,8 +398,21 @@ function TaskDetailSheet({
           <Note tone="info">Задача не запланирована на текущий спринт.</Note>
         ) : heldFull ? (
           <Note tone="warn">Все свободные слоты сейчас заняты отметками на подтверждении.</Note>
-        ) : complete ? (
-          <Note tone="info">Лимит на этот спринт уже выполнен.</Note>
+        ) : complete && !usedQuickIncrease ? (
+          <Button
+            variant="soft"
+            loading={increase.isPending}
+            disabled={adjusting}
+            onClick={() => {
+              setUsedQuickIncrease(true);
+              increase.mutate(task.id);
+            }}
+          >
+            <PlusIcon size={17} /> Увеличить количество за спринт
+          </Button>
+        ) : null}
+        {increase.isError && !isOwner ? (
+          <Note tone="error">{increase.error.message}</Note>
         ) : null}
 
         <Button
