@@ -52,6 +52,14 @@ async def test_temp_results_and_sprint_close_persist_balances() -> None:
     assert results.planned_units == Decimal("3.00")
     assert results.completed_units == Decimal("3.00")
     assert results.breakdown[0].title == "Laundry"
+    assert results.group.planned_units == Decimal("6.00")
+    assert results.group.completed_units == Decimal("3.00")
+    assert results.group.progress_percent == Decimal("50.00")
+
+    results_for_user2 = await sprint_service.get_temp_results(user_id=2, group_id=1)
+    assert results_for_user2.completed_units == Decimal("0.00")
+    assert results_for_user2.group.completed_units == Decimal("3.00")
+    assert results_for_user2.group.planned_units == Decimal("6.00")
 
     run = await sprint_service.close_current_sprint(group_id=1)
     assert run.status is SprintRunStatus.CLOSED

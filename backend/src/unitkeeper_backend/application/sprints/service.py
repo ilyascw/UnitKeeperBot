@@ -8,6 +8,7 @@ from db.enums import BalanceTransactionAccountType, BalanceTransactionType, Spri
 
 from unitkeeper_backend.application.models import (
     CompletedTaskBreakdownItem,
+    GroupProgressInfo,
     SprintMemberResultInfo,
     SprintRunInfo,
     TempResults,
@@ -54,16 +55,20 @@ class SprintService:
         )
         logs = await self._uow.tasks.list_completed_logs_in_window(
             group_id=group_id,
-            performer_user_id=user_id,
+            performer_user_id=None,
             window_start=window.starts_at,
             window_end_exclusive=window.ends_before,
         )
         task_by_id = {task.id: task for task in tasks}
         completed = ZERO
+        group_completed = ZERO
         counters: dict[int, int] = defaultdict(int)
         for log in logs:
             task = task_by_id.get(log.task_id)
             if task is None:
+                continue
+            group_completed += task.unit_cost
+            if log.performer_user_id != user_id:
                 continue
             counters[task.id] += 1
             completed += task.unit_cost
@@ -79,6 +84,13 @@ class SprintService:
                 counters.items(), key=lambda item: task_by_id[item[0]].title.lower()
             )
         ]
+        group_progress = GroupProgressInfo(
+            planned_units=quantize(total_task_units),
+            completed_units=quantize(group_completed),
+            progress_percent=progress_percent(
+                completed_units=group_completed, planned_units_total=total_task_units
+            ),
+        )
         return TempResults(
             period_start=window.period_start,
             period_end=window.period_end,
@@ -88,6 +100,7 @@ class SprintService:
                 completed_units=completed, planned_units_total=planned
             ),
             breakdown=breakdown,
+            group=group_progress,
         )
 
     async def close_current_sprint(self, *, group_id: int) -> SprintRunInfo:
