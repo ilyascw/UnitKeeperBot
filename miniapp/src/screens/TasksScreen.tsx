@@ -355,7 +355,7 @@ function TaskDetailSheet({
   const complete = taskIsComplete(task);
   const heldFull = taskIsHeldFull(task);
   const markable = taskIsMarkable(task);
-  const canCancel = heldFull && myPendingLogId !== null;
+  const canCancel = myPendingLogId !== null;
   const adjusting = increase.isPending || decrease.isPending;
 
   return (
@@ -484,7 +484,7 @@ function TaskRow({
   const complete = taskIsComplete(task);
   const markable = taskIsMarkable(task);
   const heldFull = taskIsHeldFull(task);
-  const canCancel = heldFull && myPendingLogId !== null;
+  const canCancel = myPendingLogId !== null;
   const locked = (!markable && !canCancel) || busy;
 
   return (
