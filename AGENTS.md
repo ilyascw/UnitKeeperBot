@@ -34,6 +34,13 @@ Do not add `Co-Authored-By: Claude ...` or `Claude-Session: ...` trailers to
 commit messages in this repo. Write commit messages as if authored solely by
 the human developer.
 
+## CI
+
+Commits that touch only documentation/instructions (this file, README.md,
+architecture.md, docs/**) and no code, config, schema, or dependency files
+should end with `[skip ci]` in the subject line — no need to burn a full
+CI matrix run for a doc-only change.
+
 ## Git flow
 
 `dev` is the integration branch — feature/fix branches merge into `dev` via
