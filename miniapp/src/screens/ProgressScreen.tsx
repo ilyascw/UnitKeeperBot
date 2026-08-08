@@ -48,8 +48,32 @@ export function ProgressScreen() {
 
       {/* Headline progress */}
       <Card style={{ padding: 20, borderRadius: 24 }}>
-        <div className="uk-eyebrow" style={{ letterSpacing: '0.08em' }}>
-          Спринт · {formatPeriod(data.period_start, data.period_end)}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+          }}
+        >
+          <div className="uk-eyebrow" style={{ letterSpacing: '0.08em' }}>
+            Спринт · {formatPeriod(data.period_start, data.period_end)}
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: 5,
+              padding: '4px 10px',
+              borderRadius: 999,
+              background: 'var(--uk-accent-soft)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <span style={{ font: "700 13px 'Manrope'", color: 'var(--uk-accent)' }}>
+              Группа {groupPct}%
+            </span>
+          </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, margin: '10px 0 14px' }}>
           <span style={{ font: "800 40px/1 'Manrope'", color: 'var(--uk-teal)' }}>{pct}%</span>
@@ -57,9 +81,23 @@ export function ProgressScreen() {
             плана выполнено
           </span>
         </div>
-        <div className="uk-progress">
+
+        <div className="uk-progress" style={{ position: 'relative' }}>
           <div className="uk-progress__fill" style={{ width: `${pct}%` }} />
+          <div
+            title={`Группа: ${groupPct}%`}
+            style={{
+              position: 'absolute',
+              top: -3,
+              left: `calc(${groupPct}% - 1px)`,
+              width: 2,
+              height: 16,
+              borderRadius: 1,
+              background: 'var(--uk-accent)',
+            }}
+          />
         </div>
+
         <div
           style={{
             display: 'flex',
@@ -76,38 +114,20 @@ export function ProgressScreen() {
             План {formatUnits(data.planned_units)} {UNIT_SYMBOL}
           </span>
         </div>
-      </Card>
-
-      {/* Group-wide progress */}
-      <Card style={{ padding: 20, borderRadius: 24 }}>
-        <div className="uk-eyebrow" style={{ letterSpacing: '0.08em' }}>
-          Прогресс группы
-        </div>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, margin: '10px 0 14px' }}>
-          <span style={{ font: "800 40px/1 'Manrope'", color: 'var(--uk-teal)' }}>
-            {groupPct}%
-          </span>
-          <span style={{ font: "500 13px 'Manrope'", color: 'var(--uk-ink-55)' }}>
-            плана выполнено
-          </span>
-        </div>
-        <div className="uk-progress">
-          <div className="uk-progress__fill" style={{ width: `${groupPct}%` }} />
-        </div>
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            marginTop: 10,
-            font: "600 13px 'Manrope'",
-            color: 'var(--uk-ink-70)',
+            marginTop: 4,
+            font: "500 12px 'Manrope'",
+            color: 'var(--uk-ink-55)',
           }}
         >
           <span>
-            Выполнено {formatUnits(data.group.completed_units)} {UNIT_SYMBOL}
+            Группа: выполнено {formatUnits(data.group.completed_units)} {UNIT_SYMBOL}
           </span>
           <span>
-            План {formatUnits(data.group.planned_units)} {UNIT_SYMBOL}
+            план {formatUnits(data.group.planned_units)} {UNIT_SYMBOL}
           </span>
         </div>
       </Card>
