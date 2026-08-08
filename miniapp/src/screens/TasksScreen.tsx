@@ -355,7 +355,7 @@ function TaskDetailSheet({
   const complete = taskIsComplete(task);
   const heldFull = taskIsHeldFull(task);
   const markable = taskIsMarkable(task);
-  const canCancel = heldFull && myPendingLogId !== null;
+  const canCancel = myPendingLogId !== null;
   const adjusting = increase.isPending || decrease.isPending;
 
   return (
@@ -484,7 +484,7 @@ function TaskRow({
   const complete = taskIsComplete(task);
   const markable = taskIsMarkable(task);
   const heldFull = taskIsHeldFull(task);
-  const canCancel = heldFull && myPendingLogId !== null;
+  const canCancel = myPendingLogId !== null;
   const locked = (!markable && !canCancel) || busy;
 
   return (
@@ -602,7 +602,9 @@ function TaskRow({
 
 /**
  * Tasks section. Lists the group's recurring tasks with their per-sprint
- * progress; any member can log a completion, and the owner can add tasks.
+ * progress; any active member can log a completion or add new tasks, while
+ * editing, deleting, and adjusting frequency of existing tasks stays
+ * owner-only.
  */
 export function TasksScreen() {
   const navigate = useNavigate();
@@ -675,12 +677,13 @@ export function TasksScreen() {
   }
 
   const isOwner = context?.user?.id === group.data?.owner_user_id;
+  const byCostDesc = (a: TaskResponse, b: TaskResponse): number =>
+    Number.parseFloat(b.unit_cost) - Number.parseFloat(a.unit_cost);
+  const doneTasks = tasks.filter((task) => taskIsComplete(task)).sort(byCostDesc);
   const todoTasks = tasks
-    .filter((task) => task.frequency_per_sprint > 0)
-    .sort((a, b) => b.frequency_per_sprint - a.frequency_per_sprint);
-  const backlogTasks = tasks
-    .filter((task) => task.frequency_per_sprint === 0)
-    .sort((a, b) => b.frequency_per_sprint - a.frequency_per_sprint);
+    .filter((task) => task.frequency_per_sprint > 0 && !taskIsComplete(task))
+    .sort(byCostDesc);
+  const backlogTasks = tasks.filter((task) => task.frequency_per_sprint === 0).sort(byCostDesc);
   const myPendingLogByTask = new Map<number, number>();
   for (const log of myTaskLogs.data?.items ?? []) {
     if (log.status === 'pending' && !myPendingLogByTask.has(log.task.id)) {
@@ -741,17 +744,15 @@ export function TasksScreen() {
                 className={isRefreshing ? 'uk-refresh-icon--spinning' : undefined}
               />
             </UiButton>
-            {isOwner ? (
-              <UiButton
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label="Добавить задачу"
-                onClick={() => setAddMenuOpen(true)}
-              >
-                <PlusIcon size={24} />
-              </UiButton>
-            ) : null}
+            <UiButton
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Добавить задачу"
+              onClick={() => setAddMenuOpen(true)}
+            >
+              <PlusIcon size={24} />
+            </UiButton>
           </>
         }
       />
@@ -760,17 +761,13 @@ export function TasksScreen() {
         <Card style={{ padding: 22, borderRadius: 20, textAlign: 'center' }}>
           <div style={{ font: "700 16px 'Manrope'" }}>Пока нет задач</div>
           <div style={{ font: "400 13px 'Manrope'", color: 'var(--uk-ink-55)', marginTop: 6 }}>
-            {isOwner
-              ? 'Добавьте первую задачу — участники смогут отмечать её выполнение.'
-              : 'Владелец группы ещё не добавил задачи.'}
+            Добавьте первую задачу — участники смогут отмечать её выполнение.
           </div>
-          {isOwner ? (
-            <div style={{ marginTop: 16, display: 'grid', gap: 8 }}>
-              <Button variant="primary" onClick={() => setAdding(true)}>
-                <PlusIcon size={18} /> Добавить задачу
-              </Button>
-            </div>
-          ) : null}
+          <div style={{ marginTop: 16, display: 'grid', gap: 8 }}>
+            <Button variant="primary" onClick={() => setAdding(true)}>
+              <PlusIcon size={18} /> Добавить задачу
+            </Button>
+          </div>
         </Card>
       ) : (
         <>
@@ -780,6 +777,32 @@ export function TasksScreen() {
               <div className="uk-eyebrow">Нужно сделать</div>
               <Card flush>
                 {todoTasks.map((task) => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    onDone={() => handleDone(task)}
+                    onOpen={() => setSelectedTaskId(task.id)}
+                    onCancel={() => {
+                      const logId = myPendingLogByTask.get(task.id);
+                      if (logId !== undefined) handleCancel(logId);
+                    }}
+                    myPendingLogId={myPendingLogByTask.get(task.id) ?? null}
+                    loading={
+                      (markDone.isPending && markDone.variables === task.id) ||
+                      (cancelLog.isPending &&
+                        cancelLog.variables === myPendingLogByTask.get(task.id))
+                    }
+                    busy={markDone.isPending || cancelLog.isPending}
+                  />
+                ))}
+              </Card>
+            </>
+          ) : null}
+          {doneTasks.length > 0 ? (
+            <>
+              <div className="uk-eyebrow">Выполнено</div>
+              <Card flush>
+                {doneTasks.map((task) => (
                   <TaskRow
                     key={task.id}
                     task={task}

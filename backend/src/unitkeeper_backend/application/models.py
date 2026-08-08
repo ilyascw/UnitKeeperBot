@@ -209,6 +209,13 @@ class CompletedTaskBreakdownItem:
 
 
 @dataclass(slots=True)
+class GroupProgressInfo:
+    planned_units: Decimal
+    completed_units: Decimal
+    progress_percent: Decimal
+
+
+@dataclass(slots=True)
 class TempResults:
     period_start: date
     period_end: date
@@ -216,6 +223,7 @@ class TempResults:
     completed_units: Decimal
     progress_percent: Decimal
     breakdown: list[CompletedTaskBreakdownItem]
+    group: GroupProgressInfo
 
 
 @dataclass(slots=True)

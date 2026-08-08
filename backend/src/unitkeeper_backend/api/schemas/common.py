@@ -143,6 +143,12 @@ class CompletedTaskBreakdownResponse(BaseModel):
     completed_units: Decimal
 
 
+class GroupProgressResponse(BaseModel):
+    planned_units: Decimal
+    completed_units: Decimal
+    progress_percent: Decimal
+
+
 class TempResultsResponse(BaseModel):
     period_start: date
     period_end: date
@@ -150,6 +156,7 @@ class TempResultsResponse(BaseModel):
     completed_units: Decimal
     progress_percent: Decimal
     breakdown: list[CompletedTaskBreakdownResponse]
+    group: GroupProgressResponse
 
 
 class SprintMemberResultResponse(BaseModel):
