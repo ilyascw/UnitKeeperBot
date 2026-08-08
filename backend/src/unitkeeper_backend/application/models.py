@@ -206,6 +206,16 @@ class CompletedTaskBreakdownItem:
     title: str
     completed_count: int
     completed_units: Decimal
+    performer_user_id: int
+    performer_first_name: str | None
+    performer_username: str | None
+
+
+@dataclass(slots=True)
+class GroupProgressInfo:
+    planned_units: Decimal
+    completed_units: Decimal
+    progress_percent: Decimal
 
 
 @dataclass(slots=True)
@@ -216,6 +226,7 @@ class TempResults:
     completed_units: Decimal
     progress_percent: Decimal
     breakdown: list[CompletedTaskBreakdownItem]
+    group: GroupProgressInfo
 
 
 @dataclass(slots=True)

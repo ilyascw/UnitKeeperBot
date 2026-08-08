@@ -4,10 +4,16 @@ from collections import defaultdict
 from decimal import Decimal
 from uuid import uuid4
 
-from db.enums import BalanceTransactionAccountType, BalanceTransactionType, SprintRunStatus
+from db.enums import (
+    BalanceTransactionAccountType,
+    BalanceTransactionType,
+    SprintRunStatus,
+    TaskLogStatus,
+)
 
 from unitkeeper_backend.application.models import (
     CompletedTaskBreakdownItem,
+    GroupProgressInfo,
     SprintMemberResultInfo,
     SprintRunInfo,
     TempResults,
@@ -54,19 +60,27 @@ class SprintService:
         )
         logs = await self._uow.tasks.list_completed_logs_in_window(
             group_id=group_id,
-            performer_user_id=user_id,
+            performer_user_id=None,
             window_start=window.starts_at,
             window_end_exclusive=window.ends_before,
         )
         task_by_id = {task.id: task for task in tasks}
         completed = ZERO
-        counters: dict[int, int] = defaultdict(int)
+        group_completed = ZERO
+        counters: dict[tuple[int, int], int] = defaultdict(int)
         for log in logs:
             task = task_by_id.get(log.task_id)
             if task is None:
                 continue
-            counters[task.id] += 1
-            completed += task.unit_cost
+            group_completed += task.unit_cost
+            counters[(task.id, log.performer_user_id)] += 1
+            if log.performer_user_id == user_id:
+                completed += task.unit_cost
+
+        performers = await self._uow.users.list_by_ids(
+            sorted({performer_id for _, performer_id in counters})
+        )
+        performer_by_id = {performer.id: performer for performer in performers}
 
         breakdown = [
             CompletedTaskBreakdownItem(
@@ -74,11 +88,34 @@ class SprintService:
                 title=task_by_id[task_id].title,
                 completed_count=count,
                 completed_units=quantize(task_by_id[task_id].unit_cost * count),
+                performer_user_id=performer_id,
+                performer_first_name=performer_by_id[performer_id].first_name
+                if performer_id in performer_by_id
+                else None,
+                performer_username=performer_by_id[performer_id].username
+                if performer_id in performer_by_id
+                else None,
             )
-            for task_id, count in sorted(
-                counters.items(), key=lambda item: task_by_id[item[0]].title.lower()
+            for (task_id, performer_id), count in sorted(
+                counters.items(),
+                key=lambda item: (
+                    task_by_id[item[0][0]].title.lower(),
+                    item[0][1] != user_id,
+                    performer_by_id[item[0][1]].first_name
+                    or performer_by_id[item[0][1]].username
+                    or ""
+                    if item[0][1] in performer_by_id
+                    else "",
+                ),
             )
         ]
+        group_progress = GroupProgressInfo(
+            planned_units=quantize(total_task_units),
+            completed_units=quantize(group_completed),
+            progress_percent=progress_percent(
+                completed_units=group_completed, planned_units_total=total_task_units
+            ),
+        )
         return TempResults(
             period_start=window.period_start,
             period_end=window.period_end,
@@ -88,6 +125,7 @@ class SprintService:
                 completed_units=completed, planned_units_total=planned
             ),
             breakdown=breakdown,
+            group=group_progress,
         )
 
     async def close_current_sprint(self, *, group_id: int) -> SprintRunInfo:
@@ -119,6 +157,24 @@ class SprintService:
         memberships = await self._uow.groups.list_active_memberships(group_id)
         if not memberships:
             raise BusinessRuleViolation("Cannot close a sprint for a group without active members")
+
+        # Any log still pending when a sprint closes belongs to the window
+        # that's ending (nothing for the next window can exist yet). Auto-reject
+        # it so it can't later be approved into a future sprint's stats.
+        pending_logs = await self._uow.tasks.list_task_logs(
+            group_id=group_id,
+            statuses=[TaskLogStatus.PENDING],
+            limit=10_000,
+            offset=0,
+        )
+        for pending_log in pending_logs:
+            await self._uow.tasks.reject_task_log(
+                log_id=pending_log.id,
+                approver_user_id=None,
+                decided_at=self._clock.now(),
+                rejection_reason="Спринт закрылся без подтверждения",
+            )
+
         task_by_id = {task.id: task for task in tasks}
         completed_by_user: dict[int, Decimal] = defaultdict(lambda: ZERO)
         for log in logs:

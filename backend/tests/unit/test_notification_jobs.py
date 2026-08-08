@@ -26,19 +26,19 @@ class FakePublisher:
 async def test_sprint_reports_are_durable_deduplicated_and_correlated() -> None:
     publisher = FakePublisher()
     job = SprintReportPublisher(publisher)
-    args = dict(
-        group_id=7,
-        group_name="Home",
-        owner_user_id=1,
-        period="2026-07-06..2026-07-12",
-        planned_units="10",
-        completed_units="12",
-        reports=[SprintMemberReport(1, "5", "6", "+1"), SprintMemberReport(2, "5", "6", "+1")],
-        correlation_id="close-7",
-    )
+    reports = [SprintMemberReport(1, "5", "6", "+1"), SprintMemberReport(2, "5", "6", "+1")]
 
-    await job.publish(**args)
-    await job.publish(**args)
+    for _ in range(2):
+        await job.publish(
+            group_id=7,
+            group_name="Home",
+            owner_user_id=1,
+            period="2026-07-06..2026-07-12",
+            planned_units="10",
+            completed_units="12",
+            reports=reports,
+            correlation_id="close-7",
+        )
 
     assert len(publisher.calls) == 3
     assert {item["correlation_id"] for item in publisher.calls} == {"close-7"}

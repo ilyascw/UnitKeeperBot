@@ -1,11 +1,12 @@
 import { Navigate } from '@/routes/navigation';
 
 import { useCurrentGroup, useSprintResults } from '@/api/queries';
+import { useAuth } from '@/auth/useAuth';
 import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
 import { Card, Screen, ScreenHeader } from '@/components/ui/app-kit';
 import { routes } from '@/routes/paths';
-import { UNIT_SYMBOL, formatPeriod, formatUnits } from '@/ui/format';
+import { UNIT_SYMBOL, formatPeriod, formatUnits, memberName } from '@/ui/format';
 
 /** Russian pluralisation for "раз / раза / раз". */
 function pluralTimes(n: number): string {
@@ -20,6 +21,8 @@ function pluralTimes(n: number): string {
  * planned units completed, plus a per-task breakdown of what was done.
  */
 export function ProgressScreen() {
+  const { context } = useAuth();
+  const myUserId = context?.user?.id;
   const group = useCurrentGroup();
   const { data, isPending, isError, error, refetch } = useSprintResults();
 
@@ -37,6 +40,10 @@ export function ProgressScreen() {
   }
 
   const pct = Math.max(0, Math.min(100, Math.round(Number.parseFloat(data.progress_percent) || 0)));
+  const groupPct = Math.max(
+    0,
+    Math.min(100, Math.round(Number.parseFloat(data.group.progress_percent) || 0)),
+  );
 
   return (
     <Screen>
@@ -44,8 +51,32 @@ export function ProgressScreen() {
 
       {/* Headline progress */}
       <Card style={{ padding: 20, borderRadius: 24 }}>
-        <div className="uk-eyebrow" style={{ letterSpacing: '0.08em' }}>
-          Спринт · {formatPeriod(data.period_start, data.period_end)}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+          }}
+        >
+          <div className="uk-eyebrow" style={{ letterSpacing: '0.08em' }}>
+            Спринт · {formatPeriod(data.period_start, data.period_end)}
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: 5,
+              padding: '4px 10px',
+              borderRadius: 999,
+              background: 'var(--uk-accent-soft)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <span style={{ font: "700 13px 'Manrope'", color: 'var(--uk-accent)' }}>
+              Группа {groupPct}%
+            </span>
+          </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, margin: '10px 0 14px' }}>
           <span style={{ font: "800 40px/1 'Manrope'", color: 'var(--uk-teal)' }}>{pct}%</span>
@@ -53,9 +84,24 @@ export function ProgressScreen() {
             плана выполнено
           </span>
         </div>
-        <div className="uk-progress">
+
+        <div className="uk-progress" style={{ position: 'relative' }}>
           <div className="uk-progress__fill" style={{ width: `${pct}%` }} />
+          <div
+            title={`Группа: ${groupPct}%`}
+            style={{
+              position: 'absolute',
+              top: -3,
+              left: `calc(${groupPct}% - 1px)`,
+              width: 2,
+              height: 16,
+              borderRadius: 1,
+              background: '#fff',
+              boxShadow: '0 0 0 1px var(--uk-accent)',
+            }}
+          />
         </div>
+
         <div
           style={{
             display: 'flex',
@@ -72,6 +118,22 @@ export function ProgressScreen() {
             План {formatUnits(data.planned_units)} {UNIT_SYMBOL}
           </span>
         </div>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginTop: 4,
+            font: "500 12px 'Manrope'",
+            color: 'var(--uk-ink-55)',
+          }}
+        >
+          <span>
+            Группа: выполнено {formatUnits(data.group.completed_units)} {UNIT_SYMBOL}
+          </span>
+          <span>
+            план {formatUnits(data.group.planned_units)} {UNIT_SYMBOL}
+          </span>
+        </div>
       </Card>
 
       {/* Per-task breakdown */}
@@ -85,19 +147,29 @@ export function ProgressScreen() {
         </Card>
       ) : (
         <Card flush>
-          {data.breakdown.map((item) => (
-            <div className="uk-row" key={item.task_id}>
-              <div className="uk-row__grow">
-                <div style={{ font: "600 15px 'Manrope'" }}>{item.title}</div>
-                <div style={{ font: "400 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>
-                  {pluralTimes(item.completed_count)}
+          {data.breakdown.map((item) => {
+            const who =
+              item.performer_user_id === myUserId
+                ? 'Вы'
+                : memberName({
+                    first_name: item.performer_first_name,
+                    username: item.performer_username,
+                    user_id: item.performer_user_id,
+                  });
+            return (
+              <div className="uk-row" key={`${item.task_id}-${item.performer_user_id}`}>
+                <div className="uk-row__grow">
+                  <div style={{ font: "600 15px 'Manrope'" }}>{item.title}</div>
+                  <div style={{ font: "400 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>
+                    {who} · {pluralTimes(item.completed_count)}
+                  </div>
                 </div>
+                <span style={{ font: "700 15px 'Manrope'", color: 'var(--uk-teal)' }}>
+                  {formatUnits(item.completed_units)} {UNIT_SYMBOL}
+                </span>
               </div>
-              <span style={{ font: "700 15px 'Manrope'", color: 'var(--uk-teal)' }}>
-                {formatUnits(item.completed_units)} {UNIT_SYMBOL}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </Card>
       )}
     </Screen>

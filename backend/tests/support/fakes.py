@@ -353,7 +353,7 @@ class InMemoryTaskRepository:
         group_id: int,
         task_id: int,
         performer_user_id: int,
-        status,
+        status: TaskLogStatus,
         created_at: datetime,
         approver_user_id: int | None = None,
         decided_at: datetime | None = None,
@@ -463,7 +463,7 @@ class InMemoryTaskRepository:
         self,
         *,
         log_id: int,
-        approver_user_id: int,
+        approver_user_id: int | None,
         decided_at: datetime,
         rejection_reason: str,
     ) -> TaskLogInfo:
@@ -502,7 +502,9 @@ class InMemoryTaskRepository:
 class InMemorySprintRepository:
     def __init__(self) -> None:
         self.sprint_runs: dict[tuple[int, date, date], SprintRunInfo] = {}
-        self.transactions: list[tuple[int, int, BalanceTransactionType, Decimal, int | None]] = []
+        self.transactions: list[
+            tuple[int, int | None, BalanceTransactionType, Decimal, int | None]
+        ] = []
         self.balance_transactions: list[BalanceTransactionInfo] = []
         self._seq = 1
 
@@ -550,7 +552,7 @@ class InMemorySprintRepository:
         *,
         group_id: int,
         user_id: int | None,
-        transaction_type,
+        transaction_type: BalanceTransactionType,
         amount_delta: Decimal,
         description: str,
         transaction_group_id: UUID | None = None,
@@ -560,6 +562,10 @@ class InMemorySprintRepository:
         counterparty_user_id: int | None = None,
     ) -> None:
         self.transactions.append((group_id, user_id, transaction_type, amount_delta, sprint_run_id))
+        # Mirrors SqlAlchemySprintRepository.list_balance_transactions, which only
+        # ever surfaces per-user rows (group-pool rows have no user_id to filter by).
+        if user_id is None:
+            return
         self.balance_transactions.append(
             BalanceTransactionInfo(
                 id=len(self.balance_transactions) + 1,

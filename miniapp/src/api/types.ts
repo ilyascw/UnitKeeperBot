@@ -219,6 +219,15 @@ export interface CompletedTaskBreakdownResponse {
   title: string;
   completed_count: number;
   completed_units: string;
+  performer_user_id: number;
+  performer_first_name: string | null;
+  performer_username: string | null;
+}
+
+export interface GroupProgressResponse {
+  planned_units: string;
+  completed_units: string;
+  progress_percent: string;
 }
 
 /** Provisional results for the running sprint (before it is closed). */
@@ -229,6 +238,7 @@ export interface SprintResultsResponse {
   completed_units: string;
   progress_percent: string;
   breakdown: CompletedTaskBreakdownResponse[];
+  group: GroupProgressResponse;
 }
 
 export interface BalanceResponse {
