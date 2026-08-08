@@ -602,7 +602,9 @@ function TaskRow({
 
 /**
  * Tasks section. Lists the group's recurring tasks with their per-sprint
- * progress; any member can log a completion, and the owner can add tasks.
+ * progress; any active member can log a completion or add new tasks, while
+ * editing, deleting, and adjusting frequency of existing tasks stays
+ * owner-only.
  */
 export function TasksScreen() {
   const navigate = useNavigate();
@@ -741,17 +743,15 @@ export function TasksScreen() {
                 className={isRefreshing ? 'uk-refresh-icon--spinning' : undefined}
               />
             </UiButton>
-            {isOwner ? (
-              <UiButton
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label="Добавить задачу"
-                onClick={() => setAddMenuOpen(true)}
-              >
-                <PlusIcon size={24} />
-              </UiButton>
-            ) : null}
+            <UiButton
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Добавить задачу"
+              onClick={() => setAddMenuOpen(true)}
+            >
+              <PlusIcon size={24} />
+            </UiButton>
           </>
         }
       />
@@ -760,17 +760,13 @@ export function TasksScreen() {
         <Card style={{ padding: 22, borderRadius: 20, textAlign: 'center' }}>
           <div style={{ font: "700 16px 'Manrope'" }}>Пока нет задач</div>
           <div style={{ font: "400 13px 'Manrope'", color: 'var(--uk-ink-55)', marginTop: 6 }}>
-            {isOwner
-              ? 'Добавьте первую задачу — участники смогут отмечать её выполнение.'
-              : 'Владелец группы ещё не добавил задачи.'}
+            Добавьте первую задачу — участники смогут отмечать её выполнение.
           </div>
-          {isOwner ? (
-            <div style={{ marginTop: 16, display: 'grid', gap: 8 }}>
-              <Button variant="primary" onClick={() => setAdding(true)}>
-                <PlusIcon size={18} /> Добавить задачу
-              </Button>
-            </div>
-          ) : null}
+          <div style={{ marginTop: 16, display: 'grid', gap: 8 }}>
+            <Button variant="primary" onClick={() => setAdding(true)}>
+              <PlusIcon size={18} /> Добавить задачу
+            </Button>
+          </div>
         </Card>
       ) : (
         <>
