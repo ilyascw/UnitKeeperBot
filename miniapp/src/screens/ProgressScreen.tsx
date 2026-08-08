@@ -37,6 +37,10 @@ export function ProgressScreen() {
   }
 
   const pct = Math.max(0, Math.min(100, Math.round(Number.parseFloat(data.progress_percent) || 0)));
+  const groupPct = Math.max(
+    0,
+    Math.min(100, Math.round(Number.parseFloat(data.group.progress_percent) || 0)),
+  );
 
   return (
     <Screen>
@@ -70,6 +74,40 @@ export function ProgressScreen() {
           </span>
           <span>
             План {formatUnits(data.planned_units)} {UNIT_SYMBOL}
+          </span>
+        </div>
+      </Card>
+
+      {/* Group-wide progress */}
+      <Card style={{ padding: 20, borderRadius: 24 }}>
+        <div className="uk-eyebrow" style={{ letterSpacing: '0.08em' }}>
+          Прогресс группы
+        </div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, margin: '10px 0 14px' }}>
+          <span style={{ font: "800 40px/1 'Manrope'", color: 'var(--uk-teal)' }}>
+            {groupPct}%
+          </span>
+          <span style={{ font: "500 13px 'Manrope'", color: 'var(--uk-ink-55)' }}>
+            плана выполнено
+          </span>
+        </div>
+        <div className="uk-progress">
+          <div className="uk-progress__fill" style={{ width: `${groupPct}%` }} />
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginTop: 10,
+            font: "600 13px 'Manrope'",
+            color: 'var(--uk-ink-70)',
+          }}
+        >
+          <span>
+            Выполнено {formatUnits(data.group.completed_units)} {UNIT_SYMBOL}
+          </span>
+          <span>
+            План {formatUnits(data.group.planned_units)} {UNIT_SYMBOL}
           </span>
         </div>
       </Card>
