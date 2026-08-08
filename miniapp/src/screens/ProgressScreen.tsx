@@ -96,7 +96,8 @@ export function ProgressScreen() {
               width: 2,
               height: 16,
               borderRadius: 1,
-              background: 'var(--uk-accent)',
+              background: '#fff',
+              boxShadow: '0 0 0 1px var(--uk-accent)',
             }}
           />
         </div>

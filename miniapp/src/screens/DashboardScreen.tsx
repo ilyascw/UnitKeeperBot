@@ -104,6 +104,9 @@ export function DashboardScreen() {
   const remaining = daysUntil(group.sprint_ends_at);
   const progress = results.data ? Number.parseFloat(results.data.progress_percent) : null;
   const progressPct = progress === null ? 0 : Math.max(0, Math.min(100, Math.round(progress)));
+  const groupProgress = results.data ? Number.parseFloat(results.data.group.progress_percent) : null;
+  const groupProgressPct =
+    groupProgress === null ? 0 : Math.max(0, Math.min(100, Math.round(groupProgress)));
 
   const openTasks = (tasksQuery.data ?? [])
     .filter((t) => t.remaining_in_sprint > 0)
@@ -193,11 +196,42 @@ export function DashboardScreen() {
             </div>
             <ChevronIcon size={16} style={{ color: 'var(--uk-ink-45)' }} />
           </div>
-          <div style={{ font: "800 26px/1.2 'Manrope'", marginTop: 10 }}>
-            {progress === null ? '…' : `${progressPct}%`}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+            <div style={{ font: "800 26px/1.2 'Manrope'" }}>
+              {progress === null ? '…' : `${progressPct}%`}
+            </div>
+            {results.data ? (
+              <span
+                style={{
+                  font: "700 11px 'Manrope'",
+                  color: 'var(--uk-accent)',
+                  background: 'var(--uk-accent-soft)',
+                  padding: '3px 8px',
+                  borderRadius: 999,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Группа {groupProgressPct}%
+              </span>
+            ) : null}
           </div>
-          <div className="uk-progress" style={{ marginTop: 10 }}>
+          <div className="uk-progress" style={{ marginTop: 10, position: 'relative' }}>
             <div className="uk-progress__fill" style={{ width: `${progressPct}%` }} />
+            {results.data ? (
+              <div
+                title={`Группа: ${groupProgressPct}%`}
+                style={{
+                  position: 'absolute',
+                  top: -3,
+                  left: `calc(${groupProgressPct}% - 1px)`,
+                  width: 2,
+                  height: 16,
+                  borderRadius: 1,
+                  background: '#fff',
+                  boxShadow: '0 0 0 1px var(--uk-accent)',
+                }}
+              />
+            ) : null}
           </div>
           <div style={{ font: "500 12px 'Manrope'", marginTop: 8, color: 'var(--uk-ink-70)' }}>
             {daysLeftLabel(remaining)}
