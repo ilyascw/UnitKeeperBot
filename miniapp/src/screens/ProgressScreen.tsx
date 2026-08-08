@@ -1,11 +1,12 @@
 import { Navigate } from '@/routes/navigation';
 
 import { useCurrentGroup, useSprintResults } from '@/api/queries';
+import { useAuth } from '@/auth/useAuth';
 import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
 import { Card, Screen, ScreenHeader } from '@/components/ui/app-kit';
 import { routes } from '@/routes/paths';
-import { UNIT_SYMBOL, formatPeriod, formatUnits } from '@/ui/format';
+import { UNIT_SYMBOL, formatPeriod, formatUnits, memberName } from '@/ui/format';
 
 /** Russian pluralisation for "раз / раза / раз". */
 function pluralTimes(n: number): string {
@@ -20,6 +21,8 @@ function pluralTimes(n: number): string {
  * planned units completed, plus a per-task breakdown of what was done.
  */
 export function ProgressScreen() {
+  const { context } = useAuth();
+  const myUserId = context?.user?.id;
   const group = useCurrentGroup();
   const { data, isPending, isError, error, refetch } = useSprintResults();
 
@@ -143,19 +146,29 @@ export function ProgressScreen() {
         </Card>
       ) : (
         <Card flush>
-          {data.breakdown.map((item) => (
-            <div className="uk-row" key={item.task_id}>
-              <div className="uk-row__grow">
-                <div style={{ font: "600 15px 'Manrope'" }}>{item.title}</div>
-                <div style={{ font: "400 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>
-                  {pluralTimes(item.completed_count)}
+          {data.breakdown.map((item) => {
+            const who =
+              item.performer_user_id === myUserId
+                ? 'Вы'
+                : memberName({
+                    first_name: item.performer_first_name,
+                    username: item.performer_username,
+                    user_id: item.performer_user_id,
+                  });
+            return (
+              <div className="uk-row" key={`${item.task_id}-${item.performer_user_id}`}>
+                <div className="uk-row__grow">
+                  <div style={{ font: "600 15px 'Manrope'" }}>{item.title}</div>
+                  <div style={{ font: "400 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>
+                    {who} · {pluralTimes(item.completed_count)}
+                  </div>
                 </div>
+                <span style={{ font: "700 15px 'Manrope'", color: 'var(--uk-teal)' }}>
+                  {formatUnits(item.completed_units)} {UNIT_SYMBOL}
+                </span>
               </div>
-              <span style={{ font: "700 15px 'Manrope'", color: 'var(--uk-teal)' }}>
-                {formatUnits(item.completed_units)} {UNIT_SYMBOL}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </Card>
       )}
     </Screen>

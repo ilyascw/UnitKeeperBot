@@ -62,16 +62,20 @@ class SprintService:
         task_by_id = {task.id: task for task in tasks}
         completed = ZERO
         group_completed = ZERO
-        counters: dict[int, int] = defaultdict(int)
+        counters: dict[tuple[int, int], int] = defaultdict(int)
         for log in logs:
             task = task_by_id.get(log.task_id)
             if task is None:
                 continue
             group_completed += task.unit_cost
-            if log.performer_user_id != user_id:
-                continue
-            counters[task.id] += 1
-            completed += task.unit_cost
+            counters[(task.id, log.performer_user_id)] += 1
+            if log.performer_user_id == user_id:
+                completed += task.unit_cost
+
+        performers = await self._uow.users.list_by_ids(
+            sorted({performer_id for _, performer_id in counters})
+        )
+        performer_by_id = {performer.id: performer for performer in performers}
 
         breakdown = [
             CompletedTaskBreakdownItem(
@@ -79,9 +83,25 @@ class SprintService:
                 title=task_by_id[task_id].title,
                 completed_count=count,
                 completed_units=quantize(task_by_id[task_id].unit_cost * count),
+                performer_user_id=performer_id,
+                performer_first_name=performer_by_id[performer_id].first_name
+                if performer_id in performer_by_id
+                else None,
+                performer_username=performer_by_id[performer_id].username
+                if performer_id in performer_by_id
+                else None,
             )
-            for task_id, count in sorted(
-                counters.items(), key=lambda item: task_by_id[item[0]].title.lower()
+            for (task_id, performer_id), count in sorted(
+                counters.items(),
+                key=lambda item: (
+                    task_by_id[item[0][0]].title.lower(),
+                    item[0][1] != user_id,
+                    performer_by_id[item[0][1]].first_name
+                    or performer_by_id[item[0][1]].username
+                    or ""
+                    if item[0][1] in performer_by_id
+                    else "",
+                ),
             )
         ]
         group_progress = GroupProgressInfo(

@@ -206,6 +206,9 @@ class CompletedTaskBreakdownItem:
     title: str
     completed_count: int
     completed_units: Decimal
+    performer_user_id: int
+    performer_first_name: str | None
+    performer_username: str | None
 
 
 @dataclass(slots=True)

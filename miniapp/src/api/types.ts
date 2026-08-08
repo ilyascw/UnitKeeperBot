@@ -219,6 +219,9 @@ export interface CompletedTaskBreakdownResponse {
   title: string;
   completed_count: number;
   completed_units: string;
+  performer_user_id: number;
+  performer_first_name: string | null;
+  performer_username: string | null;
 }
 
 export interface GroupProgressResponse {
