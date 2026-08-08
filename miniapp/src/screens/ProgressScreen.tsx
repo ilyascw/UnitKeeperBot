@@ -7,6 +7,7 @@ import { Loader } from '@/components/Loader';
 import { Card, Screen, ScreenHeader } from '@/components/ui/app-kit';
 import { routes } from '@/routes/paths';
 import { UNIT_SYMBOL, formatPeriod, formatUnits, memberName } from '@/ui/format';
+import type { CompletedTaskBreakdownResponse } from '@/api/types';
 
 /** Russian pluralisation for "раз / раза / раз". */
 function pluralTimes(n: number): string {
@@ -14,6 +15,59 @@ function pluralTimes(n: number): string {
   const mod100 = n % 100;
   if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return `${n} раза`;
   return `${n} раз`;
+}
+
+function byLatestCompletion(
+  left: CompletedTaskBreakdownResponse,
+  right: CompletedTaskBreakdownResponse,
+): number {
+  return Date.parse(right.last_completed_at) - Date.parse(left.last_completed_at);
+}
+
+function CompletionBreakdown({
+  items,
+  myUserId,
+  emptyText,
+}: {
+  items: CompletedTaskBreakdownResponse[];
+  myUserId: number | undefined;
+  emptyText: string;
+}) {
+  if (items.length === 0) {
+    return (
+      <Card style={{ padding: 20, borderRadius: 20, textAlign: 'center' }}>
+        <div style={{ font: "500 13px 'Manrope'", color: 'var(--uk-ink-55)' }}>{emptyText}</div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card flush>
+      {items.map((item) => {
+        const isMine = item.performer_user_id === myUserId;
+        const who = memberName({
+          first_name: item.performer_first_name,
+          username: item.performer_username,
+          user_id: item.performer_user_id,
+        });
+        return (
+          <div className="uk-row" key={`${item.task_id}-${item.performer_user_id}`}>
+            <div className="uk-row__grow">
+              <div style={{ font: "600 15px 'Manrope'" }}>{item.title}</div>
+              <div style={{ font: "400 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>
+                {isMine
+                  ? pluralTimes(item.completed_count)
+                  : `${who} · ${pluralTimes(item.completed_count)}`}
+              </div>
+            </div>
+            <span style={{ font: "700 15px 'Manrope'", color: 'var(--uk-teal)' }}>
+              {formatUnits(item.completed_units)} {UNIT_SYMBOL}
+            </span>
+          </div>
+        );
+      })}
+    </Card>
+  );
 }
 
 /**
@@ -44,6 +98,12 @@ export function ProgressScreen() {
     0,
     Math.min(100, Math.round(Number.parseFloat(data.group.progress_percent) || 0)),
   );
+  const myBreakdown = data.breakdown
+    .filter((item) => item.performer_user_id === myUserId)
+    .sort(byLatestCompletion);
+  const othersBreakdown = data.breakdown
+    .filter((item) => item.performer_user_id !== myUserId)
+    .sort(byLatestCompletion);
 
   return (
     <Screen>
@@ -136,42 +196,23 @@ export function ProgressScreen() {
         </div>
       </Card>
 
-      {/* Per-task breakdown */}
-      <div className="uk-eyebrow">Что сделано</div>
-      {data.breakdown.length === 0 ? (
-        <Card style={{ padding: 20, borderRadius: 20, textAlign: 'center' }}>
-          <div style={{ font: "600 15px 'Manrope'" }}>Пока ничего не выполнено</div>
-          <div style={{ font: "400 13px 'Manrope'", color: 'var(--uk-ink-55)', marginTop: 6 }}>
-            Отметьте задачи в разделе «Задачи», и они появятся здесь.
-          </div>
-        </Card>
-      ) : (
-        <Card flush>
-          {data.breakdown.map((item) => {
-            const who =
-              item.performer_user_id === myUserId
-                ? 'Вы'
-                : memberName({
-                    first_name: item.performer_first_name,
-                    username: item.performer_username,
-                    user_id: item.performer_user_id,
-                  });
-            return (
-              <div className="uk-row" key={`${item.task_id}-${item.performer_user_id}`}>
-                <div className="uk-row__grow">
-                  <div style={{ font: "600 15px 'Manrope'" }}>{item.title}</div>
-                  <div style={{ font: "400 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>
-                    {who} · {pluralTimes(item.completed_count)}
-                  </div>
-                </div>
-                <span style={{ font: "700 15px 'Manrope'", color: 'var(--uk-teal)' }}>
-                  {formatUnits(item.completed_units)} {UNIT_SYMBOL}
-                </span>
-              </div>
-            );
-          })}
-        </Card>
-      )}
+      <section className="uk-stack">
+        <div className="uk-eyebrow">Сделано вами</div>
+        <CompletionBreakdown
+          items={myBreakdown}
+          myUserId={myUserId}
+          emptyText="Вы пока ничего не выполнили в этом спринте."
+        />
+      </section>
+
+      <section className="uk-stack">
+        <div className="uk-eyebrow">Сделано другими участниками группы</div>
+        <CompletionBreakdown
+          items={othersBreakdown}
+          myUserId={myUserId}
+          emptyText="Другие участники пока ничего не выполнили в этом спринте."
+        />
+      </section>
     </Screen>
   );
 }
