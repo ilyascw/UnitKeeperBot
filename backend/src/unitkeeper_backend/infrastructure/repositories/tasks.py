@@ -245,7 +245,7 @@ class SqlAlchemyTaskRepository:
         self,
         *,
         log_id: int,
-        approver_user_id: int,
+        approver_user_id: int | None,
         decided_at: datetime,
         rejection_reason: str,
     ) -> TaskLogInfo:

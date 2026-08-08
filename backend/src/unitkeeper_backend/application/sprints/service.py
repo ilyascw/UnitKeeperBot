@@ -4,7 +4,12 @@ from collections import defaultdict
 from decimal import Decimal
 from uuid import uuid4
 
-from db.enums import BalanceTransactionAccountType, BalanceTransactionType, SprintRunStatus
+from db.enums import (
+    BalanceTransactionAccountType,
+    BalanceTransactionType,
+    SprintRunStatus,
+    TaskLogStatus,
+)
 
 from unitkeeper_backend.application.models import (
     CompletedTaskBreakdownItem,
@@ -152,6 +157,24 @@ class SprintService:
         memberships = await self._uow.groups.list_active_memberships(group_id)
         if not memberships:
             raise BusinessRuleViolation("Cannot close a sprint for a group without active members")
+
+        # Any log still pending when a sprint closes belongs to the window
+        # that's ending (nothing for the next window can exist yet). Auto-reject
+        # it so it can't later be approved into a future sprint's stats.
+        pending_logs = await self._uow.tasks.list_task_logs(
+            group_id=group_id,
+            statuses=[TaskLogStatus.PENDING],
+            limit=10_000,
+            offset=0,
+        )
+        for pending_log in pending_logs:
+            await self._uow.tasks.reject_task_log(
+                log_id=pending_log.id,
+                approver_user_id=None,
+                decided_at=self._clock.now(),
+                rejection_reason="Спринт закрылся без подтверждения",
+            )
+
         task_by_id = {task.id: task for task in tasks}
         completed_by_user: dict[int, Decimal] = defaultdict(lambda: ZERO)
         for log in logs:
