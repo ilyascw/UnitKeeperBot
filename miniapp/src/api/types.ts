@@ -221,6 +221,12 @@ export interface CompletedTaskBreakdownResponse {
   completed_units: string;
 }
 
+export interface GroupProgressResponse {
+  planned_units: string;
+  completed_units: string;
+  progress_percent: string;
+}
+
 /** Provisional results for the running sprint (before it is closed). */
 export interface SprintResultsResponse {
   period_start: string;
@@ -229,6 +235,7 @@ export interface SprintResultsResponse {
   completed_units: string;
   progress_percent: string;
   breakdown: CompletedTaskBreakdownResponse[];
+  group: GroupProgressResponse;
 }
 
 export interface BalanceResponse {
