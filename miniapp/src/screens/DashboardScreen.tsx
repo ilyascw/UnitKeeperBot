@@ -1,15 +1,17 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from '@/routes/navigation';
 
+import { useMarkTaskDone } from '@/api/mutations';
 import { useCurrentGroup, usePendingApprovals, useSprintResults, useTasks } from '@/api/queries';
-import type { TaskLogViewResponse } from '@/api/types';
+import type { TaskLogViewResponse, TaskResponse } from '@/api/types';
 import { useAuth } from '@/auth/useAuth';
 import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
 import { LogRow, RejectSheet } from '@/components/TaskLogRow';
-import { Card, Screen } from '@/components/ui/app-kit';
+import { Card, Screen, Toast } from '@/components/ui/app-kit';
 import { Button as UiButton } from '@/components/ui/button';
 import { ScreenHeader as UiScreenHeader } from '@/components/ui/screen';
+import { Spinner } from '@/components/ui/spinner';
 import { routes } from '@/routes/paths';
 import {
   UNIT_SYMBOL,
@@ -20,7 +22,22 @@ import {
   formatUnits,
   pluralMembers,
 } from '@/ui/format';
-import { ChevronIcon } from '@/ui/icons';
+import { ChevronIcon, ClockIcon } from '@/ui/icons';
+
+/** Task is on hold this sprint (no slots planned). */
+function taskIsPaused(task: TaskResponse): boolean {
+  return task.frequency_per_sprint === 0;
+}
+
+/** Task has at least one free slot a member can claim right now. */
+function taskIsMarkable(task: TaskResponse): boolean {
+  return task.available_in_sprint > 0;
+}
+
+/** Every remaining slot is already held by a pending, unconfirmed log. */
+function taskIsHeldFull(task: TaskResponse): boolean {
+  return !taskIsPaused(task) && task.remaining_in_sprint > 0 && !taskIsMarkable(task);
+}
 
 /** A short, plain-language read on where a member's balance stands. */
 function balanceCaption(value: string): string {
@@ -43,7 +60,26 @@ export function DashboardScreen() {
   const results = useSprintResults();
   const tasksQuery = useTasks();
   const pendingApprovals = usePendingApprovals(true);
+  const markDone = useMarkTaskDone();
   const [rejecting, setRejecting] = useState<TaskLogViewResponse | null>(null);
+  const [toast, setToast] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 2800);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  const handleMarkDone = (task: TaskResponse): void => {
+    markDone.mutate(task.id, {
+      onSuccess: (log) =>
+        setToast({
+          tone: 'success',
+          text: log.status === 'pending' ? 'Отправлено на подтверждение' : 'Задача засчитана',
+        }),
+      onError: () => setToast({ tone: 'error', text: 'Не удалось отметить задачу' }),
+    });
+  };
 
   if (isPending) return <Loader title="Загружаем…" label="Открываем вашу группу." />;
   if (isError) {
@@ -233,48 +269,91 @@ export function DashboardScreen() {
         </Card>
       ) : (
         <div className="uk-stack" style={{ gap: 10 }}>
-          {openTasks.map((task) => (
-            <UiButton
-              key={task.id}
-              type="button"
-              variant="ghost"
-              className="h-auto w-full justify-start"
-              onClick={() => navigate(routes.tasks)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 14,
-                padding: '15px 16px',
-                borderRadius: 18,
-                textAlign: 'left',
-                cursor: 'pointer',
-                background: 'rgba(255,255,255,.05)',
-                border: '1px solid rgba(255,255,255,.09)',
-              }}
-            >
+          {openTasks.map((task) => {
+            const heldFull = taskIsHeldFull(task);
+            const markable = taskIsMarkable(task);
+            const rowLoading = markDone.isPending && markDone.variables === task.id;
+            const rowLocked = !markable || (markDone.isPending && !rowLoading);
+            return (
               <div
+                key={task.id}
                 style={{
-                  width: 26,
-                  height: 26,
-                  flex: 'none',
-                  borderRadius: 9,
-                  border: '2px solid rgba(124,166,217,.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 14,
+                  padding: '15px 16px',
+                  borderRadius: 18,
+                  background: 'rgba(255,255,255,.05)',
+                  border: '1px solid rgba(255,255,255,.09)',
                 }}
-              />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ font: "600 15px 'Manrope'" }}>{task.title}</div>
-                <div style={{ font: "400 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>
-                  {task.completed_in_sprint} из {task.frequency_per_sprint} за спринт
-                </div>
+              >
+                <UiButton
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0"
+                  disabled={rowLocked}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleMarkDone(task);
+                  }}
+                  aria-label={
+                    heldFull ? 'Ждёт подтверждения' : `Отметить «${task.title}»`
+                  }
+                  style={{
+                    width: 26,
+                    height: 26,
+                    flex: 'none',
+                    borderRadius: 9,
+                    display: 'grid',
+                    placeItems: 'center',
+                    padding: 0,
+                    cursor: rowLocked ? 'default' : 'pointer',
+                    background: 'transparent',
+                    border: heldFull
+                      ? '2px solid rgba(217,173,102,.6)'
+                      : '2px solid rgba(124,166,217,.5)',
+                    color: 'var(--uk-warn)',
+                  }}
+                >
+                  {rowLoading ? (
+                    <Spinner className="text-primary" aria-hidden="true" />
+                  ) : heldFull ? (
+                    <ClockIcon size={14} />
+                  ) : null}
+                </UiButton>
+                <UiButton
+                  type="button"
+                  variant="ghost"
+                  className="h-auto min-w-0 flex-1 flex-col items-start justify-start gap-0 whitespace-normal rounded-none"
+                  onClick={() => navigate(routes.tasks)}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    padding: 0,
+                    border: 'none',
+                    background: 'none',
+                    color: 'inherit',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                  }}
+                  aria-label={`Открыть задачу «${task.title}»`}
+                >
+                  <div style={{ font: "600 15px 'Manrope'" }}>{task.title}</div>
+                  <div style={{ font: "400 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>
+                    {task.completed_in_sprint} из {task.frequency_per_sprint} за спринт
+                  </div>
+                </UiButton>
+                <span style={{ font: "700 14px 'Manrope'", color: 'var(--uk-teal)' }}>
+                  {formatUnits(task.unit_cost)} {UNIT_SYMBOL}
+                </span>
               </div>
-              <span style={{ font: "700 14px 'Manrope'", color: 'var(--uk-teal)' }}>
-                {formatUnits(task.unit_cost)} {UNIT_SYMBOL}
-              </span>
-            </UiButton>
-          ))}
+            );
+          })}
         </div>
       )}
       {rejecting ? <RejectSheet log={rejecting} onClose={() => setRejecting(null)} /> : null}
+      {toast ? <Toast tone={toast.tone} message={toast.text} /> : null}
     </Screen>
   );
 }
