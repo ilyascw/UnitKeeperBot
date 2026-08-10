@@ -25,6 +25,7 @@ import {
   Field,
   Note,
   Screen,
+  Segmented,
   Stepper,
   TextInput,
   Toast,
@@ -56,6 +57,30 @@ function taskIsComplete(task: TaskResponse): boolean {
 
 function taskIsHeldFull(task: TaskResponse): boolean {
   return !taskIsPaused(task) && !taskIsComplete(task) && !taskIsMarkable(task);
+}
+
+type TaskSortMode = 'cost' | 'title' | 'created';
+
+const taskTitleCollator = new Intl.Collator('ru', { numeric: true, sensitivity: 'base' });
+
+function compareTasks(a: TaskResponse, b: TaskResponse, mode: TaskSortMode): number {
+  if (mode === 'title') {
+    return taskTitleCollator.compare(a.title, b.title) || a.id - b.id;
+  }
+
+  if (mode === 'created') {
+    return Date.parse(b.created_at) - Date.parse(a.created_at) || b.id - a.id;
+  }
+
+  return (
+    Number.parseFloat(b.unit_cost) - Number.parseFloat(a.unit_cost) ||
+    taskTitleCollator.compare(a.title, b.title) ||
+    a.id - b.id
+  );
+}
+
+function sortTasks(tasks: TaskResponse[], mode: TaskSortMode): TaskResponse[] {
+  return [...tasks].sort((a, b) => compareTasks(a, b, mode));
 }
 
 function parseImportRows(value: string): {
@@ -639,6 +664,7 @@ export function TasksScreen() {
   const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
   const [toast, setToast] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [sortMode, setSortMode] = useState<TaskSortMode>('cost');
 
   useEffect(() => {
     if (!toast) return;
@@ -693,13 +719,18 @@ export function TasksScreen() {
   }
 
   const isOwner = context?.user?.id === group.data?.owner_user_id;
-  const byCostDesc = (a: TaskResponse, b: TaskResponse): number =>
-    Number.parseFloat(b.unit_cost) - Number.parseFloat(a.unit_cost);
-  const doneTasks = tasks.filter((task) => taskIsComplete(task)).sort(byCostDesc);
-  const todoTasks = tasks
-    .filter((task) => task.frequency_per_sprint > 0 && !taskIsComplete(task))
-    .sort(byCostDesc);
-  const backlogTasks = tasks.filter((task) => task.frequency_per_sprint === 0).sort(byCostDesc);
+  const doneTasks = sortTasks(
+    tasks.filter((task) => taskIsComplete(task)),
+    sortMode,
+  );
+  const todoTasks = sortTasks(
+    tasks.filter((task) => task.frequency_per_sprint > 0 && !taskIsComplete(task)),
+    sortMode,
+  );
+  const backlogTasks = sortTasks(
+    tasks.filter((task) => task.frequency_per_sprint === 0),
+    sortMode,
+  );
   const myPendingLogByTask = new Map<number, number>();
   for (const log of myTaskLogs.data?.items ?? []) {
     if (log.status === 'pending' && !myPendingLogByTask.has(log.task.id)) {
@@ -779,6 +810,16 @@ export function TasksScreen() {
       ) : (
         <>
           <Note tone="info">Отметьте выполнение — оно уйдёт владельцу на подтверждение.</Note>
+          <Segmented
+            options={[
+              { value: 'cost', label: 'Стоимость' },
+              { value: 'title', label: 'А-Я' },
+              { value: 'created', label: 'По дате' },
+            ]}
+            value={sortMode}
+            onChange={setSortMode}
+            label="Сортировка задач"
+          />
           {todoTasks.length > 0 ? (
             <>
               <div className="uk-eyebrow">Нужно сделать</div>

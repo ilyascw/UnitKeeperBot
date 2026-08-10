@@ -129,11 +129,13 @@ function Segmented<Value extends string>({
   value,
   onChange,
   disabled = false,
+  label = 'Выбор значения',
 }: {
   options: Array<{ value: Value; label: string }>;
   value: Value;
   onChange: (value: Value) => void;
   disabled?: boolean;
+  label?: string;
 }) {
   return (
     <SegmentedControl
@@ -141,7 +143,7 @@ function Segmented<Value extends string>({
       value={value}
       onValueChange={onChange}
       disabled={disabled}
-      label="Выбор значения"
+      label={label}
     />
   );
 }

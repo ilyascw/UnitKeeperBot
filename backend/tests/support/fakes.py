@@ -265,6 +265,7 @@ class InMemoryTaskRepository:
             frequency_per_sprint=frequency_per_sprint,
             unit_cost=unit_cost,
             deleted_at=None,
+            created_at=datetime.now(timezone.utc),
         )
         self.tasks[task.id] = task
         self._task_seq += 1

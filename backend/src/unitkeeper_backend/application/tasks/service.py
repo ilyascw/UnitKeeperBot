@@ -477,6 +477,7 @@ class TaskService:
                     frequency_per_sprint=task.frequency_per_sprint,
                     unit_cost=task.unit_cost,
                     deleted_at=task.deleted_at,
+                    created_at=task.created_at,
                     completed_in_sprint=completed,
                     pending_in_sprint=pending,
                 )

@@ -140,6 +140,7 @@ export interface TaskResponse {
   frequency_per_sprint: number;
   unit_cost: string;
   deleted_at: string | null;
+  created_at: string;
   /** Confirmed completions in the current sprint. */
   completed_in_sprint: number;
   /** Slots left against the frequency cap (frequency − completed). */

@@ -97,6 +97,7 @@ class TaskInfo:
     frequency_per_sprint: int
     unit_cost: Decimal
     deleted_at: datetime | None
+    created_at: datetime
     completed_in_sprint: int = 0
     pending_in_sprint: int = 0
 
