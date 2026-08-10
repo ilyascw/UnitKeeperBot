@@ -59,6 +59,7 @@ def map_task(model: Task) -> TaskInfo:
         frequency_per_sprint=model.frequency_per_sprint,
         unit_cost=model.unit_cost,
         deleted_at=model.deleted_at,
+        created_at=model.created_at,
     )
 
 

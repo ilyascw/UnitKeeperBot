@@ -65,6 +65,7 @@ class TaskResponse(BaseModel):
     frequency_per_sprint: int
     unit_cost: Decimal
     deleted_at: datetime | None
+    created_at: datetime
     completed_in_sprint: int
     remaining_in_sprint: int
     pending_in_sprint: int
