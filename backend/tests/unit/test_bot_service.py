@@ -42,6 +42,68 @@ async def test_ensure_user_upserts_profile_from_telegram_identity() -> None:
 
 
 @pytest.mark.asyncio
+async def test_bot_user_upsert_preserves_photo_from_web_app_auth() -> None:
+    uow = InMemoryUnitOfWork()
+    uow.users.users[42] = UserProfile(
+        42,
+        "ivan",
+        "Ivan",
+        None,
+        "ru",
+        False,
+        photo_url="https://t.me/i/userpic/320/avatar.jpeg",
+    )
+    bot = _build(uow)
+
+    user = await bot.ensure_user(
+        TelegramIdentity(
+            user_id=42,
+            username="ivan_updated",
+            first_name="Ivan",
+            last_name=None,
+            language_code="ru",
+            is_bot=False,
+        )
+    )
+
+    assert user.username == "ivan_updated"
+    assert user.photo_url == "https://t.me/i/userpic/320/avatar.jpeg"
+
+
+@pytest.mark.asyncio
+async def test_web_app_user_upsert_updates_and_clears_photo() -> None:
+    uow = InMemoryUnitOfWork()
+
+    updated = await uow.users.upsert_from_telegram(
+        TelegramIdentity(
+            user_id=42,
+            username="ivan",
+            first_name="Ivan",
+            last_name=None,
+            language_code="ru",
+            is_bot=False,
+            photo_url="https://t.me/i/userpic/320/new-avatar.jpeg",
+            photo_url_is_authoritative=True,
+        )
+    )
+    cleared = await uow.users.upsert_from_telegram(
+        TelegramIdentity(
+            user_id=42,
+            username="ivan",
+            first_name="Ivan",
+            last_name=None,
+            language_code="ru",
+            is_bot=False,
+            photo_url=None,
+            photo_url_is_authoritative=True,
+        )
+    )
+
+    assert updated.photo_url == "https://t.me/i/userpic/320/new-avatar.jpeg"
+    assert cleared.photo_url is None
+
+
+@pytest.mark.asyncio
 async def test_get_context_returns_empty_group_for_brand_new_user() -> None:
     uow = InMemoryUnitOfWork()
     uow.users.users[1] = UserProfile(1, "solo", "Solo", None, "en", False)

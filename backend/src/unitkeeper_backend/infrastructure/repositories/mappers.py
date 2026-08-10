@@ -21,6 +21,7 @@ def map_user(model: User) -> UserProfile:
         last_name=model.last_name,
         language_code=model.language_code,
         is_bot=model.is_bot,
+        photo_url=model.photo_url,
     )
 
 

@@ -4,7 +4,7 @@ import { useCurrentGroup, useSprintResults } from '@/api/queries';
 import { useAuth } from '@/auth/useAuth';
 import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
-import { Card, Screen, ScreenHeader } from '@/components/ui/app-kit';
+import { Avatar, Card, Screen, ScreenHeader } from '@/components/ui/app-kit';
 import { routes } from '@/routes/paths';
 import { UNIT_SYMBOL, formatPeriod, formatUnits, memberName } from '@/ui/format';
 import type { CompletedTaskBreakdownResponse } from '@/api/types';
@@ -52,6 +52,7 @@ function CompletionBreakdown({
         });
         return (
           <div className="uk-row" key={`${item.task_id}-${item.performer_user_id}`}>
+            <Avatar label={who} seed={item.performer_user_id} photoUrl={item.performer_photo_url} />
             <div className="uk-row__grow">
               <div style={{ font: "600 15px 'Manrope'" }}>{item.title}</div>
               <div style={{ font: "400 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>

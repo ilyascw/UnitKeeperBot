@@ -53,6 +53,14 @@ class InMemoryUserRepository:
         return [self.users[user_id] for user_id in user_ids if user_id in self.users]
 
     async def upsert_from_telegram(self, identity: TelegramIdentity) -> UserProfile:
+        existing = self.users.get(identity.user_id)
+        photo_url = (
+            identity.photo_url
+            if identity.photo_url_is_authoritative
+            else existing.photo_url
+            if existing is not None
+            else None
+        )
         profile = UserProfile(
             id=identity.user_id,
             username=identity.username,
@@ -60,6 +68,7 @@ class InMemoryUserRepository:
             last_name=identity.last_name,
             language_code=identity.language_code,
             is_bot=identity.is_bot,
+            photo_url=photo_url,
         )
         self.users[identity.user_id] = profile
         return profile

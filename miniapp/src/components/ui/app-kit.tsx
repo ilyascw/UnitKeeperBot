@@ -186,8 +186,16 @@ function BrandSpinner() {
   return <UiBrandSpinner />;
 }
 
-function Avatar({ label, seed }: { label: string; seed: number }) {
-  return <MemberAvatar label={label} seed={seed} />;
+function Avatar({
+  label,
+  seed,
+  photoUrl,
+}: {
+  label: string;
+  seed: number;
+  photoUrl?: string | null;
+}) {
+  return <MemberAvatar label={label} seed={seed} photoUrl={photoUrl} />;
 }
 
 function Toast({

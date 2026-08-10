@@ -24,6 +24,7 @@ class UserProfile:
     last_name: str | None
     language_code: str | None
     is_bot: bool
+    photo_url: str | None = None
 
 
 @dataclass(slots=True)
@@ -69,6 +70,7 @@ class MemberCardInfo:
     weight_percent: Decimal
     balance: Decimal
     is_owner: bool
+    photo_url: str | None = None
 
 
 @dataclass(slots=True)
@@ -210,6 +212,7 @@ class CompletedTaskBreakdownItem:
     performer_first_name: str | None
     performer_username: str | None
     last_completed_at: datetime
+    performer_photo_url: str | None = None
 
 
 @dataclass(slots=True)
@@ -271,6 +274,8 @@ class TelegramIdentity:
     last_name: str | None
     language_code: str | None
     is_bot: bool
+    photo_url: str | None = None
+    photo_url_is_authoritative: bool = False
 
 
 @dataclass(slots=True)

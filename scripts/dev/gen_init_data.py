@@ -26,8 +26,20 @@ ROOT = Path(__file__).resolve().parents[2]
 # Fixed dev user ids so re-running this script is idempotent (same account
 # each time -- convenient for repeated manual testing).
 DEV_USERS = [
-    {"id": 900000001, "first_name": "Alex", "username": "alex_dev", "language_code": "ru"},
-    {"id": 900000002, "first_name": "Mia", "username": "mia_dev", "language_code": "ru"},
+    {
+        "id": 900000001,
+        "first_name": "Alex",
+        "username": "alex_dev",
+        "language_code": "ru",
+        "photo_url": "http://localhost:5173/dev-avatar-alex.svg",
+    },
+    {
+        "id": 900000002,
+        "first_name": "Mia",
+        "username": "mia_dev",
+        "language_code": "ru",
+        "photo_url": "http://localhost:5174/dev-avatar-mia.svg",
+    },
 ]
 
 

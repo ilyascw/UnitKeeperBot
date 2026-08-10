@@ -60,6 +60,7 @@ class User(TimestampMixin, Base):
     first_name: Mapped[str | None] = mapped_column(String(255))
     last_name: Mapped[str | None] = mapped_column(String(255))
     language_code: Mapped[str | None] = mapped_column(String(16))
+    photo_url: Mapped[str | None] = mapped_column(Text)
     is_bot: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
