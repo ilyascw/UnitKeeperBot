@@ -144,6 +144,7 @@ class CompletedTaskBreakdownResponse(BaseModel):
     performer_user_id: int
     performer_first_name: str | None
     performer_username: str | None
+    last_completed_at: datetime
 
 
 class GroupProgressResponse(BaseModel):

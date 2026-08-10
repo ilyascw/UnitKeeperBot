@@ -222,6 +222,7 @@ export interface CompletedTaskBreakdownResponse {
   performer_user_id: number;
   performer_first_name: string | null;
   performer_username: string | null;
+  last_completed_at: string;
 }
 
 export interface GroupProgressResponse {

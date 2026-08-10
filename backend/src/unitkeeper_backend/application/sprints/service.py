@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import datetime
 from decimal import Decimal
 from uuid import uuid4
 
@@ -68,12 +69,18 @@ class SprintService:
         completed = ZERO
         group_completed = ZERO
         counters: dict[tuple[int, int], int] = defaultdict(int)
+        last_completed_at: dict[tuple[int, int], datetime] = {}
         for log in logs:
             task = task_by_id.get(log.task_id)
             if task is None:
                 continue
             group_completed += task.unit_cost
-            counters[(task.id, log.performer_user_id)] += 1
+            key = (task.id, log.performer_user_id)
+            counters[key] += 1
+            completed_at = log.decided_at or log.created_at
+            previous_completed_at = last_completed_at.get(key)
+            if previous_completed_at is None or completed_at > previous_completed_at:
+                last_completed_at[key] = completed_at
             if log.performer_user_id == user_id:
                 completed += task.unit_cost
 
@@ -95,20 +102,11 @@ class SprintService:
                 performer_username=performer_by_id[performer_id].username
                 if performer_id in performer_by_id
                 else None,
+                last_completed_at=last_completed_at[(task_id, performer_id)],
             )
-            for (task_id, performer_id), count in sorted(
-                counters.items(),
-                key=lambda item: (
-                    task_by_id[item[0][0]].title.lower(),
-                    item[0][1] != user_id,
-                    performer_by_id[item[0][1]].first_name
-                    or performer_by_id[item[0][1]].username
-                    or ""
-                    if item[0][1] in performer_by_id
-                    else "",
-                ),
-            )
+            for (task_id, performer_id), count in counters.items()
         ]
+        breakdown.sort(key=lambda item: item.last_completed_at, reverse=True)
         group_progress = GroupProgressInfo(
             planned_units=quantize(total_task_units),
             completed_units=quantize(group_completed),

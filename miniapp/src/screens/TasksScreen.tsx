@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Navigate, useNavigate } from '@/routes/navigation';
+import { Navigate } from '@/routes/navigation';
 
 import {
   useCancelTaskLog,
@@ -624,7 +624,6 @@ function TaskRow({
  * owner-only.
  */
 export function TasksScreen() {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { context } = useAuth();
   const group = useCurrentGroup();
@@ -738,15 +737,6 @@ export function TasksScreen() {
         title="Задачи"
         actions={
           <>
-            <UiButton
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label="Открыть отметки"
-              onClick={() => navigate(routes.taskLogs)}
-            >
-              <ClockIcon size={22} />
-            </UiButton>
             <UiButton
               type="button"
               variant="ghost"
