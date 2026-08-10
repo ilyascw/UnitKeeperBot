@@ -3,7 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { useApproveTaskLog, useRejectTaskLog } from '@/api/mutations';
 import type { TaskLogStatus, TaskLogViewResponse, UserResponse } from '@/api/types';
 import { UNIT_SYMBOL, formatDay, formatUnits } from '@/ui/format';
-import { BottomSheet, Button, Field, Note, TextInput } from '@/components/ui/app-kit';
+import { Avatar, BottomSheet, Button, Field, Note, TextInput } from '@/components/ui/app-kit';
 import { CheckIcon } from '@/ui/icons';
 
 function displayName(user: UserResponse): string {
@@ -36,6 +36,11 @@ export function LogRow({
   const busy = approve.isPending;
   return (
     <div className="uk-row" style={{ alignItems: 'flex-start' }}>
+      <Avatar
+        label={displayName(log.performer)}
+        seed={log.performer.id}
+        photoUrl={log.performer.photo_url}
+      />
       <div className="uk-row__grow" style={{ minWidth: 0 }}>
         <div style={{ font: "700 15px 'Manrope'" }}>{log.task.title}</div>
         <div style={{ font: "400 12px 'Manrope'", color: 'var(--uk-ink-55)', marginTop: 3 }}>

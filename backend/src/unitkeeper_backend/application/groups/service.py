@@ -266,6 +266,7 @@ class GroupService:
                     weight_percent=membership.weight_percent or ZERO,
                     balance=balances.get(membership.user_id, ZERO),
                     is_owner=membership.user_id == group.owner_user_id,
+                    photo_url=profile.photo_url if profile else None,
                 )
             )
         return cards

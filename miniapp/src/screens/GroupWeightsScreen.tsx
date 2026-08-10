@@ -6,7 +6,7 @@ import { useCurrentGroup } from '@/api/queries';
 import { useAuth } from '@/auth/useAuth';
 import { ErrorState } from '@/components/ErrorState';
 import { Loader } from '@/components/Loader';
-import { Button, Note, Screen, ScreenHeader } from '@/components/ui/app-kit';
+import { Avatar, Button, Note, Screen, ScreenHeader } from '@/components/ui/app-kit';
 import { routes } from '@/routes/paths';
 import { avatarColor } from '@/ui/avatar';
 
@@ -196,15 +196,22 @@ export function GroupWeightsScreen() {
                 <div
                   style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                 >
-                  <span style={{ font: "600 15px 'Manrope'" }}>
-                    {memberName(member)}
-                    {member.user_id === context?.user?.id ? (
-                      <span style={{ font: "500 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>
-                        {' '}
-                        (вы)
-                      </span>
-                    ) : null}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Avatar
+                      label={memberName(member)}
+                      seed={member.user_id}
+                      photoUrl={member.photo_url}
+                    />
+                    <span style={{ font: "600 15px 'Manrope'" }}>
+                      {memberName(member)}
+                      {member.user_id === context?.user?.id ? (
+                        <span style={{ font: "500 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>
+                          {' '}
+                          (вы)
+                        </span>
+                      ) : null}
+                    </span>
+                  </div>
                   <span style={{ font: "800 16px 'Manrope'", color: 'var(--uk-blue)' }}>
                     {value}%
                   </span>

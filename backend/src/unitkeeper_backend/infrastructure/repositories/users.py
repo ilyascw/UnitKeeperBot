@@ -39,16 +39,21 @@ class SqlAlchemyUserRepository:
             "language_code": identity.language_code,
             "is_bot": identity.is_bot,
         }
+        if identity.photo_url_is_authoritative:
+            values["photo_url"] = identity.photo_url
         insert_stmt = insert(User).values(**values)
+        update_values = {
+            "username": insert_stmt.excluded.username,
+            "first_name": insert_stmt.excluded.first_name,
+            "last_name": insert_stmt.excluded.last_name,
+            "language_code": insert_stmt.excluded.language_code,
+            "is_bot": insert_stmt.excluded.is_bot,
+        }
+        if identity.photo_url_is_authoritative:
+            update_values["photo_url"] = insert_stmt.excluded.photo_url
         upsert_stmt = insert_stmt.on_conflict_do_update(
             index_elements=[User.id],
-            set_={
-                "username": insert_stmt.excluded.username,
-                "first_name": insert_stmt.excluded.first_name,
-                "last_name": insert_stmt.excluded.last_name,
-                "language_code": insert_stmt.excluded.language_code,
-                "is_bot": insert_stmt.excluded.is_bot,
-            },
+            set_=update_values,
         ).returning(User)
         result = await self._session.execute(upsert_stmt)
         model = result.scalar_one()

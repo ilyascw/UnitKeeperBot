@@ -24,6 +24,7 @@ class UserResponse(BaseModel):
     last_name: str | None
     language_code: str | None
     is_bot: bool
+    photo_url: str | None
 
 
 class MembershipResponse(BaseModel):
@@ -145,6 +146,7 @@ class CompletedTaskBreakdownResponse(BaseModel):
     performer_first_name: str | None
     performer_username: str | None
     last_completed_at: datetime
+    performer_photo_url: str | None
 
 
 class GroupProgressResponse(BaseModel):

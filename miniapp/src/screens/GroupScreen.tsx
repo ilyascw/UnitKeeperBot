@@ -177,7 +177,11 @@ export function GroupScreen() {
           const you = member.user_id === myUserId;
           return (
             <div className="uk-row" key={member.user_id}>
-              <Avatar label={memberName(member)} seed={member.user_id} />
+              <Avatar
+                label={memberName(member)}
+                seed={member.user_id}
+                photoUrl={member.photo_url}
+              />
               <div className="uk-row__grow">
                 <div
                   style={{

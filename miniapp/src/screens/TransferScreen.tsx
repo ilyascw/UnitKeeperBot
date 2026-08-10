@@ -161,7 +161,11 @@ export function TransferScreen() {
               Получатель
             </span>
             <div style={{ flex: 1 }} />
-            <Avatar label={candidateName(recipient.user)} seed={recipient.user.id} />
+            <Avatar
+              label={candidateName(recipient.user)}
+              seed={recipient.user.id}
+              photoUrl={recipient.user.photo_url}
+            />
             <span style={{ font: "700 15px 'Manrope'" }}>{candidateName(recipient.user)}</span>
           </div>
 
@@ -293,7 +297,11 @@ export function TransferScreen() {
                 textAlign: 'left',
               }}
             >
-              <Avatar label={candidateName(candidate.user)} seed={candidate.user.id} />
+              <Avatar
+                label={candidateName(candidate.user)}
+                seed={candidate.user.id}
+                photoUrl={candidate.user.photo_url}
+              />
               <div style={{ flex: 1 }}>
                 <div style={{ font: "600 15px 'Manrope'" }}>{candidateName(candidate.user)}</div>
                 <div style={{ font: "400 12px 'Manrope'", color: 'var(--uk-ink-55)' }}>

@@ -13,6 +13,7 @@ export interface UserResponse {
   last_name: string | null;
   language_code: string | null;
   is_bot: boolean;
+  photo_url: string | null;
 }
 
 export interface MembershipResponse {
@@ -55,6 +56,7 @@ export interface MemberCardResponse {
   weight_percent: string;
   balance: string;
   is_owner: boolean;
+  photo_url: string | null;
 }
 
 export interface GroupCardResponse {
@@ -223,6 +225,7 @@ export interface CompletedTaskBreakdownResponse {
   performer_first_name: string | null;
   performer_username: string | null;
   last_completed_at: string;
+  performer_photo_url: string | null;
 }
 
 export interface GroupProgressResponse {

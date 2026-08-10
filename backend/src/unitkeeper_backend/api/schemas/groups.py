@@ -44,6 +44,7 @@ class MemberCardResponse(BaseModel):
     weight_percent: Decimal
     balance: Decimal
     is_owner: bool
+    photo_url: str | None
 
 
 class GroupCardResponse(BaseModel):

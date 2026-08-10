@@ -50,4 +50,6 @@ class TelegramWebAppVerifier:
             last_name=user.get("last_name"),
             language_code=user.get("language_code"),
             is_bot=bool(user.get("is_bot", False)),
+            photo_url=user.get("photo_url"),
+            photo_url_is_authoritative=True,
         )

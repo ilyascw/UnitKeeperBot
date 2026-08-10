@@ -103,6 +103,11 @@ class SprintService:
                 if performer_id in performer_by_id
                 else None,
                 last_completed_at=last_completed_at[(task_id, performer_id)],
+                performer_photo_url=(
+                    performer_by_id[performer_id].photo_url
+                    if performer_id in performer_by_id
+                    else None
+                ),
             )
             for (task_id, performer_id), count in counters.items()
         ]
