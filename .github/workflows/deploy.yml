@@ -25,7 +25,7 @@ permissions:
 jobs:
   deploy:
     name: Deploy to production
-    if: ${{ vars.DEPLOY_HOST != '' }}
+    if: ${{ secrets.DEPLOY_HOST != '' }}
     runs-on: ubuntu-latest
     environment: production
 
@@ -45,10 +45,10 @@ jobs:
 
       - name: Upload application
         env:
-          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
-          DEPLOY_PORT: ${{ vars.DEPLOY_PORT }}
-          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
           rsync --archive --compress --delete \
             --exclude '.git/' \
@@ -61,10 +61,10 @@ jobs:
 
       - name: Write production environment
         env:
-          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
-          DEPLOY_PORT: ${{ vars.DEPLOY_PORT }}
-          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           PRODUCTION_ENV: ${{ secrets.PRODUCTION_ENV }}
         run: |
           test -n "$PRODUCTION_ENV"
@@ -75,10 +75,10 @@ jobs:
       - name: Configure and start all containers
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.deploy_scope == 'all' }}
         env:
-          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
-          DEPLOY_PORT: ${{ vars.DEPLOY_PORT }}
-          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
           ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "cd '${DEPLOY_PATH}' && \
@@ -96,10 +96,10 @@ jobs:
       - name: Build and restart only the bot
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_scope == 'bot' }}
         env:
-          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
-          DEPLOY_PORT: ${{ vars.DEPLOY_PORT }}
-          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
           ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "cd '${DEPLOY_PATH}' && \
@@ -118,10 +118,10 @@ jobs:
       - name: Migrate and restart only the backend, scheduler and Mini App
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_scope == 'app' }}
         env:
-          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
-          DEPLOY_PORT: ${{ vars.DEPLOY_PORT }}
-          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
           ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
             "cd '${DEPLOY_PATH}' && \
