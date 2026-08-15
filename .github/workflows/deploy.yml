@@ -25,7 +25,9 @@ permissions:
 jobs:
   deploy:
     name: Deploy to production
-    if: ${{ secrets.DEPLOY_HOST != '' }}
+    # Guards against running on a fork with no deploy config. This has to stay
+    # on a variable: the secrets context is not available in a job-level if.
+    if: ${{ vars.DEPLOY_PATH != '' }}
     runs-on: ubuntu-latest
     environment: production
 
