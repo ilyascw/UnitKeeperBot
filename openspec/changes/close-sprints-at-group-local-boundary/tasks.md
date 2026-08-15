@@ -54,7 +54,7 @@
 - [x] 8.1 Update the documented UTC-only limitation in `AGENTS.md` / `architecture.md` wherever it is stated
 - [ ] 8.2 Deploy backend and scheduler from the same image
 - [ ] 8.3 Verify the first post-deploy pass settles nothing (the `2026-08-10..2026-08-16` window is still open)
-- [ ] 8.4 One-off production data fix: zero out the prematurely settled `2026-08-03..2026-08-09` sprint and roll back the balances it wrote (groups 1 and 4, `-20.00` and `-8.00`) — confirm the exact statements with the user before running them
+- [x] 8.4 One-off production data fix: zero out the prematurely settled `2026-08-03..2026-08-09` sprint and roll back the balances it wrote (groups 1 and 4, `-20.00` and `-8.00`) — confirm the exact statements with the user before running them. Applied 2026-08-15, preceded by `docs/backend/backfill-missing-opening-entry.sql` (see #37) without which the per-user reconciliation check could not pass
 - [ ] 8.5 Manually broadcast the "bug is fixed, mark your tasks" message to group members
 - [ ] 8.6 Watch the `2026-08-17T00:00+03:00` boundary and confirm closure lands within 5 minutes of it
 
