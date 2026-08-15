@@ -60,5 +60,5 @@
 
 ## 9. Follow-ups (not part of this change)
 
-- [ ] 9.1 File an issue for editing a group's timezone after creation (settings UI + endpoint); note that client-side auto-detection already exists at `miniapp/src/screens/CreateGroupScreen.tsx:34`
-- [ ] 9.2 Ask whether the `invalid` label on issue #28 should be removed, given production data confirms the bug
+- [x] 9.1 File an issue for editing a group's timezone after creation (settings UI + endpoint); note that client-side auto-detection already exists at `miniapp/src/screens/CreateGroupScreen.tsx:34`
+- [x] 9.2 Ask whether the `invalid` label on issue #28 should be removed, given production data confirms the bug
