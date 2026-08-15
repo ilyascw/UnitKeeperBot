@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date, datetime, timezone
 from decimal import Decimal
 
 import pytest
@@ -134,6 +135,50 @@ async def test_get_current_group_card_returns_sprint_window_and_members() -> Non
 
     card_for_member = await service.get_current_group_card(user_id=2)
     assert card_for_member.join_secret is None
+
+
+@pytest.mark.asyncio
+async def test_create_group_rejects_an_unknown_iana_timezone() -> None:
+    uow = InMemoryUnitOfWork()
+    uow.users.users[1] = UserProfile(1, "alice", "Alice", None, "en", False)
+    service = _build_service(uow)
+
+    with pytest.raises(ValidationError):
+        await service.create_group(
+            user_id=1,
+            name="team",
+            join_secret="secret",
+            sprint_start_weekday=Weekday.MONDAY,
+            sprint_duration_days=7,
+            timezone="Mars/Base",
+        )
+
+    assert uow.groups.groups == {}
+
+
+@pytest.mark.asyncio
+async def test_group_card_reports_sprint_end_at_the_group_local_boundary() -> None:
+    uow = InMemoryUnitOfWork()
+    uow.users.users[1] = UserProfile(1, "alice", "Alice", None, "en", False)
+    service = GroupService(
+        uow=uow,
+        context_service=CurrentContextService(uow=uow),
+        clock=FakeClock(datetime(2026, 8, 12, 12, tzinfo=timezone.utc)),
+    )
+    await service.create_group(
+        user_id=1,
+        name="team",
+        join_secret="secret",
+        sprint_start_weekday=Weekday.MONDAY,
+        sprint_duration_days=7,
+        timezone="Europe/Moscow",
+    )
+
+    card = await service.get_current_group_card(user_id=1)
+
+    assert card.sprint_period_end == date(2026, 8, 16)
+    # 00:00 on 2026-08-17 in Moscow, i.e. 21:00Z the day before — not 00:00Z.
+    assert card.sprint_ends_at == datetime(2026, 8, 16, 21, tzinfo=timezone.utc)
 
 
 @pytest.mark.asyncio

@@ -39,6 +39,9 @@ async def test_temp_results_and_sprint_close_persist_balances() -> None:
     clock = FakeClock(utc_datetime(2026, 3, 16))
     task_service = TaskService(uow=uow, clock=clock)
     sprint_service = SprintService(uow=uow, clock=clock)
+    # Closing is only legal once the window has ended, so the close path uses
+    # a clock past the 2026-03-16..2026-03-22 boundary.
+    closing_service = SprintService(uow=uow, clock=FakeClock(utc_datetime(2026, 3, 23)))
     task = await task_service.create_task(
         group_id=1,
         title="Laundry",
@@ -66,13 +69,13 @@ async def test_temp_results_and_sprint_close_persist_balances() -> None:
     assert results_for_user2.breakdown[0].title == "Laundry"
     assert results_for_user2.breakdown[0].performer_user_id == 1
 
-    run = await sprint_service.close_current_sprint(group_id=1)
+    run = await closing_service.close_current_sprint(group_id=1)
     assert run.status is SprintRunStatus.CLOSED
     assert len(run.member_results) == 2
     assert uow.sprints.transactions
 
     with pytest.raises(BusinessRuleViolation):
-        await sprint_service.close_current_sprint(group_id=1)
+        await closing_service.close_current_sprint(group_id=1)
 
 
 @pytest.mark.asyncio
@@ -186,7 +189,9 @@ async def test_close_current_sprint_auto_rejects_stale_pending_logs() -> None:
 
     clock = FakeClock(utc_datetime(2026, 3, 16))
     task_service = TaskService(uow=uow, clock=clock)
-    sprint_service = SprintService(uow=uow, clock=clock)
+    # Closing is only legal once the window has ended, so the close path uses
+    # a clock past the 2026-03-16..2026-03-22 boundary.
+    closing_service = SprintService(uow=uow, clock=FakeClock(utc_datetime(2026, 3, 23)))
     task = await task_service.create_task(
         group_id=1,
         title="Dishes",
@@ -196,7 +201,7 @@ async def test_close_current_sprint_auto_rejects_stale_pending_logs() -> None:
     pending = await task_service.mark_done(group_id=1, performer_user_id=1, task_id=task.id)
     assert pending.status is TaskLogStatus.PENDING
 
-    await sprint_service.close_current_sprint(group_id=1)
+    await closing_service.close_current_sprint(group_id=1)
 
     stale_log = await uow.tasks.get_task_log(log_id=pending.id)
     assert stale_log is not None

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, time, timedelta, timezone
+from datetime import datetime
 from decimal import Decimal
 
 from db.enums import NotificationEventType, Weekday
@@ -14,6 +14,7 @@ from unitkeeper_backend.application.models import (
     MembershipInfo,
 )
 from unitkeeper_backend.application.ports import Clock, UnitOfWork
+from unitkeeper_backend.application.timezones import resolve_group_zone, resolve_timezone_name
 from unitkeeper_backend.domain.errors import (
     AuthorizationError,
     BusinessRuleViolation,
@@ -55,11 +56,17 @@ class GroupService:
         self._validate_name(name)
         self._validate_join_secret(join_secret)
         self._validate_sprint_duration(sprint_duration_days)
+        zone = resolve_timezone_name(timezone)
+        if zone is None:
+            raise ValidationError(f"Unknown IANA timezone: {timezone!r}")
 
         existing = await self._uow.groups.get_by_name(name)
         if existing is not None:
             raise ConflictError("Group name is already taken")
 
+        # The anchor date aligns every future sprint window, so it has to be the
+        # group's own local day rather than the UTC one.
+        created_at = self._clock.now().astimezone(zone).date()
         group = await self._uow.groups.create_group(
             name=name,
             join_secret=join_secret,
@@ -67,7 +74,7 @@ class GroupService:
             sprint_start_weekday=sprint_start_weekday,
             sprint_duration_days=sprint_duration_days,
             timezone=timezone,
-            created_at=self._clock.today(),
+            created_at=created_at,
         )
         await self._uow.groups.create_membership(group_id=group.id, user_id=user_id)
         await self._uow.groups.replace_weights(
@@ -161,16 +168,13 @@ class GroupService:
         group, memberships = await self._require_active_group(user_id)
         members = await self._build_member_cards(group=group, memberships=memberships)
         window = current_sprint_window(
-            today=self._clock.today(),
+            now=self._clock.now(),
+            zone=resolve_group_zone(group_id=group.id, timezone_name=group.timezone),
             start_weekday=group.sprint_start_weekday,
             duration_days=group.sprint_duration_days,
             anchor=group.created_at,
         )
-        sprint_ends_at = datetime.combine(
-            window.period_end + timedelta(days=1),
-            time.min,
-            tzinfo=timezone.utc,
-        )
+        sprint_ends_at = window.ends_before
         return GroupCardInfo(
             id=group.id,
             name=group.name,

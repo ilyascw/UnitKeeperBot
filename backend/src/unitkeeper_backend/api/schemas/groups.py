@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class CreateGroupRequest(BaseModel):
@@ -12,6 +13,17 @@ class CreateGroupRequest(BaseModel):
     sprint_start_weekday: str
     sprint_duration_days: int = Field(gt=0)
     timezone: str = Field(min_length=1, max_length=64, default="UTC")
+
+    @field_validator("timezone")
+    @classmethod
+    def _validate_iana_timezone(cls, value: str) -> str:
+        # Sprint windows are evaluated in this zone, so an unknown identifier
+        # would silently settle the group at the wrong hour. Reject on write.
+        try:
+            ZoneInfo(value)
+        except (ZoneInfoNotFoundError, ValueError) as error:
+            raise ValueError(f"Unknown IANA timezone: {value!r}") from error
+        return value
 
 
 class JoinGroupRequest(BaseModel):

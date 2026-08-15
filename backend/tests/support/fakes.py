@@ -38,9 +38,6 @@ class FakeClock:
     def now(self) -> datetime:
         return self._now
 
-    def today(self) -> date:
-        return self._now.date()
-
 
 class InMemoryUserRepository:
     def __init__(self) -> None:

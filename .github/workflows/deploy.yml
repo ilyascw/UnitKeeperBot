@@ -111,7 +111,11 @@ jobs:
             docker compose -f docker-compose.yml -f docker-compose.prod.yml \
               --profile telegram ps bot"
 
-      - name: Migrate and restart only the backend and Mini App
+      # The scheduler shares the backend image and the sprint-window math with
+      # the API, so it must be rebuilt and restarted in the same pass. Leaving
+      # it on an older image would have the two disagree about when a sprint
+      # window ends.
+      - name: Migrate and restart only the backend, scheduler and Mini App
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_scope == 'app' }}
         env:
           DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
@@ -123,15 +127,17 @@ jobs:
             "cd '${DEPLOY_PATH}' && \
             docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet && \
             docker compose -f docker-compose.yml -f docker-compose.prod.yml \
-              build migrate backend miniapp && \
+              build migrate backend scheduler miniapp && \
             docker compose -f docker-compose.yml -f docker-compose.prod.yml \
               run --rm --no-deps migrate && \
             docker compose -f docker-compose.yml -f docker-compose.prod.yml \
               up -d --no-deps --force-recreate backend && \
             docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+              up -d --no-deps --force-recreate scheduler && \
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml \
               up -d --no-deps --force-recreate miniapp && \
             docker compose -f docker-compose.yml -f docker-compose.prod.yml \
-              ps backend miniapp"
+              ps backend scheduler miniapp"
 
       - name: Verify HTTPS
         env:

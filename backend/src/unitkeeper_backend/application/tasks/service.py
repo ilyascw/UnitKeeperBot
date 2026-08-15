@@ -8,6 +8,7 @@ from db.enums import NotificationEventType, TaskLogStatus
 
 from unitkeeper_backend.application.models import TaskInfo, TaskLogInfo, TaskLogPage, TaskLogView
 from unitkeeper_backend.application.ports import Clock, UnitOfWork
+from unitkeeper_backend.application.timezones import resolve_group_zone
 from unitkeeper_backend.domain.errors import (
     AuthorizationError,
     BusinessRuleViolation,
@@ -489,7 +490,8 @@ class TaskService:
         if group is None:
             raise NotFoundError("Group was not found")
         return current_sprint_window(
-            today=self._clock.today(),
+            now=self._clock.now(),
+            zone=resolve_group_zone(group_id=group.id, timezone_name=group.timezone),
             start_weekday=group.sprint_start_weekday,
             duration_days=group.sprint_duration_days,
             anchor=group.created_at,

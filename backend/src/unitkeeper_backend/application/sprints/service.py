@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from uuid import uuid4
 
@@ -20,9 +20,11 @@ from unitkeeper_backend.application.models import (
     TempResults,
 )
 from unitkeeper_backend.application.ports import Clock, UnitOfWork
+from unitkeeper_backend.application.timezones import resolve_group_zone
 from unitkeeper_backend.domain.errors import BusinessRuleViolation, NotFoundError
 from unitkeeper_backend.domain.services.sprint_math import (
     ZERO,
+    SprintWindow,
     current_sprint_window,
     planned_units,
     progress_percent,
@@ -46,7 +48,8 @@ class SprintService:
             raise NotFoundError("Active membership was not found")
 
         window = current_sprint_window(
-            today=self._clock.today(),
+            now=self._clock.now(),
+            zone=resolve_group_zone(group_id=group.id, timezone_name=group.timezone),
             start_weekday=group.sprint_start_weekday,
             duration_days=group.sprint_duration_days,
             anchor=group.created_at,
@@ -131,17 +134,47 @@ class SprintService:
             group=group_progress,
         )
 
-    async def close_current_sprint(self, *, group_id: int) -> SprintRunInfo:
+    async def close_current_sprint(
+        self,
+        *,
+        group_id: int,
+        period_start: date | None = None,
+        period_end: date | None = None,
+    ) -> SprintRunInfo:
+        """Settle one sprint window for ``group_id``.
+
+        The scheduler passes the exact period it discovered, so a catch-up pass
+        settles the window it meant to settle rather than whichever one happens
+        to be current by the time the close runs. With no explicit period — the
+        manual-close path — this targets the group's most recently *ended*
+        window, never the running one. Either way, a window that has not fully
+        ended in group-local time is refused.
+        """
         group = await self._uow.groups.get_by_id(group_id)
         if group is None:
             raise NotFoundError("Group was not found")
 
-        window = current_sprint_window(
-            today=self._clock.today(),
-            start_weekday=group.sprint_start_weekday,
-            duration_days=group.sprint_duration_days,
-            anchor=group.created_at,
-        )
+        now = self._clock.now()
+        zone = resolve_group_zone(group_id=group.id, timezone_name=group.timezone)
+        if period_start is not None and period_end is not None:
+            window = SprintWindow(period_start=period_start, period_end=period_end, zone=zone)
+        else:
+            current = current_sprint_window(
+                now=now,
+                zone=zone,
+                start_weekday=group.sprint_start_weekday,
+                duration_days=group.sprint_duration_days,
+                anchor=group.created_at,
+            )
+            # ``current`` contains ``now``, so it is by definition still running.
+            # The newest settleable window is the one immediately before it.
+            window = current.shifted(-1)
+            if window.period_end < group.created_at:
+                raise BusinessRuleViolation("Sprint window has not ended yet and cannot be closed")
+
+        if not window.has_ended_at(now):
+            raise BusinessRuleViolation("Sprint window has not ended yet and cannot be closed")
+
         existing = await self._uow.sprints.get_sprint_run(
             group_id=group_id,
             period_start=window.period_start,
@@ -161,9 +194,10 @@ class SprintService:
         if not memberships:
             raise BusinessRuleViolation("Cannot close a sprint for a group without active members")
 
-        # Any log still pending when a sprint closes belongs to the window
-        # that's ending (nothing for the next window can exist yet). Auto-reject
-        # it so it can't later be approved into a future sprint's stats.
+        # A log still pending when its own window closes can never be approved
+        # into that window's stats, so auto-reject it. Scope this to the window
+        # being settled: a catch-up close of an older window must leave marks
+        # made during a later, still-running window pending and approvable.
         pending_logs = await self._uow.tasks.list_task_logs(
             group_id=group_id,
             statuses=[TaskLogStatus.PENDING],
@@ -171,10 +205,12 @@ class SprintService:
             offset=0,
         )
         for pending_log in pending_logs:
+            if not window.starts_at <= pending_log.created_at < window.ends_before:
+                continue
             await self._uow.tasks.reject_task_log(
                 log_id=pending_log.id,
                 approver_user_id=None,
-                decided_at=self._clock.now(),
+                decided_at=now,
                 rejection_reason="Спринт закрылся без подтверждения",
             )
 

@@ -2,7 +2,7 @@
 not double-close (or double-pay) the same sprint period.
 
 This exercises the full application-layer pipeline together (discovery via
-``list_due_group_ids``, close via the real ``SprintService.close_current_sprint``
+``list_due_sprint_windows``, close via the real ``SprintService.close_current_sprint``
 through ``SprintCloseRunner``, and report fan-out via ``SprintCloseJob`` +
 ``SprintReportPublisher``) rather than mocking any of the collaborators, so it
 proves the pieces are wired correctly end to end and not just individually.
@@ -20,7 +20,10 @@ from unitkeeper_backend.application.context.service import CurrentContextService
 from unitkeeper_backend.application.groups.service import GroupService
 from unitkeeper_backend.application.jobs.notifications import SprintReportPublisher
 from unitkeeper_backend.application.jobs.scheduler import SprintCloseJob
-from unitkeeper_backend.application.jobs.sprint_close import SprintCloseRunner, list_due_group_ids
+from unitkeeper_backend.application.jobs.sprint_close import (
+    SprintCloseRunner,
+    list_due_sprint_windows,
+)
 from unitkeeper_backend.application.models import UserProfile
 from unitkeeper_backend.application.sprints.service import SprintService
 from unitkeeper_backend.application.tasks.service import TaskService
@@ -67,35 +70,33 @@ async def _seed_group(uow: InMemoryUnitOfWork, *, clock: FakeClock) -> None:
 @pytest.mark.asyncio
 async def test_rerunning_scheduler_pass_does_not_double_close_or_double_pay() -> None:
     uow = InMemoryUnitOfWork()
-    clock = FakeClock(utc_datetime(2026, 3, 22))  # Sunday: last day of the sprint window
-    await _seed_group(uow, clock=clock)
+    seed_clock = FakeClock(utc_datetime(2026, 3, 16))  # Monday: window 03-16..03-22 opens
+    await _seed_group(uow, clock=seed_clock)
 
+    clock = FakeClock(utc_datetime(2026, 3, 23))  # Monday: the window has fully ended
     sprint_service = SprintService(uow=uow, clock=clock)
     closer = SprintCloseRunner(sprint_service=sprint_service, uow=uow)
     publisher = RecordingPublisher()
     job = SprintCloseJob(closer=closer, reports=SprintReportPublisher(publisher))
 
-    due_group_ids = await list_due_group_ids(uow=uow, clock=clock)
-    assert due_group_ids == [1]
+    due_windows = await list_due_sprint_windows(uow=uow, clock=clock)
+    assert [(due.group_id, due.period_start.isoformat()) for due in due_windows] == [
+        (1, "2026-03-16")
+    ]
 
-    first_closed_count = await job.run(
-        due_group_ids=due_group_ids, correlation_id="scheduler-run-1"
-    )
+    first_closed_count = await job.run(due_windows=due_windows, correlation_id="scheduler-run-1")
     assert first_closed_count == 1
     balances_after_first_run = dict(uow.groups.balances)
     commit_count_after_first_run = uow.commit_count
     notification_calls_after_first_run = len(publisher.calls)
     assert notification_calls_after_first_run > 0
 
-    # Simulate the scheduler firing again for the same day (e.g. process
-    # restart, overlapping trigger, or a retry). The window is still "due" by
-    # date, but the period has already been closed.
-    due_group_ids_again = await list_due_group_ids(uow=uow, clock=clock)
-    assert due_group_ids_again == [1]
+    # Simulate the scheduler firing again (process restart, overlapping trigger,
+    # retry). Discovery now skips the settled window, and even replaying the
+    # exact period explicitly must not settle it a second time.
+    assert await list_due_sprint_windows(uow=uow, clock=clock) == []
 
-    second_closed_count = await job.run(
-        due_group_ids=due_group_ids_again, correlation_id="scheduler-run-2"
-    )
+    second_closed_count = await job.run(due_windows=due_windows, correlation_id="scheduler-run-2")
 
     assert second_closed_count == 0
     assert uow.groups.balances == balances_after_first_run

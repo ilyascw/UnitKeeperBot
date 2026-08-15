@@ -6,13 +6,29 @@ and report-event production in backend application code, never in the bot.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import date
 from typing import Protocol
 
 from unitkeeper_backend.application.jobs.notifications import (
     SprintMemberReport,
     SprintReportPublisher,
 )
+
+
+@dataclass(frozen=True, slots=True)
+class DueSprintWindow:
+    """A specific window of a specific group that has ended and is unsettled.
+
+    Discovery hands the exact period to the closer rather than a bare group id,
+    so a catch-up pass settles the window it found instead of whichever one
+    happens to be current by the time the close runs.
+    """
+
+    group_id: int
+    period_start: date
+    period_end: date
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,7 +44,12 @@ class ClosedSprint:
 
 class SprintCloser(Protocol):
     async def close_due_sprint(
-        self, *, group_id: int, correlation_id: str
+        self,
+        *,
+        group_id: int,
+        period_start: date,
+        period_end: date,
+        correlation_id: str,
     ) -> ClosedSprint | None: ...
 
 
@@ -37,11 +58,15 @@ class SprintCloseJob:
         self._closer = closer
         self._reports = reports
 
-    async def run(self, *, due_group_ids: list[int], correlation_id: str) -> int:
+    async def run(self, *, due_windows: Sequence[DueSprintWindow], correlation_id: str) -> int:
+        """Settle each due window in the order given (discovery yields oldest first)."""
         closed_count = 0
-        for group_id in due_group_ids:
+        for due in due_windows:
             closed = await self._closer.close_due_sprint(
-                group_id=group_id, correlation_id=correlation_id
+                group_id=due.group_id,
+                period_start=due.period_start,
+                period_end=due.period_end,
+                correlation_id=correlation_id,
             )
             if closed is None:
                 continue
