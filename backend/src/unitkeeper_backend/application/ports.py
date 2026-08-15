@@ -29,9 +29,14 @@ from unitkeeper_backend.application.models import (
 
 
 class Clock(Protocol):
-    def now(self) -> datetime: ...
+    """Source of the current instant.
 
-    def today(self) -> date: ...
+    Deliberately has no ``today()``: a calendar day is only meaningful relative
+    to a timezone, and answering it here would bake in ambient UTC. Callers
+    derive the local date from ``now()`` and the group's zone instead.
+    """
+
+    def now(self) -> datetime: ...
 
 
 class TelegramInitDataVerifier(Protocol):

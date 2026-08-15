@@ -5,11 +5,12 @@ Runs as a separate long-lived process from the FastAPI app (see
 container using the same image with `CMD ["python", "-m",
 "unitkeeper_backend.entrypoints.scheduler"]`).
 
-Timezone policy: the job is scheduled with an explicit UTC trigger, matching
-`UtcClock` and the domain sprint-window math (`domain/services/sprint_math.py`),
-which both anchor to UTC. Every group's sprint window is currently evaluated
-in UTC regardless of its own `timezone` field; group-local scheduling is not
-implemented yet.
+Timezone policy: the process itself runs on UTC, but that is only the tick
+schedule — each group's sprint window is evaluated in the group's own stored
+IANA `timezone` (see `application/jobs/sprint_close.py`). Rather than firing
+once a day, the job runs on a short interval and asks every group whether its
+window has ended locally, so groups in different zones each settle within one
+interval of their own midnight without per-group timers.
 """
 
 from __future__ import annotations
@@ -20,13 +21,16 @@ import uuid
 from datetime import timezone
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 from db.enums import NotificationEventType
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from unitkeeper_backend.application.jobs.notifications import SprintReportPublisher
 from unitkeeper_backend.application.jobs.scheduler import SprintCloseJob
-from unitkeeper_backend.application.jobs.sprint_close import SprintCloseRunner, list_due_group_ids
+from unitkeeper_backend.application.jobs.sprint_close import (
+    SprintCloseRunner,
+    list_due_sprint_windows,
+)
 from unitkeeper_backend.application.sprints.service import SprintService
 from unitkeeper_backend.config import Settings, settings
 from unitkeeper_backend.infrastructure.db.session import build_engine, build_session_maker
@@ -67,10 +71,12 @@ class _OutboxEventPublisher:
         )
 
 
-# Runs once a day, shortly after UTC midnight, so a group whose sprint window
-# ended "yesterday" (period_end == yesterday's date) is picked up as soon as
-# today begins. See `list_due_group_ids` for the exact due-ness check.
-SPRINT_CLOSE_CRON = CronTrigger(hour=0, minute=5, timezone=timezone.utc)
+# Frequent poll rather than a daily tick: due-ness is `now >= ends_before` in
+# each group's own zone, so worst-case lateness is one interval regardless of
+# where a group sits — invisible against a week-long sprint. It also removes
+# the "did we miss the daily tick" failure mode. See `list_due_sprint_windows`.
+SPRINT_CLOSE_INTERVAL_MINUTES = 5
+SPRINT_CLOSE_TRIGGER = IntervalTrigger(minutes=SPRINT_CLOSE_INTERVAL_MINUTES, timezone=timezone.utc)
 
 
 async def run_sprint_close_once(session_maker: async_sessionmaker[AsyncSession]) -> int:
@@ -86,13 +92,13 @@ async def run_sprint_close_once(session_maker: async_sessionmaker[AsyncSession])
         )
         job = SprintCloseJob(closer=closer, reports=reports)
 
-        due_group_ids = await list_due_group_ids(uow=uow, clock=clock)
+        due_windows = await list_due_sprint_windows(uow=uow, clock=clock)
         logger.info(
             "sprint_close.run_start due_count=%s correlation_id=%s",
-            len(due_group_ids),
+            len(due_windows),
             correlation_id,
         )
-        closed_count = await job.run(due_group_ids=due_group_ids, correlation_id=correlation_id)
+        closed_count = await job.run(due_windows=due_windows, correlation_id=correlation_id)
         await session.commit()
         logger.info(
             "sprint_close.run_finished closed_count=%s correlation_id=%s",
@@ -107,7 +113,7 @@ def build_scheduler(app_settings: Settings, engine: AsyncEngine) -> AsyncIOSched
     scheduler = AsyncIOScheduler(timezone=timezone.utc)
     scheduler.add_job(
         run_sprint_close_once,
-        trigger=SPRINT_CLOSE_CRON,
+        trigger=SPRINT_CLOSE_TRIGGER,
         args=[session_maker],
         id="sprint_close",
         replace_existing=True,

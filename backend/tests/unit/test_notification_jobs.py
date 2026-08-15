@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date
+
 import pytest
 
 from unitkeeper_backend.application.jobs.notifications import (
@@ -7,7 +9,11 @@ from unitkeeper_backend.application.jobs.notifications import (
     SprintMemberReport,
     SprintReportPublisher,
 )
-from unitkeeper_backend.application.jobs.scheduler import ClosedSprint, SprintCloseJob
+from unitkeeper_backend.application.jobs.scheduler import (
+    ClosedSprint,
+    DueSprintWindow,
+    SprintCloseJob,
+)
 
 
 class FakePublisher:
@@ -78,7 +84,12 @@ async def test_scheduler_does_not_publish_reports_for_already_closed_sprint() ->
         closed = False
 
         async def close_due_sprint(
-            self, *, group_id: int, correlation_id: str
+            self,
+            *,
+            group_id: int,
+            period_start: date,
+            period_end: date,
+            correlation_id: str,
         ) -> ClosedSprint | None:
             if group_id == 7 and not self.closed:
                 self.closed = True
@@ -93,8 +104,9 @@ async def test_scheduler_does_not_publish_reports_for_already_closed_sprint() ->
                 )
             return None
 
+    due = DueSprintWindow(group_id=7, period_start=date(2026, 7, 6), period_end=date(2026, 7, 12))
     result = await SprintCloseJob(closer=Closer(), reports=SprintReportPublisher(publisher)).run(
-        due_group_ids=[7, 7], correlation_id="scheduler-7"
+        due_windows=[due, due], correlation_id="scheduler-7"
     )
 
     assert result == 1

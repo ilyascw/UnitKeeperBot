@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta
 from decimal import ROUND_HALF_UP, Decimal
+from zoneinfo import ZoneInfo
 
 from db.enums import Weekday
 
@@ -15,16 +16,46 @@ TWO_PLACES = Decimal("0.01")
 
 @dataclass(frozen=True, slots=True)
 class SprintWindow:
+    """A sprint's calendar period together with the zone that gives it instants.
+
+    ``zone`` is required rather than defaulted so a caller that forgets it fails
+    at construction, instead of quietly settling the group at UTC midnight.
+    Instants are built through ``ZoneInfo`` rather than a fixed offset, so DST
+    transitions (23- and 25-hour local days) fall out correctly.
+    """
+
     period_start: date
     period_end: date
+    zone: ZoneInfo
 
     @property
     def starts_at(self) -> datetime:
-        return datetime.combine(self.period_start, time.min, tzinfo=timezone.utc)
+        return datetime.combine(self.period_start, time.min, tzinfo=self.zone)
 
     @property
     def ends_before(self) -> datetime:
-        return datetime.combine(self.period_end + timedelta(days=1), time.min, tzinfo=timezone.utc)
+        return datetime.combine(self.period_end + timedelta(days=1), time.min, tzinfo=self.zone)
+
+    @property
+    def duration_days(self) -> int:
+        return (self.period_end - self.period_start).days + 1
+
+    def has_ended_at(self, instant: datetime) -> bool:
+        """Whether this window has fully elapsed as of ``instant``.
+
+        The boundary instant itself belongs to the *next* window, so a window
+        that ends at ``00:00`` local has ended once ``instant`` reaches it.
+        """
+        return instant >= self.ends_before
+
+    def shifted(self, cycles: int) -> SprintWindow:
+        """Return the window ``cycles`` whole sprints away (negative = earlier)."""
+        offset = timedelta(days=cycles * self.duration_days)
+        return SprintWindow(
+            period_start=self.period_start + offset,
+            period_end=self.period_end + offset,
+            zone=self.zone,
+        )
 
 
 def quantize(value: Decimal) -> Decimal:
@@ -45,9 +76,14 @@ def weekday_index(weekday: Weekday) -> int:
 
 
 def current_sprint_window(
-    *, today: date, start_weekday: Weekday, duration_days: int, anchor: date
+    *, now: datetime, zone: ZoneInfo, start_weekday: Weekday, duration_days: int, anchor: date
 ) -> SprintWindow:
-    """Return the sprint window that contains ``today``.
+    """Return the sprint window containing ``now`` as seen from ``zone``.
+
+    ``now`` is a timezone-aware instant; the calendar day it falls on is derived
+    in the group's own ``zone``, which is what makes "what day is it" answerable
+    at all. Passing a bare date would re-introduce the ambient-UTC assumption
+    this signature exists to remove.
 
     Sprint windows are ``duration_days``-long, back-to-back, non-overlapping
     blocks starting from ``anchor`` (a group's ``created_at`` date) aligned to
@@ -62,13 +98,14 @@ def current_sprint_window(
     if duration_days <= 0 or duration_days % 7 != 0:
         raise ValueError("Sprint duration must be positive and divisible by 7")
 
+    today = now.astimezone(zone).date()
     anchor_days_back = (anchor.weekday() - weekday_index(start_weekday)) % 7
     cycle_zero_start = anchor - timedelta(days=anchor_days_back)
     elapsed_days = (today - cycle_zero_start).days
     cycle_index = elapsed_days // duration_days
     period_start = cycle_zero_start + timedelta(days=cycle_index * duration_days)
     period_end = period_start + timedelta(days=duration_days - 1)
-    return SprintWindow(period_start=period_start, period_end=period_end)
+    return SprintWindow(period_start=period_start, period_end=period_end, zone=zone)
 
 
 def validate_member_weights(
